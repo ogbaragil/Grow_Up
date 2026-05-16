@@ -2699,3 +2699,75 @@ button:disabled {
 .archived-goal-actions button {
   min-width: 110px;
 }
+
+
+/* Refined archived goals styling */
+.archived-goals-toggle {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.archived-goals-toggle:focus,
+.archived-goals-toggle:active {
+  outline: none !important;
+  box-shadow: 0 0 0 2px rgba(34,197,94,.14);
+}
+
+.archived-goal-card {
+  opacity: .96 !important;
+  filter: none !important;
+  border-width: 1px !important;
+  overflow: hidden;
+}
+
+.archived-goal-card .goal-top.compact {
+  padding-bottom: 10px;
+}
+
+.archived-goal-meta {
+  margin: 0 16px;
+  padding: 12px 0 0;
+  border-top: 1px solid rgba(15,23,42,.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: rgba(15,23,42,.48);
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.archived-goal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin: 12px 16px 16px;
+}
+
+.archived-goal-actions button {
+  min-height: 38px;
+  border-radius: 12px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 900;
+  border: 1px solid rgba(15,23,42,.08);
+  background: rgba(255,255,255,.72);
+  backdrop-filter: blur(10px);
+}
+
+.archived-goal-actions .ghost:hover {
+  background: rgba(255,255,255,.92);
+}
+
+.archived-goal-actions .danger-mini {
+  color: #dc2626;
+  background: rgba(239,68,68,.08);
+  border-color: rgba(239,68,68,.16);
+}
+
+.archived-goal-actions .danger-mini:hover {
+  background: rgba(239,68,68,.14);
+}
+
+.archived-goals-list {
+  gap: 18px !important;
+}
