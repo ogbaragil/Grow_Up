@@ -2627,3 +2627,75 @@ button:disabled {
     transform: translateY(0);
   }
 }
+
+
+/* Archived Goals */
+.archived-goals-wrap {
+  margin-top: 20px;
+}
+
+.archived-goals-toggle {
+  width: 100%;
+  border-radius: 22px;
+  padding: 18px 20px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  box-shadow: var(--shadow);
+}
+
+.archived-goals-toggle strong {
+  display: block;
+  text-align: left;
+  font-size: 18px;
+  letter-spacing: -.03em;
+}
+
+.archived-goals-toggle span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.archived-goals-toggle b {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.archived-goals-list {
+  margin-top: 14px;
+  display: grid;
+  gap: 14px;
+}
+
+.archived-goal-card {
+  opacity: .82;
+  filter: grayscale(.18);
+}
+
+.archived-goal-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.archived-goal-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.archived-goal-actions button {
+  min-width: 110px;
+}

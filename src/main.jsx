@@ -1773,17 +1773,19 @@ function CompactTxn({ t }) {
 }
 
 
-function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDemo=false }) {
+function Goals({
+  const [showArchivedGoals, setShowArchivedGoals] = useState(false);
+ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDemo=false }) {
   const [goalMenuOpen, setGoalMenuOpen] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const totals = computeTotals(state);
   const accountsForMonth = getAccountsForSelectedMonth(state);
 
-  const toggle = (id) => setState(s => ({ ...s, goals:s.goals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
+  const toggle = (id) => setState(s => ({ ...s, goals:s.activeGoals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
   const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
   const archive = (id) => setState(s => ({
     ...s,
-    goals: s.goals.map(g => g.id === id ? { ...g, archived:true, archivedAt:new Date().toISOString(), open:false } : g)
+    goals: s.activeGoals.map(g => g.id === id ? { ...g, archived:true, archivedAt:new Date().toISOString(), open:false } : g)
   }));
   const activeGoals = state.goals.filter(g => !g.archived);
 
@@ -1861,6 +1863,63 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
       >
         {goalMenuOpen ? <X size={34}/> : <Plus size={34}/>}
       </button>
+
+      {archivedGoals.length > 0 && (
+        <section className="archived-goals-wrap">
+          <button
+            className="archived-goals-toggle"
+            onClick={() => setShowArchivedGoals(v => !v)}
+            type="button"
+          >
+            <div>
+              <strong>Archived Goals</strong>
+              <span>Completed & retired goals</span>
+            </div>
+
+            <b>{showArchivedGoals ? "−" : "+"}</b>
+          </button>
+
+          {showArchivedGoals && (
+            <div className="archived-goals-list">
+              {archivedGoals.map(goal => (
+                <article key={goal.id || goal.name} className="goal-card slim archived-goal-card">
+                  <div className="goal-top compact">
+                    <div className="goal-icon">{goal.icon || "✓"}</div>
+
+                    <div className="row-main">
+                      <h2>{goal.name}</h2>
+                      <span>{goal.type || "Archived Goal"}</span>
+                    </div>
+
+                    <b>{Math.round(goal.progress || 100)}%</b>
+                  </div>
+
+                  <div className="archived-goal-meta">
+                    <span>Archived</span>
+                    <strong>{goal.deadline || "Completed"}</strong>
+                  </div>
+
+                  <div className="archived-goal-actions">
+                    <button
+                      type="button"
+                      className="ghost"
+                      onClick={() => {
+                        const updated = state.goals.map(g =>
+                          g.id === goal.id ? { ...g, archived: false } : g
+                        );
+                        update({ goals: updated });
+                      }}
+                    >
+                      Restore
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
     </div>
   );
 }
@@ -2220,7 +2279,7 @@ function EditorModal({ editor, setEditor, state, setState }) {
         deadline:form.deadline,
         open:item.open ?? true
       };
-      setState(s => ({ ...s, goals:item.id ? s.goals.map(g => g.id === item.id ? goal : g) : [...s.goals, goal] }));
+      setState(s => ({ ...s, goals:item.id ? s.activeGoals.map(g => g.id === item.id ? goal : g) : [...s.goals, goal] }));
     }
 
     setEditor(null);
