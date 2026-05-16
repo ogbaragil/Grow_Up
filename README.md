@@ -1,19 +1,12 @@
-# Grow UP Faithful UI Rebuild
+# Grow UP Clean Data + Proportion Fix
 
-A mobile-first Vite + React PWA rebuild that follows the uploaded Grow UP app screenshots:
-- Overview
-- Assets & Debts
-- Cash Flow
-- Wealth Goals
-- Menu / Settings
-- Supabase save + optional restore latest snapshot
+This version:
+- removes hard-coded finance data
+- starts with empty user data
+- keeps Add Account / Transaction / Goal workflows
+- improves mobile proportions closer to the reference screenshots
+- keeps Supabase save + optional restore latest under Settings/Menu
 
-## Cloudflare Pages
-Build command: `npm run build`
-Build output directory: `dist`
-
-## Supabase env vars
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
-
-Run `supabase/schema.sql` in Supabase if needed.
+Cloudflare Pages:
+- Build command: npm run build
+- Build output directory: dist
