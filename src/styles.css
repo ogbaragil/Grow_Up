@@ -909,3 +909,81 @@ dd { margin:0; font-weight:900; }
   color: var(--text);
   margin: 4px 0 2px;
 }
+
+
+/* =========================================================
+   Grow UP logo replacement
+   Replaces old GV text badge with uploaded Grow UP icon.
+   ========================================================= */
+
+.app-icon {
+  background-image: url("/icons/growup-logo.png") !important;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  color: transparent !important;
+  text-indent: -9999px !important;
+  overflow: hidden !important;
+}
+
+.app-icon.large {
+  background-image: url("/icons/growup-logo.png") !important;
+}
+
+/* =========================================================
+   Top action menu as right-side drawer
+   Replaces bottom sheet behavior.
+   ========================================================= */
+
+.sheet-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, .42) !important;
+  z-index: 60 !important;
+  display: flex !important;
+  align-items: stretch !important;
+  justify-content: flex-end !important;
+  backdrop-filter: blur(4px);
+}
+
+.menu-sheet {
+  width: min(86vw, 360px) !important;
+  max-width: 360px !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  border-radius: 28px 0 0 28px !important;
+  padding: 22px 20px calc(24px + env(safe-area-inset-bottom)) !important;
+  background: var(--card) !important;
+  box-shadow: -18px 0 50px rgba(0,0,0,.22) !important;
+  overflow-y: auto !important;
+  animation: drawer-slide-in .24s ease-out both;
+}
+
+.sheet-head {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 8px !important;
+}
+
+.menu-sheet > button {
+  border-bottom: 1px solid var(--line);
+  padding: 17px 4px !important;
+}
+
+@keyframes drawer-slide-in {
+  from {
+    transform: translateX(110%);
+    opacity: .6;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@media (min-width: 900px) {
+  .menu-sheet {
+    width: 380px !important;
+    max-width: 380px !important;
+  }
+}

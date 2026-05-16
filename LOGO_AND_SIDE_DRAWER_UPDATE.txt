@@ -1,0 +1,7 @@
+Implemented:
+- Replaced old GV text badge with uploaded Grow UP logo.
+- Copied logo to public/icons/growup-logo.png.
+- Updated index.html favicon/apple touch icon references.
+- Updated manifest icons to use Grow UP logo.
+- Converted top menu overlay from bottom sheet to right-side drawer.
+- Drawer opens from the right when the top floating menu button is tapped.
