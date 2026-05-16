@@ -1325,3 +1325,20 @@ button:disabled {
 .mode-pill:empty::before {
   content: "Real Mode";
 }
+
+
+/* Final absolute mode pill fix */
+.mode-pill.real::before,
+.mode-pill.demo::before {
+  content: none !important;
+}
+
+.mode-pill.real {
+  background: #e8f7ee !important;
+  color: #23854b !important;
+}
+
+.mode-pill.demo {
+  background: #fff4d6 !important;
+  color: #8a5a00 !important;
+}

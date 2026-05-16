@@ -807,7 +807,7 @@ function sixMonthAnimationStart(state, fallbackValue) {
   return Number(fallbackValue || 0);
 }
 
-function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo=false }) {
+function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo=false  }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const dashboardMonthLabel = monthLabel(dashboardState.selectedMonth);
