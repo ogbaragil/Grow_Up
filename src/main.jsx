@@ -219,8 +219,13 @@ function computeTotals(state) {
   const prevAssets = prev ? Number(prev.assets || 0) : 0;
   const prevDebts = prev ? Number(prev.debts || 0) : 0;
 
-  const income = state.transactions.filter(t => t.type === "income" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
-  const expenses = state.transactions.filter(t => t.type === "expense" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
+  const income = state.transactions
+    .filter(t => t.type === "income" && t.recurring)
+    .reduce((s,t)=>s+monthlyEquivalent(t),0);
+
+  const expenses = state.transactions
+    .filter(t => t.type === "expense" && t.recurring)
+    .reduce((s,t)=>s+monthlyEquivalent(t),0);
 
   return { assets, debts, net: assets-debts, prevAssets, prevDebts, prevNet: prevAssets-prevDebts, income, expenses };
 }
@@ -689,7 +694,7 @@ function TransactionRow({ t, setEditor, controls=false }) {
       <div className={`round-icon ${t.type === "income" ? "asset" : "debt"}`}>{t.icon || (t.type==="income" ? "💵" : "💳")}</div>
       <div className="row-main">
         <strong>{t.name}</strong>
-        <span>{formatDate(t.date)} · {relativeDate(t.date)}</span>
+        <span>{formatDate(t.occurrenceDate || t.date)} · {relativeDate(t.occurrenceDate || t.date)} · {frequencyLabel(t.frequency || (t.recurring ? "monthly" : "oneOff"))}</span>
       </div>
       <strong className={t.type === "income" ? "success" : "danger"}>{t.type === "income" ? "+" : "-"}{money(t.amount)}</strong>
       {controls && <button className="icon-btn" onClick={()=>setEditor({ type:"transaction", item:t })}><Pencil size={20}/></button>}
@@ -1012,6 +1017,7 @@ function EditorModal({ editor, setEditor, state, setState }) {
     category:item.category || "",
     date:item.date ? item.date.slice(0,10) : new Date().toISOString().slice(0,10),
     recurring:item.recurring || false,
+    frequency:item.frequency || (item.recurring ? "monthly" : "oneOff"),
     goalType:item.goalType || "netWorth",
     accountId:item.accountId || "",
     account:item.account || "",
@@ -1038,6 +1044,7 @@ function EditorModal({ editor, setEditor, state, setState }) {
     }
 
     if (editor.type === "transaction") {
+      const frequency = form.frequency || "oneOff";
       const tx = {
         id:item.id || safeId(),
         type:form.type,
@@ -1046,7 +1053,8 @@ function EditorModal({ editor, setEditor, state, setState }) {
         amount:Number(form.amount || 0),
         category:form.category,
         date:new Date(form.date).toISOString(),
-        recurring:!!form.recurring
+        frequency,
+        recurring:frequency !== "oneOff"
       };
       setState(s => ({ ...s, transactions:item.id ? s.transactions.map(t => t.id === item.id ? tx : t) : [...s.transactions, tx] }));
     }
@@ -1090,8 +1098,20 @@ function EditorModal({ editor, setEditor, state, setState }) {
           <label>Type<select value={form.type} onChange={e=>change("type", e.target.value)}><option value="income">Income</option><option value="expense">Expense</option></select></label>
           <label>Amount<input type="number" value={form.amount} onChange={e=>change("amount", e.target.value)} /></label>
           <label>Category<input value={form.category} onChange={e=>change("category", e.target.value)} /></label>
-          <label>Date<input type="date" value={form.date} onChange={e=>change("date", e.target.value)} /></label>
-          <label className="checkbox"><input type="checkbox" checked={form.recurring} onChange={e=>change("recurring", e.target.checked)} /> Recurring</label>
+          <label>Start / Next Date<input type="date" value={form.date} onChange={e=>change("date", e.target.value)} /></label>
+          <label>Frequency
+            <select value={form.frequency} onChange={e=>{
+              change("frequency", e.target.value);
+              change("recurring", e.target.value !== "oneOff");
+            }}>
+              <option value="oneOff">One-off</option>
+              <option value="weekly">Weekly</option>
+              <option value="fortnightly">Fortnightly</option>
+              <option value="monthly">Monthly</option>
+              <option value="quarterly">Quarterly</option>
+              <option value="yearly">Yearly</option>
+            </select>
+          </label>
         </>}
 
         {editor.type === "goal" && <>
@@ -1273,15 +1293,92 @@ function goalColorForType(type) {
   }[type || "accountGrowth"] || "green";
 }
 
+function monthlyEquivalent(transaction) {
+  const amount = Number(transaction.amount || 0);
+  const frequency = transaction.frequency || (transaction.recurring ? "monthly" : "oneOff");
+
+  switch (frequency) {
+    case "weekly":
+      return amount * 52 / 12;
+    case "fortnightly":
+      return amount * 26 / 12;
+    case "monthly":
+      return amount;
+    case "quarterly":
+      return amount / 3;
+    case "yearly":
+      return amount / 12;
+    case "oneOff":
+    default:
+      return 0;
+  }
+}
+
+function addFrequency(date, frequency) {
+  const d = new Date(date);
+
+  switch (frequency) {
+    case "weekly":
+      d.setDate(d.getDate() + 7);
+      break;
+    case "fortnightly":
+      d.setDate(d.getDate() + 14);
+      break;
+    case "monthly":
+      d.setMonth(d.getMonth() + 1);
+      break;
+    case "quarterly":
+      d.setMonth(d.getMonth() + 3);
+      break;
+    case "yearly":
+      d.setFullYear(d.getFullYear() + 1);
+      break;
+    default:
+      return d;
+  }
+
+  return d;
+}
+
 function upcomingTransactions(transactions, days) {
   const now = new Date();
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(start);
   end.setDate(end.getDate() + days);
-  return transactions.filter(t => {
-    const d = new Date(t.date);
-    return d >= start && d <= end;
-  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  const out = [];
+
+  for (const transaction of transactions) {
+    const frequency = transaction.frequency || (transaction.recurring ? "monthly" : "oneOff");
+    let occurrenceDate = new Date(transaction.date);
+
+    if (frequency === "oneOff" || !transaction.recurring) {
+      if (occurrenceDate >= start && occurrenceDate <= end) {
+        out.push({ ...transaction, occurrenceDate: occurrenceDate.toISOString() });
+      }
+      continue;
+    }
+
+    // Advance recurring item until it reaches the current window.
+    let safety = 0;
+    while (occurrenceDate < start && safety < 500) {
+      occurrenceDate = addFrequency(occurrenceDate, frequency);
+      safety += 1;
+    }
+
+    // Include all occurrences inside the selected window.
+    while (occurrenceDate <= end && safety < 600) {
+      out.push({
+        ...transaction,
+        occurrenceDate: occurrenceDate.toISOString(),
+        displayDate: occurrenceDate.toISOString()
+      });
+      occurrenceDate = addFrequency(occurrenceDate, frequency);
+      safety += 1;
+    }
+  }
+
+  return out.sort((a,b)=>new Date(a.occurrenceDate || a.date)-new Date(b.occurrenceDate || b.date));
 }
 
 function historyRows(state) {
@@ -1306,6 +1403,17 @@ function relativeDate(iso) {
   if (diff === 1) return "tomorrow";
   if (diff < 0) return `${Math.abs(diff)} days ago`;
   return `in ${diff} days`;
+}
+
+function frequencyLabel(frequency) {
+  return {
+    oneOff: "one-off",
+    weekly: "weekly",
+    fortnightly: "fortnightly",
+    monthly: "monthly",
+    quarterly: "quarterly",
+    yearly: "yearly"
+  }[frequency || "monthly"] || "monthly";
 }
 
 function signedMoney(n) {

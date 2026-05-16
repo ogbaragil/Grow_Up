@@ -1,0 +1,14 @@
+Implemented flexible cashflow recurrence:
+- One-off
+- Weekly
+- Fortnightly
+- Monthly
+- Quarterly
+- Yearly
+
+Logic:
+- Money In / Money Out monthly totals convert recurring items into monthly equivalents.
+- Next 7 Days expands recurring items based on their actual frequency.
+- Transaction editor now has Frequency dropdown.
+- frequency is stored on transaction objects.
+- recurring is derived from frequency !== oneOff.
