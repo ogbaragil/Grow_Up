@@ -71,12 +71,12 @@ const DEMO_STATE = {
   theme: "light",
   selectedMonth: currentMonthKey(),
   accounts: [
-    { id:"demo-super", name:"Hesta Super", icon:"🏦", kind:"asset", balance:75000, previous:72726 },
-    { id:"demo-fire", name:"FIRE", icon:"🔥", kind:"asset", balance:34400, previous:28000 },
-    { id:"demo-car", name:"Tesla Model 3", icon:"🚙", kind:"asset", balance:28000, previous:28000 },
-    { id:"demo-business", name:"LGDS", icon:"👔", kind:"asset", balance:1500, previous:0 },
+    { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", balance:75000, previous:72726 },
+    { id:"demo-fire", name:"Investment Portfolio", icon:"🔥", kind:"asset", balance:34400, previous:28000 },
+    { id:"demo-car", name:"Vehicle Savings", icon:"🚙", kind:"asset", balance:28000, previous:28000 },
+    { id:"demo-business", name:"Emergency Fund", icon:"👔", kind:"asset", balance:1500, previous:0 },
     { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", balance:41274, previous:41474 },
-    { id:"demo-tax", name:"Income Tax Debt", icon:"🏦", kind:"debt", balance:6049, previous:6049 }
+    { id:"demo-tax", name:"Credit Card Balance", icon:"🏦", kind:"debt", balance:6049, previous:6049 }
   ],
   transactions: [
     { id:"demo-salary", type:"income", name:"Salary", icon:"💵", amount:6392, category:"Income", date:new Date(new Date().getFullYear(), new Date().getMonth(), 27).toISOString(), frequency:"monthly", recurring:true },
@@ -86,8 +86,8 @@ const DEMO_STATE = {
   ],
   goals: [
     { id:"demo-goal-net", name:"Hit 100K Net", icon:"💰", goalType:"netWorth", account:"Net Worth", color:"purple", target:100000, current:0, deadline:"2026-10-01", open:false },
-    { id:"demo-goal-super", name:"Reach 100K in Super", icon:"🏦", goalType:"accountGrowth", accountId:"demo-super", account:"Hesta Super", color:"green", target:100000, current:0, deadline:"2026-12-01", open:false },
-    { id:"demo-goal-fire", name:"Investment Milestone 2026", icon:"🔥", goalType:"accountGrowth", accountId:"demo-fire", account:"FIRE", color:"green", target:50000, current:0, deadline:"2026-12-01", open:false },
+    { id:"demo-goal-super", name:"Reach 100K in Super", icon:"🏦", goalType:"accountGrowth", accountId:"demo-super", account:"Retirement Fund", color:"green", target:100000, current:0, deadline:"2026-12-01", open:false },
+    { id:"demo-goal-fire", name:"Investment Milestone 2026", icon:"🔥", goalType:"accountGrowth", accountId:"demo-fire", account:"Investment Portfolio", color:"green", target:50000, current:0, deadline:"2026-12-01", open:false },
     { id:"demo-goal-loan", name:"Pay off Loan", icon:"⚡", goalType:"debtPayoff", accountId:"demo-loan", account:"Personal Loan", color:"red", start:60000, target:0, current:0, deadline:"2027-06-01", open:false }
   ],
   monthSnapshots: {}
@@ -108,12 +108,12 @@ function buildDemoState() {
     const debtsTotal = baseDebts[idx] || 47323;
 
     const accounts = [
-      { id:"demo-super", name:"Hesta Super", icon:"🏦", kind:"asset", balance:Math.round(assetsTotal * .54), previous:0 },
-      { id:"demo-fire", name:"FIRE", icon:"🔥", kind:"asset", balance:Math.round(assetsTotal * .25), previous:0 },
-      { id:"demo-car", name:"Tesla Model 3", icon:"🚙", kind:"asset", balance:28000, previous:0 },
-      { id:"demo-business", name:"LGDS", icon:"👔", kind:"asset", balance:Math.max(0, assetsTotal - Math.round(assetsTotal * .54) - Math.round(assetsTotal * .25) - 28000), previous:0 },
+      { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", balance:Math.round(assetsTotal * .54), previous:0 },
+      { id:"demo-fire", name:"Investment Portfolio", icon:"🔥", kind:"asset", balance:Math.round(assetsTotal * .25), previous:0 },
+      { id:"demo-car", name:"Vehicle Savings", icon:"🚙", kind:"asset", balance:28000, previous:0 },
+      { id:"demo-business", name:"Emergency Fund", icon:"👔", kind:"asset", balance:Math.max(0, assetsTotal - Math.round(assetsTotal * .54) - Math.round(assetsTotal * .25) - 28000), previous:0 },
       { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", balance:Math.round(debtsTotal * .87), previous:0 },
-      { id:"demo-tax", name:"Income Tax Debt", icon:"🏦", kind:"debt", balance:debtsTotal - Math.round(debtsTotal * .87), previous:0 }
+      { id:"demo-tax", name:"Credit Card Balance", icon:"🏦", kind:"debt", balance:debtsTotal - Math.round(debtsTotal * .87), previous:0 }
     ];
 
     snapshots[key] = {
