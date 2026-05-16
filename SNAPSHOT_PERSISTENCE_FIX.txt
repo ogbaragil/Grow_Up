@@ -1,0 +1,7 @@
+Fixed:
+- Save Snapshot now uses functional setState to read the freshest current state.
+- Snapshot save no longer relies on possibly stale totals.
+- Existing month snapshot edits are saved from snapshot.accounts.
+- Unsaved current-month edits are saved from live accounts.
+- LocalStorage is updated immediately during save before Supabase sync.
+- Previous movement continues to pull from the prior month snapshot where available.

@@ -76,32 +76,79 @@ function App() {
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const saveSnapshot = async () => {
-    const snapshot = {
-      assets: totals.assets,
-      debts: totals.debts,
-      net: totals.net,
-      accounts: state.accounts.map(a => ({ id:a.id, name:a.name, icon:a.icon, kind:a.kind, balance:Number(a.balance||0) })),
-      createdAt: new Date().toISOString()
-    };
+    let nextStateForSupabase = null;
+    let selectedMonthForMessage = state.selectedMonth;
 
-    const next = {
-      ...state,
-      monthSnapshots: {
-        ...state.monthSnapshots,
-        [state.selectedMonth]: snapshot
-      }
-    };
+    setState(currentState => {
+      selectedMonthForMessage = currentState.selectedMonth;
 
-    setState(next);
+      const existingSnapshot = currentState.monthSnapshots?.[currentState.selectedMonth];
+
+      // IMPORTANT:
+      // Use the freshest available balances.
+      // If the selected month already has a snapshot and the user edited it,
+      // save from that snapshot's accounts. Otherwise save from live accounts.
+      const sourceAccounts = existingSnapshot?.accounts || currentState.accounts;
+
+      const cleanAccounts = sourceAccounts.map(a => ({
+        id: a.id,
+        name: a.name,
+        icon: a.icon,
+        kind: a.kind,
+        balance: Number(a.balance || 0),
+        previous: Number(a.previous || 0)
+      }));
+
+      const assets = cleanAccounts
+        .filter(a => a.kind === "asset")
+        .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+      const debts = cleanAccounts
+        .filter(a => a.kind === "debt")
+        .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+      const snapshot = {
+        ...(existingSnapshot || {}),
+        assets,
+        debts,
+        net: assets - debts,
+        accounts: cleanAccounts,
+        createdAt: existingSnapshot?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const next = {
+        ...currentState,
+        monthSnapshots: {
+          ...(currentState.monthSnapshots || {}),
+          [currentState.selectedMonth]: snapshot
+        }
+      };
+
+      nextStateForSupabase = next;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+
+    // Give React a tick to complete the state update before cloud sync.
+    await new Promise(resolve => setTimeout(resolve, 0));
+
+    if (!nextStateForSupabase) {
+      alert("Could not save snapshot. Please try again.");
+      return;
+    }
 
     if (!supabase) {
       alert("Monthly snapshot saved locally. Supabase env vars are missing.");
       return;
     }
 
-    const { error } = await supabase.from("growup_snapshots").insert({ user_id:"gil", app_state:next });
+    const { error } = await supabase
+      .from("growup_snapshots")
+      .insert({ user_id:"gil", app_state:nextStateForSupabase });
+
     if (error) return alert(`Local snapshot saved, but Supabase sync failed: ${error.message}`);
-    alert(`Snapshot saved for ${monthLabel(state.selectedMonth)}.`);
+    alert(`Snapshot saved for ${monthLabel(selectedMonthForMessage)}.`);
   };
 
   const restoreSnapshot = async () => {
@@ -316,9 +363,20 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       }
 
       // If no snapshot exists yet, edit live account balances.
+      // Previous movement still comes from prior month snapshot when available.
+      const priorSnapshot = s.monthSnapshots?.[addMonths(s.selectedMonth, -1)];
+
       return {
         ...s,
-        accounts: s.accounts.map(a => a.id === id ? { ...a, balance:numericValue } : a)
+        accounts: s.accounts.map(a => {
+          if (a.id !== id) return a;
+          const priorAccount = priorSnapshot?.accounts?.find(pa => pa.id === a.id);
+          return {
+            ...a,
+            previous: priorAccount ? Number(priorAccount.balance || 0) : Number(a.previous || 0),
+            balance:numericValue
+          };
+        })
       };
     });
   };
