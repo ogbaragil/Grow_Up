@@ -1104,6 +1104,55 @@ function CompactOverviewHeader({ title, sub, isDemo=false, setMenuOpen }) {
 
 
 
+
+function selectSmartDashboardGoal(goals, dashboardState, dashboardTotals, accounts) {
+  const activeGoals = (goals || []).filter(g => !g.archived);
+  if (!activeGoals.length) return null;
+
+  const enriched = activeGoals.map(goal => {
+    let calc = calculateGoalProgress(goal, dashboardTotals, accounts);
+    calc = refineDebtPayoffCalcWithHistory(goal, dashboardState, calc);
+    const forecast = estimateGoalCompletion(goal, dashboardState, calc);
+
+    const deadlineScore = goal.deadline
+      ? Math.max(0, new Date(goal.deadline).getTime() - Date.now())
+      : Number.MAX_SAFE_INTEGER;
+
+    const offTrackScore = Math.max(0, 100 - Number(calc.progress || 0));
+    const progressScore = Number(calc.progress || 0);
+
+    return {
+      goal,
+      calc,
+      forecast,
+      deadlineScore,
+      offTrackScore,
+      progressScore
+    };
+  });
+
+  const modes = [
+    enriched.slice().sort((a,b)=>a.deadlineScore-b.deadlineScore)[0],
+    enriched.slice().sort((a,b)=>b.offTrackScore-a.offTrackScore)[0],
+    enriched.slice().sort((a,b)=>b.progressScore-a.progressScore)[0]
+  ].filter(Boolean);
+
+  const uniqueModes = [];
+  const seen = new Set();
+
+  for (const item of modes) {
+    if (!seen.has(item.goal.id || item.goal.name)) {
+      seen.add(item.goal.id || item.goal.name);
+      uniqueModes.push(item);
+    }
+  }
+
+  const rotationIndex = Math.floor(Date.now() / 8000) % uniqueModes.length;
+
+  return uniqueModes[rotationIndex] || uniqueModes[0];
+}
+
+
 function weightedThreeMonthMomentum(state, currentNet) {
   const rows = historyRows(state)
     .slice()
@@ -1141,7 +1190,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
     : 0;
   const topAssetCirc = 2 * Math.PI * 42;
   const goals = dashboardState.goals.filter(g => !g.archived);
-  const primaryGoal = goals[0];
+  const smartGoal = selectSmartDashboardGoal(goals, dashboardState, dashboardTotals, accounts);
+  const primaryGoal = smartGoal?.goal || goals[0] || null;
 
   const animatedStartNetWorth = sixMonthAnimationStart(dashboardState, dashboardTotals.prevNet || dashboardTotals.net);
   const animatedNetWorth = useAnimatedNumber(dashboardTotals.net, animatedStartNetWorth, 1300);
@@ -1161,9 +1211,10 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
       }).join(" ")
     : "0,120 300,80";
 
-  let goalCalc = null;
-  let goalForecast = null;
-  if (primaryGoal) {
+  let goalCalc = smartGoal?.calc || null;
+  let goalForecast = smartGoal?.forecast || null;
+
+  if (primaryGoal && !goalCalc) {
     goalCalc = calculateGoalProgress(primaryGoal, dashboardTotals, accounts);
     goalCalc = refineDebtPayoffCalcWithHistory(primaryGoal, dashboardState, goalCalc);
     goalForecast = estimateGoalCompletion(primaryGoal, dashboardState, goalCalc);
@@ -1196,7 +1247,13 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         <section className={`minimal-goal-card ${primaryGoal.color || "green"}`} onClick={()=>setTab("goals")}>
           <div className="minimal-row">
             <div>
-              <p>Goal Forecast</p>
+              <p>
+                {smartGoal?.goal === primaryGoal && smartGoal?.deadlineScore < 1000 * 60 * 60 * 24 * 120
+                  ? "Closest deadline"
+                  : smartGoal?.goal === primaryGoal && smartGoal?.offTrackScore > 40
+                  ? "Needs attention"
+                  : "Top progress"}
+              </p>
               <h2>{primaryGoal.name}</h2>
             </div>
             <strong>{Math.round(goalCalc.progress)}%</strong>
