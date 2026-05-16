@@ -1630,7 +1630,7 @@ function calculateGoalProgress(goal, totals, accounts) {
   const goalType = goal.goalType || inferGoalType(goal, accounts);
   const target = Number(goal.target || 0);
   const start = Number(goal.start || goal.startAmount || 0);
-  const linkedAccount = findAccount(accounts, goal);
+  const linkedAccount = findGoalAccountInSnapshot(accounts, goal);
 
   let current = Number(goal.current || 0);
   let sourceLabel = goal.account || "Manual";
@@ -1701,6 +1701,51 @@ function monthlyNeeded(remaining, deadline) {
 }
 
 
+
+function normalizeAccountName(name) {
+  return String(name || "")
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function accountNameAliases(name) {
+  const normalized = normalizeAccountName(name);
+  const aliases = new Set([normalized]);
+
+  const map = {
+    "personal loan": ["loan", "debt loan"],
+    "credit card balance": ["credit card", "income tax debt", "tax debt"],
+    "income tax debt": ["credit card balance", "tax debt"],
+    "retirement fund": ["hesta super", "super", "retirement"],
+    "investment portfolio": ["fire", "stocks", "investments"],
+    "vehicle savings": ["tesla model 3", "car", "vehicle"],
+    "emergency fund": ["lgds", "business asset", "cash reserve"]
+  };
+
+  Object.entries(map).forEach(([key, values]) => {
+    if (normalized === key || values.includes(normalized)) {
+      aliases.add(key);
+      values.forEach(v => aliases.add(v));
+    }
+  });
+
+  return aliases;
+}
+
+function findGoalAccountInSnapshot(accounts, goal) {
+  if (!accounts?.length) return null;
+
+  if (goal.accountId) {
+    const byId = accounts.find(a => a.id === goal.accountId);
+    if (byId) return byId;
+  }
+
+  const aliases = accountNameAliases(goal.account);
+  return accounts.find(a => aliases.has(normalizeAccountName(a.name))) || null;
+}
+
 function goalValueForSnapshot(goal, snapshot) {
   const accounts = snapshot?.accounts || [];
   const totals = {
@@ -1713,10 +1758,8 @@ function goalValueForSnapshot(goal, snapshot) {
 
   if (goalType === "netWorth") return totals.net;
 
-  const account = findAccount(accounts, goal);
+  const account = findGoalAccountInSnapshot(accounts, goal);
   if (!account) return null;
-
-  if (goalType === "debtPayoff") return Number(account.balance || 0);
 
   return Number(account.balance || 0);
 }
@@ -1743,7 +1786,10 @@ function estimateGoalCompletion(goal, state, currentCalc) {
     };
   }
 
-  const recent = rows.slice(-6);
+  // Use up to 12 historical points for a more stable estimate.
+  // This fixes debt payoff goals where the last few months may be flat
+  // but the broader trend clearly shows debt reduction.
+  const recent = rows.slice(-12);
   const first = recent[0];
   const last = recent[recent.length - 1];
   const monthSpan = Math.max(1, monthDistance(first.key, last.key));
@@ -1755,9 +1801,34 @@ function estimateGoalCompletion(goal, state, currentCalc) {
   if (goalType === "debtPayoff") {
     // Debt payoff improves when debt balance drops.
     monthlyRate = (Number(first.value || 0) - Number(last.value || 0)) / monthSpan;
+
+    // If broad trend is flat, try the strongest older-to-current drop.
+    if (monthlyRate <= 0) {
+      const bestOlder = recent
+        .slice(0, -1)
+        .map(row => ({ ...row, drop: Number(row.value || 0) - Number(last.value || 0) }))
+        .sort((a, b) => b.drop - a.drop)[0];
+
+      if (bestOlder?.drop > 0) {
+        monthlyRate = bestOlder.drop / Math.max(1, monthDistance(bestOlder.key, last.key));
+      }
+    }
+
     remaining = Number(currentCalc.remaining || 0);
   } else {
     monthlyRate = (Number(last.value || 0) - Number(first.value || 0)) / monthSpan;
+
+    if (monthlyRate <= 0) {
+      const bestOlder = recent
+        .slice(0, -1)
+        .map(row => ({ ...row, gain: Number(last.value || 0) - Number(row.value || 0) }))
+        .sort((a, b) => b.gain - a.gain)[0];
+
+      if (bestOlder?.gain > 0) {
+        monthlyRate = bestOlder.gain / Math.max(1, monthDistance(bestOlder.key, last.key));
+      }
+    }
+
     remaining = Number(currentCalc.remaining || 0);
   }
 
