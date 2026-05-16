@@ -1,0 +1,5 @@
+Implemented:
+- Account Edit/Delete controls now appear when Assets & Debts is in Edit Balances mode.
+- Edit Account opens the existing account modal.
+- Delete Account removes the account from live accounts and existing month snapshots.
+- Controls stay hidden in normal/locked mode.

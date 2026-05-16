@@ -441,6 +441,9 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             accounts={assets}
             updateBalance={updateBalance}
             readOnly={!!selectedSnapshot && !editingBalances}
+            editingBalances={editingBalances}
+            setEditor={setEditor}
+            setState={setState}
           />
           <AccountGroup
             title={`Debts (${debts.length})`}
@@ -448,6 +451,9 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             accounts={debts}
             updateBalance={updateBalance}
             readOnly={!!selectedSnapshot && !editingBalances}
+            editingBalances={editingBalances}
+            setEditor={setEditor}
+            setState={setState}
           />
           <Card className="summary-list">
             <div onClick={()=>setHistoryMetric("assets")}><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
@@ -470,7 +476,36 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   );
 }
 
-function AccountGroup({ title, sub, accounts, updateBalance, readOnly }) {
+function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBalances=false, setEditor, setState }) {
+  const editAccount = (account) => {
+    setEditor?.({ type:"account", item:account, defaultKind:account.kind });
+  };
+
+  const deleteAccount = (account) => {
+    if (!confirm(`Delete ${account.name}? This removes it from your account list and future live balances.`)) return;
+
+    setState?.(s => {
+      const nextAccounts = s.accounts.filter(a => a.id !== account.id);
+
+      // Also remove from existing month snapshots so old reports stay consistent
+      // with the user's explicit delete choice.
+      const nextSnapshots = Object.fromEntries(
+        Object.entries(s.monthSnapshots || {}).map(([key, snap]) => {
+          const accounts = (snap.accounts || []).filter(a => a.id !== account.id);
+          const assets = accounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+          const debts = accounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+          return [key, { ...snap, accounts, assets, debts, net:assets - debts, updatedAt:new Date().toISOString() }];
+        })
+      );
+
+      return {
+        ...s,
+        accounts: nextAccounts,
+        monthSnapshots: nextSnapshots
+      };
+    });
+  };
+
   return (
     <Card className="account-group">
       <h2>{title}</h2>
@@ -486,11 +521,21 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly }) {
                 Prev: {money(a.previous)} {delta < 0 ? "↓" : delta > 0 ? "↑" : "—"} {money(Math.abs(delta))}
               </span>
             </div>
-            {readOnly ? (
-              <div className="balance-display">{money(a.balance)}</div>
-            ) : (
-              <input value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
-            )}
+
+            <div className="account-actions-wrap">
+              {readOnly ? (
+                <div className="balance-display">{money(a.balance)}</div>
+              ) : (
+                <input value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
+              )}
+
+              {editingBalances && (
+                <div className="account-row-actions">
+                  <button onClick={()=>editAccount(a)} aria-label={`Edit ${a.name}`}><Pencil size={16}/></button>
+                  <button className="delete" onClick={()=>deleteAccount(a)} aria-label={`Delete ${a.name}`}><Trash2 size={16}/></button>
+                </div>
+              )}
+            </div>
           </div>
         );
       })}

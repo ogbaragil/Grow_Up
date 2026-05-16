@@ -537,3 +537,47 @@ dd { margin:0; font-weight:900; }
   background: var(--red);
   color: white;
 }
+
+
+.account-actions-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-row-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.account-row-actions button {
+  width: 32px;
+  height: 26px;
+  border-radius: 9px;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.account-row-actions button.delete {
+  color: var(--red);
+}
+
+@media (max-width: 430px) {
+  .account-actions-wrap {
+    gap: 6px;
+  }
+
+  .account-row-actions button {
+    width: 30px;
+    height: 24px;
+  }
+
+  .account-row input,
+  .balance-display {
+    width: 86px;
+  }
+}
