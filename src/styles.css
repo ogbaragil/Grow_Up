@@ -2699,3 +2699,17 @@ button:disabled {
 .archived-goal-actions button {
   min-width: 110px;
 }
+
+
+.archived-goals-wrap {
+  display: block !important;
+  width: 100%;
+}
+
+.archived-goals-list {
+  display: grid !important;
+}
+
+.archived-goal-card {
+  display: block !important;
+}
