@@ -4,29 +4,42 @@ import { createRoot } from "react-dom/client";
 import {
   Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Sun, Moon, TrendingUp,
-  X, Save, DownloadCloud, RotateCcw, SlidersHorizontal
+  X, Save, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft
 } from "lucide-react";
-import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
+import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
 import "./styles.css";
 
-const STORAGE_KEY = "growup_clean_state_v2";
+const STORAGE_KEY = "growup_history_monthbar_v1";
 
 const money = (n) => new Intl.NumberFormat("en-US", {
   style: "currency", currency: "USD", maximumFractionDigits: 0
 }).format(Number(n || 0));
 
-const monthLabel = () => new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" });
+const monthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+const monthLabel = (key) => {
+  const [y,m] = key.split("-").map(Number);
+  return new Date(y, m-1, 1).toLocaleDateString("en-US", { month:"long", year:"numeric" });
+};
+const shortMonthLabel = (key) => {
+  const [y,m] = key.split("-").map(Number);
+  return new Date(y, m-1, 1).toLocaleDateString("en-US", { month:"short", year:"2-digit" }).replace(" ", " '");
+};
+const addMonths = (key, delta) => {
+  const [y,m] = key.split("-").map(Number);
+  const d = new Date(y, m-1+delta, 1);
+  return monthKey(d);
+};
 
 const EMPTY_STATE = {
   firstName: "Gil",
   theme: "light",
   mode: "Real Mode",
-  month: monthLabel(),
+  selectedMonth: monthKey(),
   accounts: [],
   transactions: [],
   goals: [],
-  monthlyNetWorth: []
+  monthSnapshots: {}
 };
 
 function safeId() {
@@ -42,11 +55,7 @@ function useGrowState() {
       return EMPTY_STATE;
     }
   });
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  }, [state]);
-
+  useEffect(() => localStorage.setItem(STORAGE_KEY, JSON.stringify(state)), [state]);
   return [state, setState];
 }
 
@@ -55,29 +64,44 @@ function App() {
   const [tab, setTab] = useState("overview");
   const [menuOpen, setMenuOpen] = useState(false);
   const [editor, setEditor] = useState(null);
+  const [historyMetric, setHistoryMetric] = useState(null);
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, [state.theme]);
 
-  const totals = useMemo(() => {
-    const assets = state.accounts.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.balance || 0),0);
-    const debts = state.accounts.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.balance || 0),0);
-    const prevAssets = state.accounts.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.previous || 0),0);
-    const prevDebts = state.accounts.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.previous || 0),0);
-    const income = state.transactions.filter(t => t.type === "income" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
-    const expenses = state.transactions.filter(t => t.type === "expense" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
-    return { assets, debts, net: assets - debts, prevAssets, prevDebts, prevNet: prevAssets - prevDebts, income, expenses };
-  }, [state]);
+  const totals = useMemo(() => computeTotals(state), [state]);
 
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const saveSnapshot = async () => {
-    if (!supabase) return alert("Supabase env vars are missing.");
-    const { error } = await supabase.from("growup_snapshots").insert({ user_id: "gil", app_state: state });
-    if (error) return alert(`Supabase sync failed: ${error.message}`);
-    alert("Snapshot saved to Supabase.");
+    const snapshot = {
+      assets: totals.assets,
+      debts: totals.debts,
+      net: totals.net,
+      accounts: state.accounts.map(a => ({ id:a.id, name:a.name, icon:a.icon, kind:a.kind, balance:Number(a.balance||0) })),
+      createdAt: new Date().toISOString()
+    };
+
+    const next = {
+      ...state,
+      monthSnapshots: {
+        ...state.monthSnapshots,
+        [state.selectedMonth]: snapshot
+      }
+    };
+
+    setState(next);
+
+    if (!supabase) {
+      alert("Monthly snapshot saved locally. Supabase env vars are missing.");
+      return;
+    }
+
+    const { error } = await supabase.from("growup_snapshots").insert({ user_id:"gil", app_state:next });
+    if (error) return alert(`Local snapshot saved, but Supabase sync failed: ${error.message}`);
+    alert(`Snapshot saved for ${monthLabel(state.selectedMonth)}.`);
   };
 
   const restoreSnapshot = async () => {
@@ -94,29 +118,27 @@ function App() {
     alert("Latest snapshot restored.");
   };
 
-  const common = { state, setState, totals, setEditor };
+  const common = { state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot };
 
   return (
     <div className="app-shell">
       <main className="phone">
-{tab === "overview" && <Overview {...common} setTab={setTab} setMenuOpen={setMenuOpen} />}
-        {tab === "assets" && <AssetsDebts {...common} setMenuOpen={setMenuOpen} />}
-        {tab === "cash" && <CashFlow {...common} setMenuOpen={setMenuOpen} />}
-        {tab === "goals" && <Goals {...common} setMenuOpen={setMenuOpen} />}
-        {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} setMenuOpen={setMenuOpen} />}
-
-        <BottomNav tab={tab} setTab={setTab} />
+        {historyMetric ? (
+          <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
+        ) : (
+          <>
+            {tab === "overview" && <Overview {...common} setTab={setTab} />}
+            {tab === "assets" && <AssetsDebts {...common} />}
+            {tab === "cash" && <CashFlow {...common} />}
+            {tab === "goals" && <Goals {...common} />}
+            {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} setMenuOpen={setMenuOpen} />}
+            <BottomNav tab={tab} setTab={setTab} />
+          </>
+        )}
       </main>
 
       {menuOpen && (
-        <MenuSheet
-          state={state}
-          setMenuOpen={setMenuOpen}
-          setTab={setTab}
-          update={update}
-          saveSnapshot={saveSnapshot}
-          restoreSnapshot={restoreSnapshot}
-        />
+        <MenuSheet state={state} setMenuOpen={setMenuOpen} setTab={setTab} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} />
       )}
 
       {editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} />}
@@ -124,17 +146,45 @@ function App() {
   );
 }
 
-function ScreenTitle({ title, sub, setMenuOpen }) {
+function computeTotals(state) {
+  const current = state.monthSnapshots?.[state.selectedMonth];
+  const prevKey = addMonths(state.selectedMonth, -1);
+  const prev = state.monthSnapshots?.[prevKey];
+
+  const accountSource = current?.accounts || state.accounts;
+  const assets = accountSource.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.balance || 0),0);
+  const debts = accountSource.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.balance || 0),0);
+
+  const prevAssets = prev ? Number(prev.assets || 0) : state.accounts.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.previous || 0),0);
+  const prevDebts = prev ? Number(prev.debts || 0) : state.accounts.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.previous || 0),0);
+
+  const income = state.transactions.filter(t => t.type === "income" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
+  const expenses = state.transactions.filter(t => t.type === "expense" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
+
+  return { assets, debts, net: assets-debts, prevAssets, prevDebts, prevNet: prevAssets-prevDebts, income, expenses };
+}
+
+function ScreenTitle({ title, sub, setMenuOpen, back }) {
   return (
     <section className="page-header">
-      <div>
+      {back && <button className="round-nav-btn" onClick={back}><ArrowLeft size={24}/></button>}
+      <div className="title-block">
         <h1>{title}</h1>
         {sub && <p>{sub}</p>}
       </div>
-      <button className="mini-menu-btn" onClick={() => setMenuOpen?.(true)} aria-label="Open menu">
-        <Menu size={20}/>
-      </button>
+      <button className="mini-menu-btn" onClick={() => setMenuOpen?.(true)} aria-label="Open menu"><Menu size={22}/></button>
     </section>
+  );
+}
+
+function MonthBar({ state, setState, thin=false }) {
+  const move = (delta) => setState(s => ({ ...s, selectedMonth:addMonths(s.selectedMonth, delta) }));
+  return (
+    <div className={thin ? "month-bar thin" : "month-bar"}>
+      <button onClick={()=>move(-1)}><ChevronLeft size={24}/></button>
+      <strong>{monthLabel(state.selectedMonth)}</strong>
+      <button onClick={()=>move(1)}><ChevronRight size={24}/></button>
+    </div>
   );
 }
 
@@ -148,48 +198,40 @@ function EmptyState({ title, text, action, onClick }) {
   );
 }
 
-function Overview({ state, totals, setEditor, setTab, setMenuOpen }) {
+function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric }) {
   const completedGoals = state.goals.filter(g => goalPct(g) >= 100).length;
   const upcoming = upcomingTransactions(state.transactions, 7);
-
-  const chartData = state.monthlyNetWorth.length
-    ? state.monthlyNetWorth
-    : [{ m:"Now", net: totals.net }];
+  const chartData = historyRows(state).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
 
   return (
     <div className="screen">
-      <ScreenTitle title={`Welcome, ${state.firstName}`} sub={`Here's your Snapshot for ${state.month}`} setMenuOpen={setMenuOpen} />
+      <ScreenTitle title={`Welcome, ${state.firstName}`} sub={`Here's your Snapshot for ${monthLabel(state.selectedMonth)}`} setMenuOpen={setMenuOpen} />
       <span className="mode-pill">{state.mode}</span>
 
       <div className="kpi-grid">
-        <Kpi title="Total Assets" value={money(totals.assets)} sub={`${signedMoney(totals.assets - totals.prevAssets)} vs last month`} icon="💼" dot="green" />
-        <Kpi title="Total Debts" value={money(totals.debts)} sub={`${signedMoney(totals.debts - totals.prevDebts)} vs last month`} icon="💳" dot="red" />
-        <Kpi title="Net Worth" value={money(totals.net)} sub={`${signedMoney(totals.net - totals.prevNet)} vs last month`} icon="$" dot="blue" />
+        <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(totals.assets)} sub={`${signedMoney(totals.assets - totals.prevAssets)} vs last month`} icon="💼" dot="green" />
+        <Kpi onClick={()=>setHistoryMetric("debts")} title="Total Debts" value={money(totals.debts)} sub={`${signedMoney(totals.debts - totals.prevDebts)} vs last month`} icon="💳" dot="red" />
+        <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(totals.net)} sub={`${signedMoney(totals.net - totals.prevNet)} vs last month`} icon="$" dot="blue" />
         <Kpi title="Goals" value={`${completedGoals} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple" />
       </div>
 
       {state.accounts.length === 0 && state.goals.length === 0 && state.transactions.length === 0 && (
-        <EmptyState
-          title="Start building your snapshot"
-          text="Add your first account, goal, or cash flow item. Nothing is hard-coded now."
-          action="Add account"
-          onClick={()=>setEditor({ type:"account" })}
-        />
+        <EmptyState title="Start building your snapshot" text="Add your first account, goal, or cash flow item. Nothing is hard-coded." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
       )}
 
-      <Card>
+      <Card onClick={()=>setHistoryMetric("net")}>
         <div className="card-head">
           <span className="green-square"><TrendingUp size={22}/></span>
-          <div><h2>Net Worth Trend</h2><p>12-month overview</p></div>
+          <div><h2>Net Worth Trend</h2><p>Tap to view History</p></div>
           <ChevronDown className="muted-icon"/>
         </div>
         <div className="trend-box">
           <div><span>Current Net Worth</span><strong>{money(totals.net)}</strong></div>
-          <div><span>Growth</span><strong className="success">{state.monthlyNetWorth.length ? "+0%" : "—"}</strong></div>
+          <div><span>Snapshots</span><strong className="success">{Object.keys(state.monthSnapshots || {}).length}</strong></div>
         </div>
         <div className="chart-holder">
           <ResponsiveContainer width="100%" height={110}>
-            <LineChart data={chartData}>
+            <LineChart data={chartData.length ? chartData : [{m:"Now", net:totals.net}]}>
               <XAxis dataKey="m" hide />
               <YAxis hide />
               <Tooltip formatter={(v)=>money(v)} />
@@ -215,21 +257,23 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen }) {
   );
 }
 
-function Kpi({ title, value, sub, icon, dot }) {
+function Kpi({ title, value, sub, icon, dot, onClick }) {
   return (
-    <div className="kpi">
+    <button className="kpi" onClick={onClick}>
       <div className={`emoji-badge ${dot}`}>{icon}</div>
       <span className={`dot ${dot}`}></span>
       <p>{title}</p>
       <h2>{value}</h2>
       <small>{sub}</small>
-    </div>
+    </button>
   );
 }
 
-function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen }) {
-  const assets = state.accounts.filter(a => a.kind === "asset");
-  const debts = state.accounts.filter(a => a.kind === "debt");
+function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot }) {
+  const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
+  const displayedAccounts = selectedSnapshot?.accounts || state.accounts;
+  const assets = displayedAccounts.filter(a => a.kind === "asset");
+  const debts = displayedAccounts.filter(a => a.kind === "debt");
 
   const updateBalance = (id, value) => {
     setState(s => ({
@@ -241,18 +285,19 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen }) {
   return (
     <div className="screen">
       <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
-      <div className="month-switch"><ChevronLeft/><strong>{state.month}</strong><ChevronRight/></div>
+      <MonthBar state={state} setState={setState} thin />
 
       {state.accounts.length === 0 ? (
         <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
       ) : (
         <>
-          <AccountGroup title={`Assets (${assets.length})`} sub="Enter this month's values; see last month + change." accounts={assets} updateBalance={updateBalance} />
-          <AccountGroup title={`Debts (${debts.length})`} sub="Enter this month's amounts owed; see last month + change." accounts={debts} updateBalance={updateBalance} />
+          <AccountGroup title={`Assets (${assets.length})`} sub="Enter this month's values; see last month + change." accounts={assets} updateBalance={updateBalance} readOnly={!!selectedSnapshot}/>
+          <AccountGroup title={`Debts (${debts.length})`} sub="Enter this month's amounts owed; see last month + change." accounts={debts} updateBalance={updateBalance} readOnly={!!selectedSnapshot}/>
           <Card className="summary-list">
-            <div><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
-            <div><span>Debts (this month)</span><strong>{money(totals.debts)}</strong></div>
-            <div className="bold"><span>Net Worth</span><strong>{money(totals.net)}</strong></div>
+            <div onClick={()=>setHistoryMetric("assets")}><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
+            <div onClick={()=>setHistoryMetric("debts")}><span>Debts (this month)</span><strong>{money(totals.debts)}</strong></div>
+            <div className="bold" onClick={()=>setHistoryMetric("net")}><span>Net Worth</span><strong>{money(totals.net)}</strong></div>
+            <button className="primary full" onClick={saveSnapshot}><Save size={18}/> Save {monthLabel(state.selectedMonth)} Snapshot</button>
           </Card>
         </>
       )}
@@ -262,7 +307,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen }) {
   );
 }
 
-function AccountGroup({ title, sub, accounts, updateBalance }) {
+function AccountGroup({ title, sub, accounts, updateBalance, readOnly }) {
   return (
     <Card className="account-group">
       <h2>{title}</h2>
@@ -276,10 +321,82 @@ function AccountGroup({ title, sub, accounts, updateBalance }) {
               <strong>{a.name}</strong>
               <span>Prev: {money(a.previous)} {delta < 0 ? "↓" : delta > 0 ? "↑" : "—"} {money(Math.abs(delta))}</span>
             </div>
-            <input value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
+            <input value={a.balance} type="number" disabled={readOnly} onChange={(e)=>updateBalance(a.id, e.target.value)} />
           </div>
         );
       })}
+    </Card>
+  );
+}
+
+function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMenuOpen }) {
+  const rows = historyRows(state);
+  const current = state.monthSnapshots?.[state.selectedMonth] || { assets:totals.assets, debts:totals.debts, net:totals.net, accounts:state.accounts };
+  const titleMap = { net:"Net Worth", assets:"Total Assets", debts:"Total Debts" };
+
+  return (
+    <div className="screen">
+      <ScreenTitle title="History" sub="Month-by-month financial summary." setMenuOpen={setMenuOpen} back={()=>setHistoryMetric(null)} />
+      <MonthBar state={state} setState={setState} thin />
+
+      <Card className="center-card">
+        <p>{titleMap[metric]}</p>
+        <h2 className={metric === "debts" ? "danger" : "success"}>{metric === "debts" ? "-" : ""}{money(current[metric] || 0)}</h2>
+        <p>{titleMap[metric]} for {monthLabel(state.selectedMonth)}</p>
+      </Card>
+
+      <DonutCard title="What I Own" kind="asset" accounts={(current.accounts || []).filter(a=>a.kind==="asset")} />
+      <DonutCard title="What I Owe" kind="debt" accounts={(current.accounts || []).filter(a=>a.kind==="debt")} />
+
+      <Card className="history-table">
+        <div className="table-head"><span>Month</span><span>Assets</span><span>Debts</span><span>Net · MoM</span></div>
+        {rows.length ? rows.map((r, i) => {
+          const prev = rows[i+1];
+          const mom = prev ? r.net - prev.net : 0;
+          return (
+            <div className="history-row" key={r.key} onClick={()=>setState(s=>({...s, selectedMonth:r.key}))}>
+              <span>{shortMonthLabel(r.key)}</span>
+              <span>{money(r.assets)}</span>
+              <span className="danger">-{money(r.debts)}</span>
+              <span>
+                <b className={r.net >= 0 ? "success":"danger"}>{money(r.net)}</b>
+                <em className={mom >= 0 ? "mom good":"mom bad"}>{signedMoney(mom)} MoM</em>
+              </span>
+            </div>
+          );
+        }) : <p className="muted">No saved monthly snapshots yet. Save a snapshot from Assets & Debts.</p>}
+      </Card>
+    </div>
+  );
+}
+
+function DonutCard({ title, kind, accounts }) {
+  const total = accounts.reduce((s,a)=>s+Number(a.balance||0),0);
+  const colors = kind === "asset" ? ["#3fa463","#63b77c","#91cda3","#c0e2ca"] : ["#e5292f","#ea5358","#f07d82","#f6a6a9"];
+  const data = accounts.map((a, i)=>({ name:a.name, value:Number(a.balance||0), color:colors[i%colors.length] })).filter(d=>d.value>0);
+
+  return (
+    <Card className="donut-card">
+      <h2>{title}</h2>
+      {data.length ? (
+        <div className="donut-layout">
+          <div className="donut-wrap">
+            <ResponsiveContainer width="100%" height={170}>
+              <PieChart>
+                <Pie data={data} dataKey="value" innerRadius={48} outerRadius={78} paddingAngle={0}>
+                  {data.map((d,i)=><Cell key={d.name} fill={d.color}/>)}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+            <div className="donut-center"><b className={kind==="debt"?"danger":""}>{kind==="debt" ? "-" : ""}{money(total)}</b><span>total</span></div>
+          </div>
+          <div className="donut-legend">
+            {data.map(d=>(
+              <div key={d.name}><i style={{background:d.color}}></i><span>{d.name}</span><b className={kind==="debt"?"danger":""}>{kind==="debt" ? "-" : ""}{money(d.value)}</b></div>
+            ))}
+          </div>
+        </div>
+      ) : <p className="muted">No {kind === "asset" ? "assets" : "debts"} in this snapshot.</p>}
     </Card>
   );
 }
@@ -308,7 +425,6 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
 
       <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
       <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
-
       <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
     </div>
   );
@@ -454,7 +570,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <button onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
         <hr/>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
-        <button onClick={saveSnapshot}><Save/> Save snapshot to Supabase</button>
+        <button onClick={saveSnapshot}><Save/> Save monthly snapshot</button>
         <button onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
       </div>
@@ -578,12 +694,16 @@ function upcomingTransactions(transactions, days) {
   const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const end = new Date(start);
   end.setDate(end.getDate() + days);
-  return transactions
-    .filter(t => {
-      const d = new Date(t.date);
-      return d >= start && d <= end;
-    })
-    .sort((a,b)=>new Date(a.date) - new Date(b.date));
+  return transactions.filter(t => {
+    const d = new Date(t.date);
+    return d >= start && d <= end;
+  }).sort((a,b)=>new Date(a.date)-new Date(b.date));
+}
+
+function historyRows(state) {
+  return Object.entries(state.monthSnapshots || {})
+    .map(([key, snap]) => ({ key, assets:Number(snap.assets||0), debts:Number(snap.debts||0), net:Number(snap.net||0), accounts:snap.accounts||[] }))
+    .sort((a,b)=>b.key.localeCompare(a.key));
 }
 
 function formatDate(iso) {

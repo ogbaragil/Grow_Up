@@ -1,12 +1,17 @@
-# Grow UP Clean Data + Proportion Fix
+# Grow UP — Functional Month Bar + History
 
-This version:
-- removes hard-coded finance data
-- starts with empty user data
-- keeps Add Account / Transaction / Goal workflows
-- improves mobile proportions closer to the reference screenshots
-- keeps Supabase save + optional restore latest under Settings/Menu
+This update adds:
+- thinner functional month bar
+- selectedMonth state
+- monthly snapshots
+- dashboard KPI links to History
+- History page for Net Worth, Total Assets, Total Debts
+- donut summaries for What I Own / What I Owe
+- month-by-month summary table
 
-Cloudflare Pages:
-- Build command: npm run build
-- Build output directory: dist
+Use:
+1. Add accounts.
+2. Go to Assets & Debts.
+3. Adjust balances.
+4. Tap Save Month Snapshot.
+5. Tap Dashboard Net Worth / Assets / Debts to open History.
