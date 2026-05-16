@@ -4,3 +4,9 @@ html[data-theme=light] .app-shell{background:#f7f7f9;color:#111827}html[data-the
 /* v2 Accounts CRUD additions */
 .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:18px}.section-head p{margin:6px 0 0;color:var(--muted);max-width:700px}.small-btn{padding:10px 14px;font-size:13px;white-space:nowrap}.account-form{margin-bottom:18px}.account-form button[disabled]{opacity:.45;cursor:not-allowed}.edit-card{border:1px solid var(--border);border-radius:18px;padding:14px;margin:10px 0;background:rgba(64,160,96,.08)}.row-actions{display:flex;gap:8px;align-items:center}.muted-row{opacity:.64}.danger-text{color:#ef4444}.empty{padding:22px;border:1px dashed var(--border);border-radius:16px;color:var(--muted);text-align:center;background:rgba(255,255,255,.03)}
 @media (max-width: 760px){.section-head{flex-direction:column}.row-actions{width:100%;justify-content:flex-end}.list-row{flex-wrap:wrap}.list-row strong{margin-left:auto}.account-form{grid-template-columns:1fr!important}}
+
+
+/* v3 Transactions additions */
+.mini-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:12px;margin:16px 0}.transaction-form{grid-template-columns:130px 1fr 130px 150px 170px auto auto}.transaction-row{border-left:4px solid transparent}.income-row{border-left-color:#40a060}.expense-row{border-left-color:#ef4444}.good{color:#54d17a}.bad{color:#f87171}.transaction-form button[disabled]{opacity:.45;cursor:not-allowed}
+@media(max-width:900px){.mini-grid{grid-template-columns:1fr}.transaction-form{grid-template-columns:1fr!important}}
+@media(max-width:800px){nav{grid-template-columns:repeat(5,1fr)}}
