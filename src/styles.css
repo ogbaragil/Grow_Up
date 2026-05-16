@@ -1013,3 +1013,26 @@ dd { margin:0; font-weight:900; }
 .chart-holder {
   touch-action: pan-x pan-y;
 }
+
+
+.mode-pill.demo {
+  background: #fff3cd;
+  border-color: #facc15;
+  color: #92400e;
+}
+
+.demo-auth-btn {
+  margin-top: 16px;
+  width: 100%;
+  height: 48px;
+  border-radius: 14px;
+  background: var(--green2);
+  color: var(--green);
+  border: 1px solid rgba(63,164,99,.22);
+  font-weight: 950;
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}

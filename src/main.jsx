@@ -65,6 +65,80 @@ function useGrowState() {
 
 
 
+
+const DEMO_STATE = {
+  firstName: "Demo",
+  theme: "light",
+  selectedMonth: currentMonthKey(),
+  accounts: [
+    { id:"demo-super", name:"Hesta Super", icon:"🏦", kind:"asset", balance:75000, previous:72726 },
+    { id:"demo-fire", name:"FIRE", icon:"🔥", kind:"asset", balance:34400, previous:28000 },
+    { id:"demo-car", name:"Tesla Model 3", icon:"🚙", kind:"asset", balance:28000, previous:28000 },
+    { id:"demo-business", name:"LGDS", icon:"👔", kind:"asset", balance:1500, previous:0 },
+    { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", balance:41274, previous:41474 },
+    { id:"demo-tax", name:"Income Tax Debt", icon:"🏦", kind:"debt", balance:6049, previous:6049 }
+  ],
+  transactions: [
+    { id:"demo-salary", type:"income", name:"Salary", icon:"💵", amount:6392, category:"Income", date:new Date(new Date().getFullYear(), new Date().getMonth(), 27).toISOString(), frequency:"monthly", recurring:true },
+    { id:"demo-rent", type:"expense", name:"Rent", icon:"🏡", amount:2303, category:"Home", date:new Date(new Date().getFullYear(), new Date().getMonth(), 19).toISOString(), frequency:"monthly", recurring:true },
+    { id:"demo-insurance", type:"expense", name:"Car Insurance", icon:"🚗", amount:178, category:"Insurance", date:new Date(new Date().getFullYear(), new Date().getMonth(), 14).toISOString(), frequency:"monthly", recurring:true },
+    { id:"demo-gym", type:"expense", name:"Gym", icon:"🏋️", amount:23, category:"Health", date:new Date(new Date().getFullYear(), new Date().getMonth(), 22).toISOString(), frequency:"weekly", recurring:true }
+  ],
+  goals: [
+    { id:"demo-goal-net", name:"Hit 100K Net", icon:"💰", goalType:"netWorth", account:"Net Worth", color:"purple", target:100000, current:0, deadline:"2026-10-01", open:false },
+    { id:"demo-goal-super", name:"Reach 100K in Super", icon:"🏦", goalType:"accountGrowth", accountId:"demo-super", account:"Hesta Super", color:"green", target:100000, current:0, deadline:"2026-12-01", open:false },
+    { id:"demo-goal-fire", name:"Investment Milestone 2026", icon:"🔥", goalType:"accountGrowth", accountId:"demo-fire", account:"FIRE", color:"green", target:50000, current:0, deadline:"2026-12-01", open:false },
+    { id:"demo-goal-loan", name:"Pay off Loan", icon:"⚡", goalType:"debtPayoff", accountId:"demo-loan", account:"Personal Loan", color:"red", start:60000, target:0, current:0, deadline:"2027-06-01", open:false }
+  ],
+  monthSnapshots: {}
+};
+
+function buildDemoState() {
+  const now = new Date();
+  const selectedMonth = monthKey(now);
+  const snapshots = {};
+  const baseAssets = [124426, 127626, 130176, 128726, 138900, 140200];
+  const baseDebts = [48123, 47923, 47723, 47523, 47323, 46800];
+
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const key = monthKey(d);
+    const idx = 5 - i;
+    const assetsTotal = baseAssets[idx] || 138900;
+    const debtsTotal = baseDebts[idx] || 47323;
+
+    const accounts = [
+      { id:"demo-super", name:"Hesta Super", icon:"🏦", kind:"asset", balance:Math.round(assetsTotal * .54), previous:0 },
+      { id:"demo-fire", name:"FIRE", icon:"🔥", kind:"asset", balance:Math.round(assetsTotal * .25), previous:0 },
+      { id:"demo-car", name:"Tesla Model 3", icon:"🚙", kind:"asset", balance:28000, previous:0 },
+      { id:"demo-business", name:"LGDS", icon:"👔", kind:"asset", balance:Math.max(0, assetsTotal - Math.round(assetsTotal * .54) - Math.round(assetsTotal * .25) - 28000), previous:0 },
+      { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", balance:Math.round(debtsTotal * .87), previous:0 },
+      { id:"demo-tax", name:"Income Tax Debt", icon:"🏦", kind:"debt", balance:debtsTotal - Math.round(debtsTotal * .87), previous:0 }
+    ];
+
+    snapshots[key] = {
+      assets: accounts.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.balance||0),0),
+      debts: accounts.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.balance||0),0),
+      net: accounts.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.balance||0),0) - accounts.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.balance||0),0),
+      accounts,
+      createdAt: d.toISOString(),
+      updatedAt: d.toISOString()
+    };
+  }
+
+  const latest = snapshots[selectedMonth] || Object.values(snapshots).at(-1);
+  return {
+    ...DEMO_STATE,
+    selectedMonth,
+    accounts: latest?.accounts || DEMO_STATE.accounts,
+    monthSnapshots: snapshots
+  };
+}
+
+function readOnlyDemoAlert() {
+  alert("Demo Mode is read-only. Exit Demo Mode to edit, save, or restore your real data.");
+}
+
 function getUserDisplayName(session, state) {
   const metadata = session?.user?.user_metadata || {};
 
@@ -100,6 +174,7 @@ function App() {
   const [compoundOpen, setCompoundOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
@@ -131,8 +206,10 @@ function App() {
     }
   }, [state.selectedMonth, setState]);
 
-  const totals = useMemo(() => computeTotals(state), [state]);
-  const displayName = getUserDisplayName(session, state);
+  const activeState = useMemo(() => demoMode ? buildDemoState() : state, [demoMode, state]);
+  const activeSetState = demoMode ? (() => readOnlyDemoAlert()) : setState;
+  const totals = useMemo(() => computeTotals(activeState), [activeState]);
+  const displayName = demoMode ? "Demo" : getUserDisplayName(session, state);
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const signOut = async () => {
@@ -141,7 +218,20 @@ function App() {
     setSession(null);
   };
 
+  const enterDemoMode = () => {
+    localStorage.setItem("growup_demo_mode", "true");
+    setDemoMode(true);
+    setMenuOpen(false);
+  };
+
+  const exitDemoMode = () => {
+    localStorage.removeItem("growup_demo_mode");
+    setDemoMode(false);
+    setMenuOpen(false);
+  };
+
   const saveSnapshot = async () => {
+    if (demoMode) return readOnlyDemoAlert();
     if (!session?.user?.id) {
       alert("Please sign in before saving to Supabase.");
       return;
@@ -211,6 +301,7 @@ function App() {
   };
 
   const restoreSnapshot = async () => {
+    if (demoMode) return readOnlyDemoAlert();
     if (!session?.user?.id) {
       alert("Please sign in before restoring from Supabase.");
       return;
@@ -234,7 +325,7 @@ function App() {
     alert("Latest snapshot restored.");
   };
 
-  const common = { state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName };
+  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName, isDemo: demoMode };
 
   if (authLoading) {
     return (
@@ -250,8 +341,8 @@ function App() {
     );
   }
 
-  if (!session) {
-    return <AuthScreen />;
+  if (!session && !demoMode) {
+    return <AuthScreen enterDemoMode={enterDemoMode} />;
   }
 
   return (
@@ -269,7 +360,7 @@ function App() {
             {tab === "goals" && <Goals {...common} setCompoundOpen={setCompoundOpen} />}
             {tab === "settings" && (
               <Settings
-                state={state}
+                state={activeState}
                 update={update}
                 saveSnapshot={saveSnapshot}
                 restoreSnapshot={restoreSnapshot}
@@ -277,6 +368,12 @@ function App() {
                 session={session}
                 displayName={displayName}
                 signOut={signOut}
+          isDemo={demoMode}
+          enterDemoMode={enterDemoMode}
+          exitDemoMode={exitDemoMode}
+                isDemo={demoMode}
+                enterDemoMode={enterDemoMode}
+                exitDemoMode={exitDemoMode}
               />
             )}
             <BottomNav tab={tab} setTab={setTab} />
@@ -286,7 +383,7 @@ function App() {
 
       {menuOpen && (
         <MenuSheet
-          state={state}
+          state={activeState}
           setMenuOpen={setMenuOpen}
           setTab={setTab}
           update={update}
@@ -295,15 +392,18 @@ function App() {
           session={session}
           displayName={displayName}
           signOut={signOut}
+          isDemo={demoMode}
+          enterDemoMode={enterDemoMode}
+          exitDemoMode={exitDemoMode}
         />
       )}
 
-      {editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} />}
+      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} />}
     </div>
   );
 }
 
-function AuthScreen() {
+function AuthScreen({ enterDemoMode }) {
   const [mode, setMode] = useState("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -440,6 +540,10 @@ function AuthScreen() {
           {mode === "signIn" && (
             <button className="link-btn" onClick={resetPassword}>Forgot password?</button>
           )}
+
+          <button className="demo-auth-btn" type="button" onClick={enterDemoMode}>
+            Try Demo Mode
+          </button>
         </section>
       </main>
     </div>
@@ -574,7 +678,7 @@ function sixMonthAnimationStart(state, fallbackValue) {
   return Number(fallbackValue || 0);
 }
 
-function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName }) {
+function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const dashboardMonthLabel = monthLabel(dashboardState.selectedMonth);
@@ -655,7 +759,7 @@ function Kpi({ title, value, sub, icon, dot, onClick, animated=false }) {
   );
 }
 
-function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot }) {
+function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, isDemo=false }) {
   const [editingBalances, setEditingBalances] = useState(false);
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
@@ -722,11 +826,13 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   };
 
   const openAddAccount = (kind) => {
+    if (isDemo) return readOnlyDemoAlert();
     setAssetMenuOpen(false);
     setEditor({ type:"account", defaultKind:kind });
   };
 
   const toggleBalanceEdit = () => {
+    if (isDemo) return readOnlyDemoAlert();
     setAssetMenuOpen(false);
     if (state.accounts.length === 0) {
       setEditor({ type:"account", defaultKind:"asset" });
@@ -736,6 +842,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   };
 
   const saveAndClose = () => {
+    if (isDemo) return readOnlyDemoAlert();
     setAssetMenuOpen(false);
     saveSnapshot();
   };
@@ -799,6 +906,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             setEditingBalances(false);
             return;
           }
+          if (isDemo) return readOnlyDemoAlert();
           setAssetMenuOpen(value => !value);
         }}
         aria-label={editingBalances ? "Finish editing balances" : assetMenuOpen ? "Close asset actions" : "Open asset actions"}
@@ -1020,7 +1128,7 @@ function CompactTxn({ t }) {
 }
 
 
-function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen }) {
+function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDemo=false }) {
   const [goalMenuOpen, setGoalMenuOpen] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const totals = computeTotals(state);
@@ -1030,6 +1138,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen }) {
   const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
 
   const moveGoal = (id, direction) => {
+    if (isDemo) return readOnlyDemoAlert();
     setState(s => {
       const goals = [...s.goals];
       const index = goals.findIndex(g => g.id === id);
@@ -1041,6 +1150,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen }) {
   };
 
   const openAddGoal = () => {
+    if (isDemo) return readOnlyDemoAlert();
     setGoalMenuOpen(false);
     setEditor({ type:"goal" });
   };
@@ -1081,14 +1191,14 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen }) {
       {goalMenuOpen && (
         <div className="goal-fab-menu">
           <button onClick={openAddGoal}><span className="menu-icon green">+</span><b>Add goal</b></button>
-          <button onClick={()=>{ setReorderMode(v=>!v); setGoalMenuOpen(false); }}><span className="menu-icon gray">↕</span><b>{reorderMode ? "Done reorder" : "Reorder goals"}</b></button>
+          <button onClick={()=>{ if (isDemo) return readOnlyDemoAlert(); setReorderMode(v=>!v); setGoalMenuOpen(false); }}><span className="menu-icon gray">↕</span><b>{reorderMode ? "Done reorder" : "Reorder goals"}</b></button>
           <button onClick={openCompound}><span className="menu-icon gray">%</span><b>Compound Wealth</b></button>
         </div>
       )}
 
       <button
         className={goalMenuOpen ? "fab edit-active" : "fab"}
-        onClick={()=>setGoalMenuOpen(v=>!v)}
+        onClick={()=> isDemo ? readOnlyDemoAlert() : setGoalMenuOpen(v=>!v)}
         aria-label="Goal actions"
       >
         {goalMenuOpen ? <X size={34}/> : <Plus size={34}/>}
@@ -1248,7 +1358,7 @@ function compactMoney(value) {
 }
 
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut }) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode }) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
@@ -1264,6 +1374,14 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
       </Card>
 
       <Card>
+        <h2>Demo Mode</h2>
+        <p>{isDemo ? "You are viewing read-only sample data. Save, restore, edit, add, and delete actions are disabled." : "Try Grow UP with read-only sample data."}</p>
+        <button className={isDemo ? "danger-btn" : "secondary"} onClick={isDemo ? exitDemoMode : enterDemoMode}>
+          {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}
+        </button>
+      </Card>
+
+      <Card>
         <h2>Appearance</h2>
         <p>Theme: {state.theme}</p>
         <button className="primary" onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon size={18}/> : <Sun size={18}/>} Toggle theme</button>
@@ -1273,14 +1391,14 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <h2>Cloud backup</h2>
         <p>Save and restore snapshots manually. Restore never runs automatically.</p>
         <div className="button-row">
-          <button className="primary" onClick={saveSnapshot}><Save size={18}/> Save snapshot</button>
-          <button className="secondary" onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest</button>
+          <button className="primary" disabled={isDemo} onClick={saveSnapshot}><Save size={18}/> Save snapshot</button>
+          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest</button>
         </div>
       </Card>
 
       <Card>
         <h2>Danger zone</h2>
-        <button className="danger-btn" onClick={()=>{ if(confirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
+        <button className="danger-btn" disabled={isDemo} onClick={()=>{ if(confirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
       </Card>
     </div>
   );
@@ -1305,7 +1423,7 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut }) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode }) {
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
       <div className="menu-sheet" onClick={(e)=>e.stopPropagation()}>
@@ -1314,12 +1432,13 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
         <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
         <button onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
+        <button onClick={isDemo ? exitDemoMode : enterDemoMode}><SlidersHorizontal/> {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}</button>
         <hr/>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
-        <button onClick={saveSnapshot}><Save/> Save monthly snapshot</button>
-        <button onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
+        <button disabled={isDemo} onClick={saveSnapshot}><Save/> Save monthly snapshot</button>
+        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
-        <button className="menu-danger" onClick={signOut}><X/> Sign out</button>
+        {session && !isDemo && <button className="menu-danger" onClick={signOut}><X/> Sign out</button>}
       </div>
     </div>
   );
