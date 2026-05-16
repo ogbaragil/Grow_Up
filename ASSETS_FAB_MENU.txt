@@ -1,0 +1,7 @@
+Implemented:
+- Assets & Debts FAB now opens an action menu.
+- Add Asset opens account modal prefilled with kind=asset.
+- Add Debt opens account modal prefilled with kind=debt.
+- Edit Balances toggles balance edit mode.
+- Save Month Snapshot runs snapshot save.
+- Existing goal FAB menu pattern reused for consistency.
