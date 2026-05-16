@@ -581,3 +581,57 @@ dd { margin:0; font-weight:900; }
     width: 86px;
   }
 }
+
+
+/* Assets & Debts FAB action menu - final state machine */
+.asset-fab-menu {
+  position: fixed;
+  right: 38px;
+  bottom: 190px;
+  width: 270px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.18);
+  z-index: 30;
+  overflow: hidden;
+}
+
+.asset-fab-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 17px;
+  text-align: left;
+}
+
+.asset-fab-menu button:last-child {
+  border-bottom: 0;
+}
+
+.asset-fab-menu b {
+  font-size: 17px;
+}
+
+.menu-icon.red {
+  background: var(--red);
+  color: white;
+}
+
+.fab.edit-active {
+  background: #202b3e;
+}
+
+
+/* Missing slim goal card refinements */
+.goal-card.slim.open {
+  padding-bottom: 4px;
+}
+
+.goal-top.compact svg {
+  width: 20px;
+  height: 20px;
+}

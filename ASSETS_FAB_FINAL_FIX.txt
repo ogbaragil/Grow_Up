@@ -1,0 +1,7 @@
+Fixed final Assets & Debts FAB behavior:
+- Default state shows +.
+- Tapping + opens action menu.
+- Menu contains Add Asset, Add Debt, Edit Balances, Save Month Snapshot.
+- Tapping Edit Balances unlocks row inputs and shows row edit/delete controls.
+- While editing, FAB shows checkmark; tapping it exits edit mode.
+- Menu open state shows X.

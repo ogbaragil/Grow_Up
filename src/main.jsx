@@ -347,6 +347,7 @@ function Kpi({ title, value, sub, icon, dot, onClick }) {
 
 function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot }) {
   const [editingBalances, setEditingBalances] = useState(false);
+  const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
   const prevSnapshot = state.monthSnapshots?.[addMonths(state.selectedMonth, -1)];
 
@@ -393,7 +394,6 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       }
 
       // If no snapshot exists yet, edit live account balances.
-      // Previous movement still comes from prior month snapshot when available.
       const priorSnapshot = s.monthSnapshots?.[addMonths(s.selectedMonth, -1)];
 
       return {
@@ -403,7 +403,6 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
           const priorAccount = priorSnapshot?.accounts?.find(pa => pa.id === a.id);
           return {
             ...a,
-            // Rule: unsaved previous month means previous value is zero.
             previous: priorAccount ? Number(priorAccount.balance || 0) : 0,
             balance:numericValue
           };
@@ -412,12 +411,23 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     });
   };
 
+  const openAddAccount = (kind) => {
+    setAssetMenuOpen(false);
+    setEditor({ type:"account", defaultKind:kind });
+  };
+
   const toggleBalanceEdit = () => {
+    setAssetMenuOpen(false);
     if (state.accounts.length === 0) {
-      setEditor({ type:"account" });
+      setEditor({ type:"account", defaultKind:"asset" });
       return;
     }
     setEditingBalances(value => !value);
+  };
+
+  const saveAndClose = () => {
+    setAssetMenuOpen(false);
+    saveSnapshot();
   };
 
   return (
@@ -432,7 +442,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       )}
 
       {state.accounts.length === 0 ? (
-        <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
+        <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>openAddAccount("asset")}/>
       ) : (
         <>
           <AccountGroup
@@ -459,18 +469,37 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             <div onClick={()=>setHistoryMetric("assets")}><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
             <div onClick={()=>setHistoryMetric("debts")}><span>Debts (this month)</span><strong>{money(totals.debts)}</strong></div>
             <div className="bold" onClick={()=>setHistoryMetric("net")}><span>Net Worth</span><strong>{money(totals.net)}</strong></div>
-            <button className="primary full" onClick={saveSnapshot}><Save size={18}/> Save {monthLabel(state.selectedMonth)} Snapshot</button>
           </Card>
         </>
       )}
 
+      {assetMenuOpen && (
+        <div className="asset-fab-menu">
+          <button onClick={()=>openAddAccount("asset")}><span className="menu-icon green">+</span><b>Add Asset</b></button>
+          <button onClick={()=>openAddAccount("debt")}><span className="menu-icon red">+</span><b>Add Debt</b></button>
+          <button onClick={toggleBalanceEdit}><span className="menu-icon gray">✎</span><b>{editingBalances ? "Done Editing" : "Edit Balances"}</b></button>
+          <button onClick={saveAndClose}><span className="menu-icon gray">💾</span><b>Save Month Snapshot</b></button>
+        </div>
+      )}
+
       <button
-        className={editingBalances ? "fab edit-active" : "fab"}
-        onClick={toggleBalanceEdit}
-        aria-label={editingBalances ? "Finish editing balances" : "Edit balances"}
-        title={editingBalances ? "Done editing balances" : "Edit balances"}
+        className={editingBalances || assetMenuOpen ? "fab edit-active" : "fab"}
+        onClick={() => {
+          if (editingBalances) {
+            setEditingBalances(false);
+            return;
+          }
+          setAssetMenuOpen(value => !value);
+        }}
+        aria-label={editingBalances ? "Finish editing balances" : assetMenuOpen ? "Close asset actions" : "Open asset actions"}
       >
-        {editingBalances ? <Save size={30}/> : <Pencil size={30}/>}
+        {editingBalances ? (
+          <Check size={30}/>
+        ) : assetMenuOpen ? (
+          <X size={34}/>
+        ) : (
+          <Plus size={34}/>
+        )}
       </button>
     </div>
   );
@@ -975,7 +1004,7 @@ function EditorModal({ editor, setEditor, state, setState }) {
   const [form, setForm] = useState({
     name:item.name || "",
     icon:item.icon || "",
-    kind:item.kind || "asset",
+    kind:item.kind || editor.defaultKind || "asset",
     balance:item.balance || "",
     previous:item.previous || "",
     type:item.type || "expense",
