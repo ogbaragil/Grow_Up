@@ -156,3 +156,33 @@ dd { margin:0; font-weight:900; }
   .screen { padding:32px 42px 70px; }
   .bottom-nav { display:none; }
 }
+
+
+.snapshot-banner {
+  margin: -2px 0 14px;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: var(--green2);
+  color: var(--green);
+  font-size: 14px;
+  font-weight: 900;
+  border: 1px solid rgba(63,164,99,.22);
+}
+
+.balance-display {
+  min-width: 94px;
+  height: 48px;
+  border: 1.5px solid var(--line);
+  border-radius: 13px;
+  padding: 0 10px;
+  display: grid;
+  place-items: center end;
+  font-size: 15px;
+  font-weight: 850;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.fab.edit-active {
+  background: #202b3e;
+}

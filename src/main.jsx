@@ -270,16 +270,65 @@ function Kpi({ title, value, sub, icon, dot, onClick }) {
 }
 
 function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot }) {
+  const [editingBalances, setEditingBalances] = useState(false);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
+  const prevSnapshot = state.monthSnapshots?.[addMonths(state.selectedMonth, -1)];
+
   const displayedAccounts = selectedSnapshot?.accounts || state.accounts;
-  const assets = displayedAccounts.filter(a => a.kind === "asset");
-  const debts = displayedAccounts.filter(a => a.kind === "debt");
+  const accountsWithPrev = displayedAccounts.map(account => {
+    const prevAccount = prevSnapshot?.accounts?.find(a => a.id === account.id);
+    const previous = prevAccount ? Number(prevAccount.balance || 0) : Number(account.previous || 0);
+    return { ...account, previous };
+  });
+
+  const assets = accountsWithPrev.filter(a => a.kind === "asset");
+  const debts = accountsWithPrev.filter(a => a.kind === "debt");
 
   const updateBalance = (id, value) => {
-    setState(s => ({
-      ...s,
-      accounts: s.accounts.map(a => a.id === id ? { ...a, balance:Number(value || 0) } : a)
-    }));
+    const numericValue = Number(value || 0);
+
+    setState(s => {
+      const existingSnapshot = s.monthSnapshots?.[s.selectedMonth];
+
+      // If this month already has a snapshot, edit that snapshot directly.
+      if (existingSnapshot) {
+        const updatedAccounts = (existingSnapshot.accounts || s.accounts).map(a =>
+          a.id === id ? { ...a, balance:numericValue } : a
+        );
+
+        const assets = updatedAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        const debts = updatedAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+        return {
+          ...s,
+          monthSnapshots: {
+            ...s.monthSnapshots,
+            [s.selectedMonth]: {
+              ...existingSnapshot,
+              accounts: updatedAccounts,
+              assets,
+              debts,
+              net: assets - debts,
+              updatedAt: new Date().toISOString()
+            }
+          }
+        };
+      }
+
+      // If no snapshot exists yet, edit live account balances.
+      return {
+        ...s,
+        accounts: s.accounts.map(a => a.id === id ? { ...a, balance:numericValue } : a)
+      };
+    });
+  };
+
+  const toggleBalanceEdit = () => {
+    if (state.accounts.length === 0) {
+      setEditor({ type:"account" });
+      return;
+    }
+    setEditingBalances(value => !value);
   };
 
   return (
@@ -287,12 +336,30 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
       <MonthBar state={state} setState={setState} thin />
 
+      {selectedSnapshot && (
+        <div className="snapshot-banner">
+          Historical snapshot · {editingBalances ? "editing enabled" : "locked"}
+        </div>
+      )}
+
       {state.accounts.length === 0 ? (
         <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
       ) : (
         <>
-          <AccountGroup title={`Assets (${assets.length})`} sub="Enter this month's values; see last month + change." accounts={assets} updateBalance={updateBalance} readOnly={!!selectedSnapshot}/>
-          <AccountGroup title={`Debts (${debts.length})`} sub="Enter this month's amounts owed; see last month + change." accounts={debts} updateBalance={updateBalance} readOnly={!!selectedSnapshot}/>
+          <AccountGroup
+            title={`Assets (${assets.length})`}
+            sub="Enter this month's values; see last month + change."
+            accounts={assets}
+            updateBalance={updateBalance}
+            readOnly={!!selectedSnapshot && !editingBalances}
+          />
+          <AccountGroup
+            title={`Debts (${debts.length})`}
+            sub="Enter this month's amounts owed; see last month + change."
+            accounts={debts}
+            updateBalance={updateBalance}
+            readOnly={!!selectedSnapshot && !editingBalances}
+          />
           <Card className="summary-list">
             <div onClick={()=>setHistoryMetric("assets")}><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
             <div onClick={()=>setHistoryMetric("debts")}><span>Debts (this month)</span><strong>{money(totals.debts)}</strong></div>
@@ -302,7 +369,14 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
         </>
       )}
 
-      <button className="fab" onClick={()=>setEditor({ type:"account" })}><Plus size={34}/></button>
+      <button
+        className={editingBalances ? "fab edit-active" : "fab"}
+        onClick={toggleBalanceEdit}
+        aria-label={editingBalances ? "Finish editing balances" : "Edit balances"}
+        title={editingBalances ? "Done editing balances" : "Edit balances"}
+      >
+        {editingBalances ? <Save size={30}/> : <Pencil size={30}/>}
+      </button>
     </div>
   );
 }
@@ -319,9 +393,15 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly }) {
             <div className={`round-icon ${a.kind === "debt" ? "debt" : "asset"}`}>{a.icon || (a.kind==="debt" ? "💳" : "💼")}</div>
             <div className="row-main">
               <strong>{a.name}</strong>
-              <span>Prev: {money(a.previous)} {delta < 0 ? "↓" : delta > 0 ? "↑" : "—"} {money(Math.abs(delta))}</span>
+              <span>
+                Prev: {money(a.previous)} {delta < 0 ? "↓" : delta > 0 ? "↑" : "—"} {money(Math.abs(delta))}
+              </span>
             </div>
-            <input value={a.balance} type="number" disabled={readOnly} onChange={(e)=>updateBalance(a.id, e.target.value)} />
+            {readOnly ? (
+              <div className="balance-display">{money(a.balance)}</div>
+            ) : (
+              <input value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
+            )}
           </div>
         );
       })}

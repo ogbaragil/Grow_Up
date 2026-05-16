@@ -1,0 +1,8 @@
+Implemented:
+- Assets & Debts floating + is now an edit-balances button.
+- When no accounts exist, the floating button still opens Add Account.
+- Saved/historical months are locked by default.
+- Tapping floating edit button unlocks balances for that selected month.
+- Tapping it again saves/exits edit mode.
+- Previous movement now uses the previous month snapshot account balance.
+- If no previous snapshot exists, it falls back to the account's previous field.
