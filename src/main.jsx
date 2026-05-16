@@ -62,6 +62,35 @@ function App(){
     setSyncStatus(error ? `Supabase sync failed: ${error.message}` : `Snapshot saved to Supabase at ${new Date().toLocaleTimeString()}.`);
   };
 
+  const restoreLatestSnapshot = async () => {
+    if(!supabase){ setSyncStatus('Add Supabase variables in Cloudflare to enable cloud sync.'); return; }
+    const confirmed = confirm('Restore your latest Supabase snapshot? This will replace the data currently stored on this device.');
+    if(!confirmed) return;
+
+    const { data, error } = await supabase
+      .from('growup_snapshots')
+      .select('app_state,state,created_at')
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if(error){
+      setSyncStatus(`Supabase restore failed: ${error.message}`);
+      return;
+    }
+
+    const snapshot = data?.app_state || data?.state;
+    if(!snapshot){
+      setSyncStatus('No Supabase snapshot found yet. Save a snapshot first.');
+      return;
+    }
+
+    const restored = normalizeState(snapshot);
+    setState(restored);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
+    setSyncStatus(`Restored latest Supabase snapshot from ${new Date(data.created_at).toLocaleString()}.`);
+  };
+
   if(!state.onboarded) return <Onboarding update={update} seedDemo={seedDemo} />;
   return <div className="app-shell">
     <aside className="sidebar">
@@ -74,7 +103,7 @@ function App(){
       {tab==='accounts' && <Accounts accounts={state.accounts} setAccounts={updateAccounts}/>} 
       {tab==='transactions' && <Transactions transactions={state.transactions} setTransactions={transactions=>update({transactions})} accounts={activeAccounts}/>} 
       {tab==='goals' && <Goals goals={state.goals} setGoals={goals=>update({goals})} accounts={activeAccounts}/>} 
-      {tab==='settings' && <SettingsPanel state={state} update={update} saveSnapshot={saveSnapshot} syncStatus={syncStatus}/>} 
+      {tab==='settings' && <SettingsPanel state={state} update={update} saveSnapshot={saveSnapshot} restoreLatestSnapshot={restoreLatestSnapshot} syncStatus={syncStatus}/>} 
     </main>
   </div>
 }
@@ -201,8 +230,8 @@ function Goals({goals,setGoals,accounts}){
   return <section className="panel"><h2>Goals</h2><div className="form-row"><input placeholder="Goal name" value={name} onChange={e=>setName(e.target.value)}/><input placeholder="Target amount" type="number" value={target} onChange={e=>setTarget(e.target.value)}/><select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="NET_WORTH">Net Worth</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select><button onClick={add}><Plus size={16}/>Add</button></div><div className="list">{goals.map(g=><div className="list-row" key={g.id}><span>{g.name}<small>{g.accountId==='NET_WORTH'?'Net Worth':'Account goal'}</small></span><strong>{money(g.targetAmount)}</strong><button className="ghost" onClick={()=>setGoals(goals.filter(x=>x.id!==g.id))}><Trash2 size={16}/></button></div>)}</div></section> 
 }
 
-function SettingsPanel({state,update,saveSnapshot,syncStatus}){ 
-  return <section className="panel"><h2>Settings</h2><p>Theme: {state.theme}</p><button onClick={()=>update({theme:state.theme==='dark'?'light':'dark'})}>Toggle theme</button><button onClick={saveSnapshot}>Save snapshot to Supabase</button><p className="status">{syncStatus}</p><button className="danger" onClick={()=>{localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('growup_pwa_state_v1'); location.reload();}}>Reset local data</button></section> 
+function SettingsPanel({state,update,saveSnapshot,restoreLatestSnapshot,syncStatus}){ 
+  return <section className="panel"><h2>Settings</h2><p>Theme: {state.theme}</p><button onClick={()=>update({theme:state.theme==='dark'?'light':'dark'})}>Toggle theme</button><button onClick={saveSnapshot}>Save snapshot to Supabase</button><button onClick={restoreLatestSnapshot}>Restore latest from Supabase</button><p className="status">{syncStatus}</p><button className="danger" onClick={()=>{localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('growup_pwa_state_v1'); location.reload();}}>Reset local data</button></section> 
 }
 
 createRoot(document.getElementById('root')).render(<App/>);
