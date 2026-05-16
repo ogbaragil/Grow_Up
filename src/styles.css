@@ -10,3 +10,8 @@ html[data-theme=light] .app-shell{background:#f7f7f9;color:#111827}html[data-the
 .mini-grid{display:grid;grid-template-columns:repeat(3,minmax(160px,1fr));gap:12px;margin:16px 0}.transaction-form{grid-template-columns:130px 1fr 130px 150px 170px auto auto}.transaction-row{border-left:4px solid transparent}.income-row{border-left-color:#40a060}.expense-row{border-left-color:#ef4444}.good{color:#54d17a}.bad{color:#f87171}.transaction-form button[disabled]{opacity:.45;cursor:not-allowed}
 @media(max-width:900px){.mini-grid{grid-template-columns:1fr}.transaction-form{grid-template-columns:1fr!important}}
 @media(max-width:800px){nav{grid-template-columns:repeat(5,1fr)}}
+
+/* Transactions v2 polish */
+.filter-bar{display:grid;grid-template-columns:1fr 220px;gap:10px;margin:10px 0 18px}.tx-form-v2{grid-template-columns:120px 1.1fr 150px 120px 150px 170px 1fr auto auto}.tx-form-v2 input[placeholder='Note (optional)']{min-width:180px}.transaction-row small{line-height:1.45}.panel + .panel{margin-top:18px}
+@media(max-width:1100px){.tx-form-v2{grid-template-columns:1fr 1fr!important}.tx-form-v2 button{justify-content:center}.filter-bar{grid-template-columns:1fr}}
+@media(max-width:700px){.tx-form-v2{grid-template-columns:1fr!important}.filter-bar{grid-template-columns:1fr}.metric strong{font-size:22px}.topbar{align-items:flex-start;gap:12px}.topbar h1{font-size:30px}}

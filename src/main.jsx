@@ -23,7 +23,7 @@ function normalizeState(saved){
   const merged = { ...initialState, ...(saved || {}) };
   merged.accounts = Array.isArray(merged.accounts) ? merged.accounts.map(a => ({ archived:false, ...a, balance:Number(a.balance||0) })) : [];
   merged.goals = Array.isArray(merged.goals) ? merged.goals : [];
-  merged.transactions = Array.isArray(merged.transactions) ? merged.transactions.map(t => ({ type:'expense', date:new Date().toISOString().slice(0,10), ...t, amount:Number(t.amount||0) })) : [];
+  merged.transactions = Array.isArray(merged.transactions) ? merged.transactions.map(t => ({ type:'expense', date:new Date().toISOString().slice(0,10), category:'General', note:'', ...t, amount:Number(t.amount||0) })) : [];
   return merged;
 }
 
@@ -54,7 +54,7 @@ function App(){
 
   const update = patch => setState(s=>({...s,...patch}));
   const updateAccounts = accounts => update({ accounts });
-  const seedDemo = () => update({ onboarded:true, firstName:'Gil', accounts:demoAccounts, goals:[{id:makeId(),name:'Achieve $750k Net Worth', targetAmount:750000, accountId:'NET_WORTH'}], transactions:[{id:makeId(),type:'income',description:'Paycheck',amount:4500,date:new Date().toISOString().slice(0,10),accountId:''},{id:makeId(),type:'expense',description:'Groceries',amount:142,date:new Date().toISOString().slice(0,10),accountId:''}] });
+  const seedDemo = () => update({ onboarded:true, firstName:'Gil', accounts:demoAccounts, goals:[{id:makeId(),name:'Achieve $750k Net Worth', targetAmount:750000, accountId:'NET_WORTH'}], transactions:[{id:makeId(),type:'income',description:'Paycheck',category:'Salary',amount:4500,date:new Date().toISOString().slice(0,10),accountId:'',note:'Demo income'},{id:makeId(),type:'expense',description:'Groceries',category:'Food',amount:142,date:new Date().toISOString().slice(0,10),accountId:'',note:'Demo expense'}] });
 
   const saveSnapshot = async () => {
     if(!supabase){ setSyncStatus('Add Supabase variables in Cloudflare to enable cloud sync.'); return; }
@@ -99,7 +99,7 @@ function App(){
     </aside>
     <main className="main">
       <header className="topbar"><div><p>Welcome back,</p><h1>{state.firstName || 'Gil'}</h1></div><button className="icon-btn" onClick={()=>update({theme:state.theme==='dark'?'light':'dark'})}>{state.theme==='dark'?<Sun/>:<Moon/>}</button></header>
-      {tab==='dashboard' && <Dashboard totals={totals} accounts={activeAccounts} archivedCount={archivedAccounts.length} goals={state.goals} transactions={state.transactions}/>} 
+      {tab==='dashboard' && <Dashboard totals={totals} accounts={activeAccounts} archivedCount={archivedAccounts.length} goals={state.goals} transactions={state.transactions} setTab={setTab}/>}  
       {tab==='accounts' && <Accounts accounts={state.accounts} setAccounts={updateAccounts}/>} 
       {tab==='transactions' && <Transactions transactions={state.transactions} setTransactions={transactions=>update({transactions})} accounts={activeAccounts}/>} 
       {tab==='goals' && <Goals goals={state.goals} setGoals={goals=>update({goals})} accounts={activeAccounts}/>} 
@@ -118,10 +118,12 @@ function Nav({tab,setTab}){
   return <nav>{items.map(([id,Icon])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={18}/>{id}</button>)}</nav> 
 }
 
-function Dashboard({totals,accounts,archivedCount,goals,transactions}){ 
+function Dashboard({totals,accounts,archivedCount,goals,transactions,setTab}){ 
+  const recent = [...transactions].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5);
   return <section>
     <div className="grid"><Metric icon={<PiggyBank/>} label="Assets" value={money(totals.assets)}/><Metric icon={<Wallet/>} label="Debts" value={money(totals.debts)}/><Metric icon={<TrendingUp/>} label="Net Worth" value={money(totals.netWorth)}/><Metric icon={<ReceiptText/>} label="Cash Flow" value={money(totals.cashFlow)}/></div>
-    <div className="panel"><h2>Quick overview</h2><p>You have {accounts.length} active accounts, {goals.length} active goals, and {transactions.length} transactions. {archivedCount ? `${archivedCount} account${archivedCount>1?'s are':' is'} archived and excluded from totals.` : 'No archived accounts yet.'}</p></div>
+    <div className="panel"><div className="section-head"><div><h2>Quick overview</h2><p>You have {accounts.length} active accounts, {goals.length} active goals, and {transactions.length} transactions. {archivedCount ? `${archivedCount} account${archivedCount>1?'s are':' is'} archived and excluded from totals.` : 'No archived accounts yet.'}</p></div><button className="secondary small-btn" onClick={()=>setTab('transactions')}>Add transaction</button></div></div>
+    <div className="panel"><div className="section-head"><div><h2>Recent transactions</h2><p>Your latest income and expenses.</p></div><button className="secondary small-btn" onClick={()=>setTab('transactions')}>View all</button></div><div className="list">{recent.length===0 && <div className="empty">No transactions yet.</div>}{recent.map(t=><div className={`list-row transaction-row ${t.type==='income'?'income-row':'expense-row'}`} key={t.id}><span>{t.description}<small>{t.date} · {t.category || 'General'} · {t.type}</small></span><strong className={t.type==='income'?'good':'bad'}>{t.type==='income'?'+':'-'}{money(t.amount)}</strong></div>)}</div></div>
   </section> 
 }
 function Metric({icon,label,value}){ return <div className="metric"><div className="metric-icon">{icon}</div><span>{label}</span><strong>{value}</strong></div> }
@@ -179,21 +181,25 @@ function Accounts({accounts,setAccounts}){
 function TransactionForm({onSave,onCancel,initial,accounts}){
   const [type,setType]=useState(initial?.type || 'expense');
   const [description,setDescription]=useState(initial?.description || '');
+  const [category,setCategory]=useState(initial?.category || (initial?.type === 'income' ? 'Salary' : 'General'));
   const [amount,setAmount]=useState(initial?.amount ?? '');
   const [date,setDate]=useState(initial?.date || new Date().toISOString().slice(0,10));
   const [accountId,setAccountId]=useState(initial?.accountId || '');
+  const [note,setNote]=useState(initial?.note || '');
   const valid = description.trim().length >= 2 && Number(amount) > 0;
   const submit = e => {
     e.preventDefault();
     if(!valid) return;
-    onSave({ type, description:description.trim(), amount:Number(amount), date, accountId });
+    onSave({ type, description:description.trim(), category:category.trim() || 'General', amount:Number(amount), date, accountId, note:note.trim() });
   };
-  return <form className="form-row transaction-form" onSubmit={submit}>
-    <select value={type} onChange={e=>setType(e.target.value)}><option value="income">Income</option><option value="expense">Expense</option></select>
+  return <form className="form-row transaction-form tx-form-v2" onSubmit={submit}>
+    <select value={type} onChange={e=>{setType(e.target.value); if(!category || category==='General' || category==='Salary') setCategory(e.target.value==='income'?'Salary':'General')}}><option value="income">Income</option><option value="expense">Expense</option></select>
     <input placeholder="Description" value={description} onChange={e=>setDescription(e.target.value)}/>
+    <input placeholder="Category" value={category} onChange={e=>setCategory(e.target.value)}/>
     <input placeholder="Amount" inputMode="decimal" type="number" value={amount} onChange={e=>setAmount(e.target.value)}/>
     <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
     <select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">No account</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>
+    <input placeholder="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
     <button disabled={!valid} type="submit"><Check size={16}/>{initial?'Save':'Add'}</button>
     {onCancel && <button className="ghost" type="button" onClick={onCancel}><X size={16}/>Cancel</button>}
   </form>
@@ -201,9 +207,17 @@ function TransactionForm({onSave,onCancel,initial,accounts}){
 
 function Transactions({transactions,setTransactions,accounts}){
   const [editingId,setEditingId]=useState(null);
+  const [filter,setFilter]=useState('all');
+  const [search,setSearch]=useState('');
   const income = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
   const expenses = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
-  const sorted = [...transactions].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
+  const filtered = transactions.filter(t=>{
+    const matchesType = filter==='all' || t.type===filter;
+    const q = search.trim().toLowerCase();
+    const matchesSearch = !q || [t.description,t.category,t.note].some(v=>String(v||'').toLowerCase().includes(q));
+    return matchesType && matchesSearch;
+  });
+  const sorted = [...filtered].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
   const add = payload => setTransactions([{id:makeId(), ...payload}, ...transactions]);
   const patch = (id,payload) => setTransactions(transactions.map(t=>t.id===id?{...t,...payload}:t));
   const remove = id => setTransactions(transactions.filter(t=>t.id!==id));
@@ -211,12 +225,13 @@ function Transactions({transactions,setTransactions,accounts}){
   return <section className="panel"><div className="section-head"><div><h2>Transactions</h2><p>Add income and expenses. Cash flow updates automatically on the dashboard.</p></div></div>
     <div className="mini-grid"><Metric icon={<TrendingUp/>} label="Income" value={money(income)}/><Metric icon={<Wallet/>} label="Expenses" value={money(expenses)}/><Metric icon={<ReceiptText/>} label="Net Cash Flow" value={money(income-expenses)}/></div>
     <TransactionForm onSave={add} accounts={accounts}/>
+    <div className="filter-bar"><input placeholder="Search description, category, or note" value={search} onChange={e=>setSearch(e.target.value)}/><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></select></div>
     <div className="list">
-      {sorted.length===0 && <div className="empty">No transactions yet. Add your first income or expense above.</div>}
+      {sorted.length===0 && <div className="empty">No matching transactions. Add one above or clear filters.</div>}
       {sorted.map(t=> editingId===t.id ?
         <div className="edit-card" key={t.id}><TransactionForm initial={t} accounts={accounts} onSave={payload=>{patch(t.id,payload); setEditingId(null)}} onCancel={()=>setEditingId(null)}/></div>
         : <div className={`list-row transaction-row ${t.type==='income'?'income-row':'expense-row'}`} key={t.id}>
-          <span>{t.description}<small>{t.date} · {accountName(t.accountId)} · {t.type}</small></span>
+          <span>{t.description}<small>{t.date} · {t.category || 'General'} · {accountName(t.accountId)} · {t.type}{t.note ? ` · ${t.note}` : ''}</small></span>
           <strong className={t.type==='income'?'good':'bad'}>{t.type==='income'?'+':'-'}{money(t.amount)}</strong>
           <div className="row-actions"><button className="ghost" title="Edit" onClick={()=>setEditingId(t.id)}><Pencil size={16}/></button><button className="ghost danger-text" title="Delete" onClick={()=>confirm(`Delete ${t.description}?`) && remove(t.id)}><Trash2 size={16}/></button></div>
         </div>)}

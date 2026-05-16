@@ -1,21 +1,14 @@
-# Grow UP PWA Starter
+# Grow UP PWA — Transactions v2
 
-A Vite + React PWA starter based on the uploaded Grow UP Expo/React Native app concept.
+This update adds a stronger transactions workflow:
 
-## Run locally
-npm install
-npm run dev
+- Add income and expense transactions
+- Edit and delete transactions
+- Categories and optional notes
+- Transaction search and income/expense filters
+- Dashboard cash-flow totals
+- Dashboard recent transactions panel
+- Works with existing local storage and Supabase snapshot restore/save
 
-## Cloudflare Pages
-Build command: npm run build
-Build output directory: dist
-
-## Supabase
-Run supabase/schema.sql in SQL Editor, then set Cloudflare env vars:
-VITE_SUPABASE_URL=https://your-project.supabase.co
-VITE_SUPABASE_ANON_KEY=your publishable/anon key
-
-
-## Transactions v1
-
-Adds a Transactions tab with income/expense CRUD and dashboard cash-flow totals.
+Upload the contents of this folder to GitHub and replace existing files.
+Cloudflare Pages will auto-deploy after the commit.
