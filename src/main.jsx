@@ -63,6 +63,7 @@ function useGrowState() {
   return [state, setState];
 }
 
+
 function App() {
   const [state, setState] = useGrowState();
   const [tab, setTab] = useState("overview");
@@ -70,11 +71,32 @@ function App() {
   const [editor, setEditor] = useState(null);
   const [historyMetric, setHistoryMetric] = useState(null);
   const [compoundOpen, setCompoundOpen] = useState(false);
+  const [session, setSession] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, [state.theme]);
+
+  useEffect(() => {
+    if (!supabase) {
+      setAuthLoading(false);
+      return;
+    }
+
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session || null);
+      setAuthLoading(false);
+    });
+
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession || null);
+      setAuthLoading(false);
+    });
+
+    return () => data?.subscription?.unsubscribe?.();
+  }, []);
 
   useEffect(() => {
     if (isFutureMonth(state.selectedMonth)) {
@@ -83,22 +105,26 @@ function App() {
   }, [state.selectedMonth, setState]);
 
   const totals = useMemo(() => computeTotals(state), [state]);
-
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
+  const signOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+    setSession(null);
+  };
+
   const saveSnapshot = async () => {
+    if (!session?.user?.id) {
+      alert("Please sign in before saving to Supabase.");
+      return;
+    }
+
     let nextStateForSupabase = null;
     let selectedMonthForMessage = state.selectedMonth;
 
     setState(currentState => {
       selectedMonthForMessage = currentState.selectedMonth;
-
       const existingSnapshot = currentState.monthSnapshots?.[currentState.selectedMonth];
-
-      // IMPORTANT:
-      // Use the freshest available balances.
-      // If the selected month already has a snapshot and the user edited it,
-      // save from that snapshot's accounts. Otherwise save from live accounts.
       const sourceAccounts = existingSnapshot?.accounts || currentState.accounts;
 
       const cleanAccounts = sourceAccounts.map(a => ({
@@ -110,13 +136,8 @@ function App() {
         previous: Number(a.previous || 0)
       }));
 
-      const assets = cleanAccounts
-        .filter(a => a.kind === "asset")
-        .reduce((sum, a) => sum + Number(a.balance || 0), 0);
-
-      const debts = cleanAccounts
-        .filter(a => a.kind === "debt")
-        .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+      const assets = cleanAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+      const debts = cleanAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
 
       const snapshot = {
         ...(existingSnapshot || {}),
@@ -141,7 +162,6 @@ function App() {
       return next;
     });
 
-    // Give React a tick to complete the state update before cloud sync.
     await new Promise(resolve => setTimeout(resolve, 0));
 
     if (!nextStateForSupabase) {
@@ -156,27 +176,55 @@ function App() {
 
     const { error } = await supabase
       .from("growup_snapshots")
-      .insert({ user_id:"gil", app_state:nextStateForSupabase });
+      .insert({ user_id:session.user.id, app_state:nextStateForSupabase });
 
     if (error) return alert(`Local snapshot saved, but Supabase sync failed: ${error.message}`);
     alert(`Snapshot saved for ${monthLabel(selectedMonthForMessage)}.`);
   };
 
   const restoreSnapshot = async () => {
+    if (!session?.user?.id) {
+      alert("Please sign in before restoring from Supabase.");
+      return;
+    }
+
     if (!supabase) return alert("Supabase env vars are missing.");
-    if (!confirm("Restore the latest Supabase snapshot? This replaces local app data.")) return;
-    const { data, error } = await supabase.from("growup_snapshots")
+    if (!confirm("Restore your latest Supabase snapshot? This replaces local app data.")) return;
+
+    const { data, error } = await supabase
+      .from("growup_snapshots")
       .select("app_state, state, created_at")
+      .eq("user_id", session.user.id)
       .order("created_at", { ascending:false })
       .limit(1);
+
     if (error) return alert(`Restore failed: ${error.message}`);
     const restored = data?.[0]?.app_state || data?.[0]?.state;
-    if (!restored) return alert("No snapshot found.");
+    if (!restored) return alert("No snapshot found for this account.");
+
     setState({ ...EMPTY_STATE, ...restored });
     alert("Latest snapshot restored.");
   };
 
   const common = { state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot };
+
+  if (authLoading) {
+    return (
+      <div className="app-shell">
+        <main className="phone auth-phone">
+          <div className="auth-loading">
+            <div className="app-icon large">GV</div>
+            <h1>Grow UP</h1>
+            <p>Checking your session…</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen />;
+  }
 
   return (
     <div className="app-shell">
@@ -191,17 +239,154 @@ function App() {
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
             {tab === "goals" && <Goals {...common} setCompoundOpen={setCompoundOpen} />}
-            {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} setMenuOpen={setMenuOpen} />}
+            {tab === "settings" && (
+              <Settings
+                state={state}
+                update={update}
+                saveSnapshot={saveSnapshot}
+                restoreSnapshot={restoreSnapshot}
+                setMenuOpen={setMenuOpen}
+                session={session}
+                signOut={signOut}
+              />
+            )}
             <BottomNav tab={tab} setTab={setTab} />
           </>
         )}
       </main>
 
       {menuOpen && (
-        <MenuSheet state={state} setMenuOpen={setMenuOpen} setTab={setTab} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} />
+        <MenuSheet
+          state={state}
+          setMenuOpen={setMenuOpen}
+          setTab={setTab}
+          update={update}
+          saveSnapshot={saveSnapshot}
+          restoreSnapshot={restoreSnapshot}
+          session={session}
+          signOut={signOut}
+        />
       )}
 
       {editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} />}
+    </div>
+  );
+}
+
+function AuthScreen() {
+  const [mode, setMode] = useState("signIn");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [firstName, setFirstName] = useState("Gil");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const canSubmit = email.trim() && password.length >= 6;
+
+  const submit = async (event) => {
+    event.preventDefault();
+    setMessage("");
+
+    if (!supabase) {
+      setMessage("Supabase is not configured. Check your Cloudflare environment variables.");
+      return;
+    }
+
+    if (!canSubmit) {
+      setMessage("Enter an email and a password with at least 6 characters.");
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      if (mode === "signUp") {
+        const { error } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { data: { first_name: firstName.trim() || "User" } }
+        });
+
+        if (error) throw error;
+        setMessage("Account created. Check your email if Supabase asks for confirmation, then sign in.");
+        setMode("signIn");
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: email.trim(),
+          password
+        });
+
+        if (error) throw error;
+      }
+    } catch (error) {
+      setMessage(error.message || "Authentication failed.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetPassword = async () => {
+    if (!supabase) {
+      setMessage("Supabase is not configured.");
+      return;
+    }
+
+    if (!email.trim()) {
+      setMessage("Enter your email first.");
+      return;
+    }
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+      redirectTo: window.location.origin
+    });
+
+    if (error) setMessage(error.message);
+    else setMessage("Password reset email sent.");
+  };
+
+  return (
+    <div className="app-shell">
+      <main className="phone auth-phone">
+        <section className="auth-card">
+          <div className="app-icon large">GV</div>
+          <h1>Grow UP</h1>
+          <p>Sign in to sync your snapshots, goals, and wealth progress.</p>
+
+          <div className="auth-tabs">
+            <button className={mode === "signIn" ? "active" : ""} onClick={()=>setMode("signIn")}>Sign in</button>
+            <button className={mode === "signUp" ? "active" : ""} onClick={()=>setMode("signUp")}>Create account</button>
+          </div>
+
+          <form onSubmit={submit}>
+            {mode === "signUp" && (
+              <label>
+                First name
+                <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="Gil" />
+              </label>
+            )}
+
+            <label>
+              Email
+              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
+            </label>
+
+            <label>
+              Password
+              <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Minimum 6 characters" autoComplete={mode === "signIn" ? "current-password" : "new-password"} />
+            </label>
+
+            {message && <div className="auth-message">{message}</div>}
+
+            <button className="primary full" disabled={busy || !canSubmit}>
+              {busy ? "Please wait…" : mode === "signIn" ? "Sign in" : "Create account"}
+            </button>
+          </form>
+
+          {mode === "signIn" && (
+            <button className="link-btn" onClick={resetPassword}>Forgot password?</button>
+          )}
+        </section>
+      </main>
     </div>
   );
 }
@@ -992,15 +1177,27 @@ function compactMoney(value) {
   return money(n);
 }
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen }) {
+
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, signOut }) {
   return (
     <div className="screen">
-      <ScreenTitle title="Settings" sub="Manage theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
+      <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
+
+      <Card>
+        <h2>Account</h2>
+        <p>Signed in as</p>
+        <strong className="account-email">{session?.user?.email || "Unknown user"}</strong>
+        <div className="button-row">
+          <button className="danger-btn" onClick={signOut}>Sign out</button>
+        </div>
+      </Card>
+
       <Card>
         <h2>Appearance</h2>
         <p>Theme: {state.theme}</p>
         <button className="primary" onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon size={18}/> : <Sun size={18}/>} Toggle theme</button>
       </Card>
+
       <Card>
         <h2>Cloud backup</h2>
         <p>Save and restore snapshots manually. Restore never runs automatically.</p>
@@ -1009,6 +1206,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen })
           <button className="secondary" onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest</button>
         </div>
       </Card>
+
       <Card>
         <h2>Danger zone</h2>
         <button className="danger-btn" onClick={()=>{ if(confirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
@@ -1035,11 +1233,12 @@ function BottomNav({ tab, setTab }) {
   );
 }
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot }) {
+
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, signOut }) {
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
       <div className="menu-sheet" onClick={(e)=>e.stopPropagation()}>
-        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>Grow UP</h2><p>Personal finance PWA</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
+        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>Grow UP</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
         <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
         <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
         <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
@@ -1049,6 +1248,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <button onClick={saveSnapshot}><Save/> Save monthly snapshot</button>
         <button onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
+        <button className="menu-danger" onClick={signOut}><X/> Sign out</button>
       </div>
     </div>
   );

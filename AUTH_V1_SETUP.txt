@@ -1,0 +1,20 @@
+Auth v1 added.
+
+Features:
+- Supabase email/password sign up
+- Supabase email/password sign in
+- Session check on app load
+- Sign out in Settings and menu
+- Save snapshots under the authenticated user's ID
+- Restore only the authenticated user's latest snapshot
+
+Supabase setup:
+1. Go to Authentication > Providers.
+2. Ensure Email provider is enabled.
+3. Run supabase/schema.sql in SQL Editor.
+4. Cloudflare env vars remain:
+   VITE_SUPABASE_URL
+   VITE_SUPABASE_ANON_KEY
+
+Important:
+schema.sql changes user_id to uuid and uses RLS with auth.uid().
