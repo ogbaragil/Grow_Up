@@ -1,0 +1,7 @@
+Dynamic user name fix:
+- Removed hardcoded Gil from EMPTY_STATE.
+- Dashboard greeting now uses Supabase auth metadata.
+- Google sign-in uses full_name/name metadata when available.
+- Email sign-up uses first_name metadata or email prefix.
+- Settings and menu display resolved user name + email.
+- Fallback greeting is "there".

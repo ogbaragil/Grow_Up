@@ -36,7 +36,7 @@ const isFutureMonth = (key) => key.localeCompare(currentMonthKey()) > 0;
 const canMoveToMonth = (key) => !isFutureMonth(key);
 
 const EMPTY_STATE = {
-  firstName: "Gil",
+  firstName: "",
   theme: "light",
   mode: "Real Mode",
   selectedMonth: monthKey(),
@@ -63,6 +63,33 @@ function useGrowState() {
   return [state, setState];
 }
 
+
+
+function getUserDisplayName(session, state) {
+  const metadata = session?.user?.user_metadata || {};
+
+  const metadataName =
+    metadata.first_name ||
+    metadata.full_name ||
+    metadata.name ||
+    metadata.display_name ||
+    "";
+
+  if (metadataName) {
+    return String(metadataName).split(" ")[0];
+  }
+
+  if (state?.firstName) {
+    return state.firstName;
+  }
+
+  const emailPrefix = session?.user?.email?.split("@")?.[0];
+  if (emailPrefix) {
+    return emailPrefix;
+  }
+
+  return "there";
+}
 
 function App() {
   const [state, setState] = useGrowState();
@@ -105,6 +132,7 @@ function App() {
   }, [state.selectedMonth, setState]);
 
   const totals = useMemo(() => computeTotals(state), [state]);
+  const displayName = getUserDisplayName(session, state);
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const signOut = async () => {
@@ -206,7 +234,7 @@ function App() {
     alert("Latest snapshot restored.");
   };
 
-  const common = { state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot };
+  const common = { state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName };
 
   if (authLoading) {
     return (
@@ -247,6 +275,7 @@ function App() {
                 restoreSnapshot={restoreSnapshot}
                 setMenuOpen={setMenuOpen}
                 session={session}
+                displayName={displayName}
                 signOut={signOut}
               />
             )}
@@ -264,6 +293,7 @@ function App() {
           saveSnapshot={saveSnapshot}
           restoreSnapshot={restoreSnapshot}
           session={session}
+          displayName={displayName}
           signOut={signOut}
         />
       )}
@@ -277,7 +307,7 @@ function AuthScreen() {
   const [mode, setMode] = useState("signIn");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [firstName, setFirstName] = useState("Gil");
+  const [firstName, setFirstName] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -304,7 +334,7 @@ function AuthScreen() {
         const { error } = await supabase.auth.signUp({
           email: email.trim(),
           password,
-          options: { data: { first_name: firstName.trim() || "User" } }
+          options: { data: { first_name: firstName.trim() || email.trim().split("@")[0] } }
         });
 
         if (error) throw error;
@@ -386,7 +416,7 @@ function AuthScreen() {
             {mode === "signUp" && (
               <label>
                 First name
-                <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="Gil" />
+                <input value={firstName} onChange={e=>setFirstName(e.target.value)} placeholder="Your first name" />
               </label>
             )}
 
@@ -536,7 +566,7 @@ function sixMonthAnimationStart(state, fallbackValue) {
   return Number(fallbackValue || 0);
 }
 
-function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric }) {
+function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName }) {
   const completedGoals = state.goals.filter(g => calculateGoalProgress(g, totals, getAccountsForSelectedMonth(state)).progress >= 100).length;
   const upcoming = upcomingTransactions(state.transactions, 7);
   const chartData = historyRows(state).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
@@ -546,7 +576,7 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
 
   return (
     <div className="screen">
-      <ScreenTitle title={`Welcome, ${state.firstName}`} sub={`Here's your Snapshot for ${monthLabel(state.selectedMonth)}`} setMenuOpen={setMenuOpen} />
+      <ScreenTitle title={`Welcome, ${displayName || "there"}`} sub={`Here's your Snapshot for ${monthLabel(state.selectedMonth)}`} setMenuOpen={setMenuOpen} />
       <span className="mode-pill">{state.mode}</span>
 
       <div className="kpi-grid">
@@ -1203,7 +1233,7 @@ function compactMoney(value) {
 }
 
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, signOut }) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut }) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
@@ -1211,6 +1241,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
       <Card>
         <h2>Account</h2>
         <p>Signed in as</p>
+        <strong className="account-name">{displayName || "there"}</strong>
         <strong className="account-email">{session?.user?.email || "Unknown user"}</strong>
         <div className="button-row">
           <button className="danger-btn" onClick={signOut}>Sign out</button>
@@ -1259,11 +1290,11 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, signOut }) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut }) {
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
       <div className="menu-sheet" onClick={(e)=>e.stopPropagation()}>
-        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>Grow UP</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
+        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
         <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
         <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
         <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>

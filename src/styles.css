@@ -901,3 +901,11 @@ dd { margin:0; font-weight:900; }
   background: var(--line);
   flex: 1;
 }
+
+
+.account-name {
+  display: block;
+  font-size: 20px;
+  color: var(--text);
+  margin: 4px 0 2px;
+}
