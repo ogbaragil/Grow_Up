@@ -2599,3 +2599,14 @@ button:disabled {
     height: 112px !important;
   }
 }
+
+
+/* Dashboard style toggle hard fix */
+.dashboard-style-toggle button {
+  cursor: pointer;
+}
+
+.dashboard-style-toggle button.active {
+  background: var(--green) !important;
+  color: #fff !important;
+}

@@ -709,6 +709,12 @@ function App() {
     alert("Latest saved data restored.");
   };
 
+  const changeDashboardStyle = (style) => {
+    localStorage.setItem("growup_dashboard_style", style);
+    setDashboardStyle(style);
+    setState(s => ({ ...s, dashboardStyle: style }));
+  };
+
   const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName, isDemo: demoMode};
 
   if (authLoading) {
@@ -739,9 +745,9 @@ function App() {
         ) : (
           <>
             {tab === "overview" && (
-              dashboardStyle === "minimal"
-                ? <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} />
-                : <Overview {...common} setTab={setTab} isDemo={demoMode} />
+              dashboardStyle === "detailed"
+                ? <Overview {...common} setTab={setTab} isDemo={demoMode} />
+                : <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} />
             )}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
@@ -1968,7 +1974,7 @@ function compactMoney(value) {
 }
 
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle='minimal', setDashboardStyle}) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle}) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
@@ -1994,10 +2000,22 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
 
       <Card>
         <h2>Dashboard Style</h2>
-        <p>Choose the home screen that fits how you want to use Grow UP. Switches instantly on the Overview tab.</p>
+        <p>Choose your Overview layout. Minimal is the default, Detailed keeps the full dashboard.</p>
         <div className="dashboard-style-toggle">
-          <button className={dashboardStyle === "minimal" ? "active" : ""} onClick={()=>setDashboardStyle("minimal")}>Minimal</button>
-          <button className={(state.dashboardStyle || "minimal") === "detailed" ? "active" : ""} onClick={()=>update({ dashboardStyle: "minimal" })}>Detailed</button>
+          <button
+            type="button"
+            className={dashboardStyle === "minimal" ? "active" : ""}
+            onClick={()=>setDashboardStyle("minimal")}
+          >
+            Minimal
+          </button>
+          <button
+            type="button"
+            className={dashboardStyle === "detailed" ? "active" : ""}
+            onClick={()=>setDashboardStyle("detailed")}
+          >
+            Detailed
+          </button>
         </div>
       </Card>
 
