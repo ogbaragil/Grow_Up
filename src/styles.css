@@ -1036,3 +1036,71 @@ button:disabled {
   opacity: .45;
   cursor: not-allowed;
 }
+
+
+/* Permanent mode badge fix */
+.mode-pill,
+.mode-pill.demo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -.01em;
+  width: fit-content;
+  white-space: nowrap;
+  margin-top: 10px;
+}
+
+.mode-pill {
+  background: #e8f7ee;
+  border: 1px solid rgba(63,164,99,.18);
+  color: #23854b;
+}
+
+.mode-pill.demo {
+  background: #fff4d6;
+  border: 1px solid #f4d27a;
+  color: #8a5a00;
+}
+
+
+.forecast-pill {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 4px;
+}
+
+.forecast-pill strong {
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.forecast-pill b {
+  font-size: 17px;
+  color: var(--text);
+}
+
+.forecast-pill small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.forecast-pill.active b,
+.forecast-pill.complete b {
+  color: var(--green);
+}
+
+.forecast-pill.warning b {
+  color: var(--red);
+}

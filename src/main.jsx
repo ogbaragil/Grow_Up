@@ -1176,6 +1176,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
           g={g}
           totals={totals}
           accounts={accountsForMonth}
+          state={state}
           toggle={toggle}
           del={del}
           setEditor={setEditor}
@@ -1207,10 +1208,11 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
   );
 }
 
-function GoalCard({ g, totals, accounts, toggle, del, setEditor, reorderMode, moveGoal, canMoveUp, canMoveDown }) {
+function GoalCard({ g, totals, accounts, state, toggle, del, setEditor, reorderMode, moveGoal, canMoveUp, canMoveDown }) {
   const calc = calculateGoalProgress(g, totals, accounts);
   const pct = Math.round(calc.progress);
   const status = goalStatus(calc, g);
+  const forecast = estimateGoalCompletion(g, state, calc);
 
   return (
     <div className={`goal-card slim ${g.color || goalColorForType(g.goalType)} ${g.open ? "open":""}`}>
@@ -1245,7 +1247,13 @@ function GoalCard({ g, totals, accounts, toggle, del, setEditor, reorderMode, mo
           <div className={`pace-card ${status.kind}`}>
             <h3>{status.icon} {status.label}</h3>
             <span>{status.detail}</span>
-            <p>{calc.monthlyNeeded > 0 ? `Need ${money(calc.monthlyNeeded)}/mo until deadline` : "No monthly pace needed."}</p>
+            <p>{calc.monthlyNeeded > 0 ? `Required: ${money(calc.monthlyNeeded)}/mo until deadline` : "No monthly pace required."}</p>
+
+            <div className={`forecast-pill ${forecast.kind}`}>
+              <strong>Forecast finish</strong>
+              <b>{forecast.label}</b>
+              <small>{forecast.detail}</small>
+            </div>
           </div>
 
           <div className="goal-actions">
@@ -1690,6 +1698,103 @@ function monthlyNeeded(remaining, deadline) {
   if (end <= now) return remaining;
   const months = Math.max(1, ((end.getFullYear() - now.getFullYear()) * 12) + (end.getMonth() - now.getMonth()));
   return Math.ceil(remaining / months);
+}
+
+
+function goalValueForSnapshot(goal, snapshot) {
+  const accounts = snapshot?.accounts || [];
+  const totals = {
+    assets: Number(snapshot?.assets || 0),
+    debts: Number(snapshot?.debts || 0),
+    net: Number(snapshot?.net || 0)
+  };
+
+  const goalType = goal.goalType || inferGoalType(goal, accounts);
+
+  if (goalType === "netWorth") return totals.net;
+
+  const account = findAccount(accounts, goal);
+  if (!account) return null;
+
+  if (goalType === "debtPayoff") return Number(account.balance || 0);
+
+  return Number(account.balance || 0);
+}
+
+function estimateGoalCompletion(goal, state, currentCalc) {
+  const rows = historyRows(state)
+    .slice()
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map(row => {
+      const snapshot = state.monthSnapshots?.[row.key];
+      return {
+        key: row.key,
+        value: goalValueForSnapshot(goal, snapshot)
+      };
+    })
+    .filter(row => row.value !== null && Number.isFinite(row.value));
+
+  if (rows.length < 2) {
+    return {
+      label: "Need more history",
+      detail: "Save at least 2 monthly snapshots for a forecast.",
+      monthlyRate: 0,
+      kind: "neutral"
+    };
+  }
+
+  const recent = rows.slice(-6);
+  const first = recent[0];
+  const last = recent[recent.length - 1];
+  const monthSpan = Math.max(1, monthDistance(first.key, last.key));
+  const goalType = currentCalc.goalType || goal.goalType;
+
+  let monthlyRate = 0;
+  let remaining = Number(currentCalc.remaining || 0);
+
+  if (goalType === "debtPayoff") {
+    // Debt payoff improves when debt balance drops.
+    monthlyRate = (Number(first.value || 0) - Number(last.value || 0)) / monthSpan;
+    remaining = Number(currentCalc.remaining || 0);
+  } else {
+    monthlyRate = (Number(last.value || 0) - Number(first.value || 0)) / monthSpan;
+    remaining = Number(currentCalc.remaining || 0);
+  }
+
+  if (currentCalc.progress >= 100 || remaining <= 0) {
+    return {
+      label: "Already complete",
+      detail: "Goal has been reached.",
+      monthlyRate,
+      kind: "complete"
+    };
+  }
+
+  if (monthlyRate <= 0) {
+    return {
+      label: "No clear ETA",
+      detail: "Past data is flat or moving away from the goal.",
+      monthlyRate,
+      kind: "warning"
+    };
+  }
+
+  const monthsToFinish = Math.ceil(remaining / monthlyRate);
+  const completionKey = addMonths(state.selectedMonth || currentMonthKey(), monthsToFinish);
+
+  return {
+    label: monthLabel(completionKey),
+    detail: `Based on recent pace of ${money(monthlyRate)}/mo.`,
+    monthlyRate,
+    monthsToFinish,
+    kind: "active"
+  };
+}
+
+function monthDistance(startKey, endKey) {
+  const [sy, sm] = startKey.split("-").map(Number);
+  const [ey, em] = endKey.split("-").map(Number);
+  return ((ey - sy) * 12) + (em - sm);
 }
 
 function goalStatus(calc, goal) {
