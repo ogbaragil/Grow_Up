@@ -2093,3 +2093,218 @@ button:disabled {
     align-items: flex-start;
   }
 }
+
+
+/* Minimal Dashboard */
+.minimal-dashboard-screen {
+  padding-top: 22px;
+  background: radial-gradient(circle at 50% 0%, rgba(63,164,99,.14), transparent 30%), var(--bg);
+}
+.minimal-dashboard-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+.minimal-dashboard-head p {
+  margin: 0 0 2px;
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 850;
+}
+.minimal-dashboard-head h1 {
+  margin: 0;
+  font-size: clamp(42px, 11vw, 58px);
+  line-height: .92;
+  letter-spacing: -.07em;
+  font-weight: 1000;
+}
+.minimal-dashboard-head .mode-pill { margin-top: 14px; }
+.minimal-networth-card {
+  border-radius: 34px;
+  background: var(--green);
+  color: white;
+  padding: 30px;
+  min-height: 188px;
+  box-shadow: 0 24px 60px rgba(63,164,99,.25);
+  margin-bottom: 22px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+.minimal-networth-card::after {
+  content: "";
+  position: absolute;
+  width: 240px;
+  height: 240px;
+  right: -120px;
+  top: -120px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+}
+.minimal-networth-card p,
+.minimal-goal-card p,
+.minimal-chart-card p,
+.minimal-forecast-box p {
+  margin: 0;
+  color: inherit;
+  opacity: .72;
+  font-size: 16px;
+  font-weight: 950;
+}
+.minimal-networth-card h2 {
+  margin: 14px 0 0;
+  font-size: clamp(54px, 14vw, 76px);
+  line-height: .9;
+  letter-spacing: -.08em;
+  color: white;
+  font-weight: 1000;
+}
+.minimal-networth-card span {
+  display: block;
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: 1000;
+  color: rgba(255,255,255,.82);
+}
+.minimal-goal-card,
+.minimal-chart-card,
+.minimal-split-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  border-radius: 34px;
+  padding: 26px;
+  margin-bottom: 22px;
+}
+.minimal-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+.minimal-row h2 {
+  margin: 6px 0 0;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -.06em;
+  font-weight: 1000;
+}
+.minimal-row strong {
+  color: var(--green);
+  font-size: 44px;
+  line-height: .95;
+  letter-spacing: -.06em;
+  font-weight: 1000;
+  flex: 0 0 auto;
+}
+.minimal-progress {
+  height: 13px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(15,23,42,.07);
+  margin-top: 22px;
+}
+.minimal-progress i {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: var(--green);
+}
+.minimal-forecast-box {
+  margin-top: 22px;
+  border-radius: 24px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 18px;
+}
+.minimal-forecast-box h3 {
+  margin: 6px 0 0;
+  font-size: 29px;
+  line-height: 1;
+  letter-spacing: -.055em;
+  font-weight: 1000;
+}
+.minimal-forecast-box span {
+  display: block;
+  color: var(--muted);
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 6px;
+}
+.minimal-trend-svg {
+  width: 100%;
+  height: 190px;
+  margin-top: 22px;
+  cursor: pointer;
+}
+.minimal-trend-svg polyline {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 8px 12px rgba(63,164,99,.15));
+  stroke-dasharray: 900;
+  stroke-dashoffset: 900;
+  animation: drawTrend 1.15s ease-out forwards;
+}
+@keyframes drawTrend { to { stroke-dashoffset: 0; } }
+.minimal-split-card {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  padding: 18px;
+}
+.minimal-split-card button {
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 24px;
+  padding: 18px;
+}
+.minimal-split-card span {
+  display: block;
+  color: var(--muted);
+  font-weight: 850;
+  font-size: 14px;
+}
+.minimal-split-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 25px;
+  letter-spacing: -.05em;
+}
+.dashboard-style-toggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 6px;
+  margin-top: 16px;
+}
+.dashboard-style-toggle button {
+  min-height: 46px;
+  border-radius: 14px;
+  font-weight: 1000;
+  color: var(--muted);
+}
+.dashboard-style-toggle button.active {
+  background: var(--green);
+  color: white;
+  box-shadow: 0 10px 24px rgba(63,164,99,.18);
+}
+@media (max-width: 420px) {
+  .minimal-networth-card,
+  .minimal-goal-card,
+  .minimal-chart-card {
+    border-radius: 28px;
+    padding: 22px;
+  }
+  .minimal-row h2 { font-size: 26px; }
+  .minimal-row strong { font-size: 38px; }
+  .minimal-split-card { grid-template-columns: 1fr; }
+}

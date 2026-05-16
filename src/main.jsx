@@ -38,6 +38,7 @@ const canMoveToMonth = (key) => !isFutureMonth(key);
 const EMPTY_STATE = {
   firstName: "",
   theme: "light",
+  dashboardStyle: "minimal",
   mode: "Real Mode",
   selectedMonth: monthKey(),
   accounts: [],
@@ -69,6 +70,7 @@ function useGrowState() {
 const DEMO_STATE = {
   firstName: "Demo",
   theme: "light",
+  dashboardStyle: "minimal",
   selectedMonth: currentMonthKey(),
   accounts: [
     { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", balance:75000, previous:72726 },
@@ -727,7 +729,11 @@ function App() {
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
           <>
-            {tab === "overview" && <Overview {...common} setTab={setTab} isDemo={demoMode} />}
+            {tab === "overview" && (
+              (activeState.dashboardStyle || "minimal") === "minimal"
+                ? <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} />
+                : <Overview {...common} setTab={setTab} isDemo={demoMode} />
+            )}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
             {tab === "goals" && <Goals {...common} setCompoundOpen={setCompoundOpen} />}
@@ -1055,6 +1061,100 @@ function sixMonthAnimationStart(state, fallbackValue) {
   if (latestSix.length) return Number(latestSix[0].net || 0);
 
   return Number(fallbackValue || 0);
+}
+
+
+function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
+  const dashboardState = useMemo(() => latestDashboardState(state), [state]);
+  const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
+  const accounts = getAccountsForSelectedMonth(dashboardState);
+  const goals = dashboardState.goals.filter(g => !g.archived);
+  const primaryGoal = goals[0];
+
+  const animatedStartNetWorth = sixMonthAnimationStart(dashboardState, dashboardTotals.prevNet || dashboardTotals.net);
+  const animatedNetWorth = useAnimatedNumber(dashboardTotals.net, animatedStartNetWorth, 1300);
+
+  const chartRows = historyRows(dashboardState).slice().reverse().slice(-6);
+  const chartValues = chartRows.map(r => Number(r.net || 0));
+  const min = Math.min(...chartValues, dashboardTotals.net);
+  const max = Math.max(...chartValues, dashboardTotals.net);
+  const range = Math.max(1, max - min);
+  const points = chartValues.length
+    ? chartValues.map((v, i) => {
+        const x = chartValues.length === 1 ? 0 : (i / (chartValues.length - 1)) * 300;
+        const y = 128 - ((v - min) / range) * 104;
+        return `${x},${y}`;
+      }).join(" ")
+    : "0,120 300,80";
+
+  let goalCalc = null;
+  let goalForecast = null;
+  if (primaryGoal) {
+    goalCalc = calculateGoalProgress(primaryGoal, dashboardTotals, accounts);
+    goalCalc = refineDebtPayoffCalcWithHistory(primaryGoal, dashboardState, goalCalc);
+    goalForecast = estimateGoalCompletion(primaryGoal, dashboardState, goalCalc);
+  }
+
+  return (
+    <div className="screen minimal-dashboard-screen">
+      <div className="minimal-dashboard-head">
+        <div>
+          <p>Welcome back</p>
+          <h1>{displayName || "there"}</h1>
+          <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>
+            {isDemo ? "Demo Mode" : "Real Mode"}
+          </span>
+        </div>
+        <button className="top-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={26}/>
+        </button>
+      </div>
+
+      <section className="minimal-networth-card" onClick={()=>setHistoryMetric("net")}>
+        <p>Net Worth</p>
+        <h2>{money(animatedNetWorth)}</h2>
+        <span>{signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} over last month</span>
+      </section>
+
+      {primaryGoal && goalCalc && (
+        <section className={`minimal-goal-card ${primaryGoal.color || "green"}`} onClick={()=>setTab("goals")}>
+          <div className="minimal-row">
+            <div>
+              <p>Goal Forecast</p>
+              <h2>{primaryGoal.name}</h2>
+            </div>
+            <strong>{Math.round(goalCalc.progress)}%</strong>
+          </div>
+          <div className="minimal-progress">
+            <i style={{ width:`${Math.min(100, Math.max(0, goalCalc.progress))}%` }}></i>
+          </div>
+          <div className="minimal-forecast-box">
+            <p>Forecast Finish</p>
+            <h3>{goalForecast?.label || "Need more history"}</h3>
+            <span>{goalForecast?.detail || "Save more snapshots to improve forecasting."}</span>
+          </div>
+        </section>
+      )}
+
+      <section className="minimal-chart-card">
+        <div className="minimal-row">
+          <div>
+            <p>Net Worth Trend</p>
+            <h2>Momentum</h2>
+          </div>
+          <strong>{dashboardTotals.net >= dashboardTotals.prevNet ? "+" : ""}{dashboardTotals.prevNet ? Math.round(((dashboardTotals.net - dashboardTotals.prevNet) / Math.max(1, Math.abs(dashboardTotals.prevNet))) * 100) : 0}%</strong>
+        </div>
+        <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
+          <polyline points={points} />
+        </svg>
+      </section>
+
+      <section className="minimal-split-card">
+        <button onClick={()=>setHistoryMetric("assets")}><span>Total Assets</span><strong>{money(dashboardTotals.assets)}</strong></button>
+        <button onClick={()=>setHistoryMetric("debts")}><span>Total Debts</span><strong>{money(dashboardTotals.debts)}</strong></button>
+      </section>
+    </div>
+  );
 }
 
 function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo = false}) {
@@ -1786,6 +1886,16 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <button className={isDemo ? "danger-btn" : "secondary"} onClick={isDemo ? exitDemoMode : enterDemoMode}>
           {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}
         </button>
+      </Card>
+
+
+      <Card>
+        <h2>Dashboard Style</h2>
+        <p>Choose the home screen that fits how you want to use Grow UP.</p>
+        <div className="dashboard-style-toggle">
+          <button className={(state.dashboardStyle || "minimal") === "minimal" ? "active" : ""} onClick={()=>update({ dashboardStyle:"minimal" })}>Minimal</button>
+          <button className={(state.dashboardStyle || "minimal") === "detailed" ? "active" : ""} onClick={()=>update({ dashboardStyle:"detailed" })}>Detailed</button>
+        </div>
       </Card>
 
       <Card>
