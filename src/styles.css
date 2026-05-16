@@ -1232,3 +1232,96 @@ button:disabled {
   flex-direction: column;
   gap: 12px;
 }
+
+
+/* Final centered editor / cash-flow transaction modal */
+.modal-backdrop,
+.transaction-modal-overlay,
+.editor-backdrop {
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 120 !important;
+  background: rgba(0,0,0,.34) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 18px !important;
+}
+
+.modal,
+.transaction-modal,
+.editor-modal {
+  width: min(100%, 420px) !important;
+  max-width: 420px !important;
+  max-height: 92vh !important;
+  overflow-y: auto !important;
+  margin: 0 auto !important;
+  left: auto !important;
+  right: auto !important;
+  top: auto !important;
+  bottom: auto !important;
+  transform: none !important;
+  background: var(--card) !important;
+  border-radius: 26px !important;
+  border: 1px solid var(--line) !important;
+  box-shadow: 0 30px 80px rgba(0,0,0,.22), 0 8px 24px rgba(0,0,0,.08) !important;
+  padding: 22px 18px 18px !important;
+  animation: modalIn .18s ease !important;
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+
+/* Final demo/real mode badge fix */
+.screen .mode-pill,
+.phone .mode-pill,
+.mode-pill,
+.mode-pill.real,
+.mode-pill.demo {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  min-width: 0 !important;
+  width: fit-content !important;
+  max-width: max-content !important;
+  min-height: 32px !important;
+  height: auto !important;
+  padding: 7px 14px !important;
+  border-radius: 999px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  letter-spacing: -0.01em !important;
+  white-space: nowrap !important;
+  text-indent: 0 !important;
+  overflow: visible !important;
+  color: #23854b !important;
+  background: #e8f7ee !important;
+  border: 1px solid rgba(63,164,99,.22) !important;
+}
+
+.screen .mode-pill.demo,
+.phone .mode-pill.demo,
+.mode-pill.demo {
+  color: #8a5a00 !important;
+  background: #fff4d6 !important;
+  border: 1px solid #f4d27a !important;
+}
+
+.mode-pill.demo:empty::before {
+  content: "Demo Mode";
+}
+
+.mode-pill.real:empty::before,
+.mode-pill:empty::before {
+  content: "Real Mode";
+}
