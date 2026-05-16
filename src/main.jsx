@@ -4,7 +4,7 @@ import { createRoot } from "react-dom/client";
 import {
   Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Sun, Moon, TrendingUp,
-  X, Save, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft
+  X, Save, Check, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
