@@ -2308,3 +2308,134 @@ button:disabled {
   .minimal-row strong { font-size: 38px; }
   .minimal-split-card { grid-template-columns: 1fr; }
 }
+
+
+/* =========================================================
+   Compact Overview Headers
+   - Mode badge sits neatly beside greeting/title
+   - Removes excess vertical whitespace on both overview styles
+   ========================================================= */
+
+.compact-overview-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 22px;
+}
+
+.compact-title-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.compact-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.compact-title-line h1 {
+  margin: 0;
+  font-size: clamp(32px, 9vw, 48px);
+  line-height: .96;
+  letter-spacing: -.065em;
+  font-weight: 1000;
+}
+
+.compact-title-block p {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: clamp(15px, 4vw, 21px);
+  line-height: 1.2;
+  font-weight: 650;
+}
+
+.compact-overview-header .mode-pill,
+.compact-minimal-head .mode-pill {
+  margin: 0 !important;
+  min-height: 30px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  flex: 0 0 auto;
+}
+
+.compact-menu-btn {
+  width: 56px !important;
+  height: 56px !important;
+  min-width: 56px !important;
+}
+
+/* Minimal dashboard header tightening */
+.minimal-dashboard-screen {
+  padding-top: 16px !important;
+}
+
+.compact-minimal-head {
+  margin-bottom: 18px !important;
+}
+
+.minimal-title-block {
+  min-width: 0;
+  flex: 1;
+}
+
+.minimal-greeting-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.minimal-greeting-line p {
+  margin: 0 !important;
+  color: var(--muted);
+  font-size: clamp(15px, 4vw, 18px) !important;
+  font-weight: 900 !important;
+  line-height: 1.1;
+}
+
+.compact-minimal-head h1 {
+  margin: 0 !important;
+  font-size: clamp(44px, 13vw, 66px) !important;
+  line-height: .86 !important;
+  letter-spacing: -.08em !important;
+}
+
+@media (max-width: 420px) {
+  .compact-overview-header {
+    margin-bottom: 18px;
+  }
+
+  .compact-title-line {
+    gap: 8px;
+  }
+
+  .compact-title-line h1 {
+    font-size: 32px;
+  }
+
+  .compact-title-block p {
+    font-size: 15px;
+    margin-top: 6px;
+  }
+
+  .compact-menu-btn {
+    width: 50px !important;
+    height: 50px !important;
+    min-width: 50px !important;
+  }
+
+  .compact-overview-header .mode-pill,
+  .compact-minimal-head .mode-pill {
+    min-height: 28px !important;
+    padding: 5px 11px !important;
+    font-size: 12.5px !important;
+  }
+
+  .compact-minimal-head h1 {
+    font-size: 48px !important;
+  }
+}
