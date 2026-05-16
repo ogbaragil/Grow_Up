@@ -165,7 +165,130 @@ function getUserDisplayName(session, state) {
   return "there";
 }
 
+
+function LegalPage({ type }) {
+  const isPrivacy = type === "privacy";
+
+  return (
+    <div className="app-shell">
+      <main className="phone legal-phone">
+        <section className="legal-header">
+          <div className="app-icon legal-logo">GV</div>
+          <div>
+            <h1>{isPrivacy ? "Privacy Policy" : "Terms of Service"}</h1>
+            <p>Effective Date: May 16, 2026</p>
+          </div>
+        </section>
+
+        {isPrivacy ? <PrivacyPolicyContent /> : <TermsContent />}
+
+        <div className="legal-footer">
+          <a href="/">Back to Grow UP</a>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function PrivacyPolicyContent() {
+  return (
+    <article className="legal-card">
+      <p>Welcome to Grow UP (“Grow UP”, “we”, “our”, or “us”). This Privacy Policy explains how Grow UP collects, uses, stores, and protects information when you use the Grow UP application and related services available at https://growupapp.app.</p>
+
+      <h2>1. Information We Collect</h2>
+      <p>Grow UP may collect account information such as your name, email address, and authentication provider information. Grow UP also stores financial information you manually enter, including assets, debts, goals, income, expenses, monthly snapshots, and financial progress data.</p>
+      <p>We may also collect limited technical information such as device type, browser type, IP address, app usage diagnostics, and error logs.</p>
+
+      <h2>2. How We Use Information</h2>
+      <p>We use information to provide app functionality, save and restore snapshots, synchronize data across devices, authenticate users, improve reliability, provide support, and protect against abuse or unauthorized access.</p>
+      <p>Grow UP does not sell personal financial data.</p>
+
+      <h2>3. Local Storage and Cloud Sync</h2>
+      <p>Grow UP stores some data locally on your device for performance and offline functionality. If cloud sync is enabled, your app data may also be stored using third-party infrastructure providers including Supabase.</p>
+
+      <h2>4. Google Sign-In</h2>
+      <p>If you sign in with Google, Grow UP receives basic account information associated with your Google account, such as your name, email address, and profile information. Grow UP does not access Gmail, Google Drive, Google Photos, Contacts, or Calendar data unless explicitly authorized in the future.</p>
+
+      <h2>5. Data Access</h2>
+      <p>Grow UP operators may technically access stored data when reasonably necessary for maintenance, troubleshooting, abuse prevention, security, support requests, or system reliability. Access is limited to operational purposes only.</p>
+
+      <h2>6. Data Retention and Deletion</h2>
+      <p>We retain user data while accounts remain active or as reasonably necessary to provide the service. Users may request deletion of their account and associated data by contacting ogbaragil@gmail.com.</p>
+
+      <h2>7. Security</h2>
+      <p>Grow UP uses commercially reasonable safeguards to protect stored information. However, no method of electronic storage is completely secure, and no online platform can guarantee absolute security.</p>
+
+      <h2>8. Third-Party Services</h2>
+      <p>Grow UP may rely on third-party providers including Supabase, Cloudflare, and Google Authentication services. These providers may process limited information necessary to operate the platform.</p>
+
+      <h2>9. Financial Disclaimer</h2>
+      <p>Grow UP is a personal finance tracking and goal management tool only. Grow UP is not a bank, financial advisor, or investment advisor and does not guarantee financial outcomes.</p>
+
+      <h2>10. Children’s Privacy</h2>
+      <p>Grow UP is not intended for children under 13 years of age. We do not knowingly collect personal information from children.</p>
+
+      <h2>11. Changes to This Policy</h2>
+      <p>We may update this Privacy Policy periodically. Updated versions will be posted at https://growupapp.app/privacy.</p>
+
+      <h2>12. Contact</h2>
+      <p>For questions, support requests, or data deletion requests, contact Gilbert Ogbara at ogbaragil@gmail.com.</p>
+    </article>
+  );
+}
+
+function TermsContent() {
+  return (
+    <article className="legal-card">
+      <p>These Terms of Service (“Terms”) govern your access to and use of Grow UP, available at https://growupapp.app. By using Grow UP, you agree to these Terms.</p>
+
+      <h2>1. About Grow UP</h2>
+      <p>Grow UP is a personal finance tracking, goal management, and wealth snapshot application. It helps users manually track assets, debts, goals, income, expenses, and progress over time.</p>
+
+      <h2>2. Not Financial Advice</h2>
+      <p>Grow UP is provided for informational and organisational purposes only. Grow UP is not a bank, financial advisor, investment advisor, tax advisor, or legal advisor. You are solely responsible for financial, investment, tax, and legal decisions.</p>
+
+      <h2>3. User Accounts</h2>
+      <p>You may need an account to use certain features. You are responsible for maintaining the confidentiality of your login credentials and for activity under your account.</p>
+
+      <h2>4. User Data</h2>
+      <p>You are responsible for the accuracy of the information you enter into Grow UP. Grow UP does not independently verify user-entered financial data.</p>
+
+      <h2>5. Cloud Sync and Availability</h2>
+      <p>Grow UP may provide cloud sync and backup features using third-party infrastructure. We do not guarantee uninterrupted access, error-free operation, or permanent preservation of data. You should keep independent records of important financial information.</p>
+
+      <h2>6. Acceptable Use</h2>
+      <p>You agree not to misuse Grow UP, attempt unauthorized access, interfere with the service, upload malicious code, or use the service for unlawful purposes.</p>
+
+      <h2>7. Intellectual Property</h2>
+      <p>Grow UP and its design, branding, software, and content are owned by or licensed to the operator. You may not copy, modify, reverse engineer, or distribute the app except as permitted by law.</p>
+
+      <h2>8. Third-Party Services</h2>
+      <p>Grow UP may integrate with or rely on third-party services such as Supabase, Cloudflare, and Google Authentication. Their terms and policies may also apply.</p>
+
+      <h2>9. Termination</h2>
+      <p>We may suspend or terminate access if you violate these Terms or misuse the service. You may stop using Grow UP at any time and may request data deletion by contacting ogbaragil@gmail.com.</p>
+
+      <h2>10. Limitation of Liability</h2>
+      <p>To the maximum extent permitted by law, Grow UP is provided “as is” and “as available”. We are not liable for financial losses, lost data, lost profits, indirect damages, or decisions made based on information in the app.</p>
+
+      <h2>11. Changes to These Terms</h2>
+      <p>We may update these Terms periodically. Updated versions will be posted at https://growupapp.app/terms. Continued use of Grow UP after updates means you accept the revised Terms.</p>
+
+      <h2>12. Governing Law</h2>
+      <p>These Terms are governed by the laws of Victoria, Australia, unless otherwise required by applicable law.</p>
+
+      <h2>13. Contact</h2>
+      <p>For questions about these Terms, contact Gilbert Ogbara at ogbaragil@gmail.com.</p>
+    </article>
+  );
+}
+
+
 function App() {
+  const path = window.location.pathname;
+  if (path === "/privacy") return <LegalPage type="privacy" />;
+  if (path === "/terms") return <LegalPage type="terms" />;
+
   const [state, setState] = useGrowState();
   const [tab, setTab] = useState("overview");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -544,6 +667,12 @@ function AuthScreen({ enterDemoMode }) {
           <button className="demo-auth-btn" type="button" onClick={enterDemoMode}>
             Try Demo Mode
           </button>
+
+          <div className="auth-legal-links">
+            <a href="/privacy">Privacy Policy</a>
+            <span>•</span>
+            <a href="/terms">Terms</a>
+          </div>
         </section>
       </main>
     </div>
@@ -1425,6 +1554,14 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
       </Card>
 
       <Card>
+        <h2>Legal</h2>
+        <div className="legal-link-row">
+          <a href="/privacy">Privacy Policy</a>
+          <a href="/terms">Terms of Service</a>
+        </div>
+      </Card>
+
+      <Card>
         <h2>Danger zone</h2>
         <button className="danger-btn" disabled={isDemo} onClick={()=>{ if(confirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
       </Card>
@@ -1466,6 +1603,8 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <button disabled={isDemo} onClick={saveSnapshot}><Save/> Save monthly snapshot</button>
         <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
+        <button onClick={()=>{ window.location.href = "/privacy"; }}><SlidersHorizontal/> Privacy Policy</button>
+        <button onClick={()=>{ window.location.href = "/terms"; }}><SlidersHorizontal/> Terms</button>
         {session && !isDemo && <button className="menu-danger" onClick={signOut}><X/> Sign out</button>}
       </div>
     </div>

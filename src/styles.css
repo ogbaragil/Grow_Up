@@ -1147,3 +1147,88 @@ button:disabled {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+
+/* Legal pages */
+.legal-phone {
+  padding: 24px 18px 60px;
+}
+
+.legal-header {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  margin: 8px 0 20px;
+}
+
+.legal-logo {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+}
+
+.legal-header h1 {
+  margin: 0;
+  font-size: 31px;
+  line-height: 1.05;
+  letter-spacing: -.05em;
+}
+
+.legal-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.legal-card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+
+.legal-card h2 {
+  margin: 24px 0 8px;
+  font-size: 21px;
+  letter-spacing: -.04em;
+}
+
+.legal-card h2:first-of-type {
+  margin-top: 12px;
+}
+
+.legal-card p {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.55;
+  margin: 10px 0;
+}
+
+.legal-footer {
+  text-align: center;
+  margin-top: 20px;
+}
+
+.legal-footer a,
+.auth-legal-links a,
+.legal-link-row a {
+  color: var(--green);
+  font-weight: 900;
+  text-decoration: none;
+}
+
+.auth-legal-links {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.legal-link-row {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
