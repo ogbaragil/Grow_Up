@@ -1086,6 +1086,32 @@ function CompactOverviewHeader({ title, sub, isDemo=false, setMenuOpen }) {
 }
 
 
+
+function weightedThreeMonthMomentum(state, currentNet) {
+  const rows = historyRows(state)
+    .slice()
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .filter(r => Number.isFinite(Number(r.net)));
+
+  if (rows.length < 2) return 0;
+
+  const latest = Number(currentNet ?? rows.at(-1)?.net ?? 0);
+  const comparisons = rows.slice(-4, -1).map((row, index, arr) => {
+    const previous = Number(row.net || 0);
+    if (!previous) return 0;
+    const growth = ((latest - previous) / Math.abs(previous)) * 100;
+    // Heavier weight on more recent months.
+    const weights = [0.2, 0.3, 0.5];
+    return growth * weights[Math.max(0, 3 - arr.length + index)];
+  });
+
+  const usedWeights = comparisons.length === 1 ? 0.5 : comparisons.length === 2 ? 0.8 : 1;
+  const score = comparisons.reduce((sum, value) => sum + value, 0) / usedWeights;
+
+  return Math.round(score);
+}
+
+
 function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
@@ -1102,6 +1128,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
 
   const animatedStartNetWorth = sixMonthAnimationStart(dashboardState, dashboardTotals.prevNet || dashboardTotals.net);
   const animatedNetWorth = useAnimatedNumber(dashboardTotals.net, animatedStartNetWorth, 1300);
+  const momentumScore = weightedThreeMonthMomentum(dashboardState, dashboardTotals.net);
+  const animatedMomentum = useAnimatedNumber(momentumScore, 0, 1100);
 
   const chartRows = historyRows(dashboardState).slice().reverse().slice(-6);
   const chartValues = chartRows.map(r => Number(r.net || 0));
@@ -1170,10 +1198,10 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
       <section className="minimal-chart-card">
         <div className="minimal-row">
           <div>
-            <p>Net Worth Trend</p>
+            <p>3-month weighted trend</p>
             <h2>Momentum</h2>
           </div>
-          <strong>{dashboardTotals.net >= dashboardTotals.prevNet ? "+" : ""}{dashboardTotals.prevNet ? Math.round(((dashboardTotals.net - dashboardTotals.prevNet) / Math.max(1, Math.abs(dashboardTotals.prevNet))) * 100) : 0}%</strong>
+          <strong>{animatedMomentum >= 0 ? "+" : ""}{Math.round(animatedMomentum)}%</strong>
         </div>
         <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
           <polyline points={points} />

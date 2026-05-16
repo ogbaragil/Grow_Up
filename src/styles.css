@@ -2564,3 +2564,38 @@ button:disabled {
     font-size: 21px;
   }
 }
+
+
+/* Compact animated momentum card */
+.minimal-chart-card {
+  padding: 22px 24px !important;
+  min-height: 270px !important;
+}
+
+.minimal-chart-card .minimal-row h2 {
+  font-size: 28px !important;
+}
+
+.minimal-chart-card .minimal-row p {
+  font-size: 14px !important;
+}
+
+.minimal-chart-card .minimal-row strong {
+  font-size: 38px !important;
+}
+
+.minimal-chart-card .minimal-trend-svg {
+  height: 128px !important;
+  margin-top: 14px !important;
+}
+
+@media (max-width: 420px) {
+  .minimal-chart-card {
+    min-height: 244px !important;
+    padding: 20px !important;
+  }
+
+  .minimal-chart-card .minimal-trend-svg {
+    height: 112px !important;
+  }
+}
