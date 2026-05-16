@@ -99,10 +99,7 @@ function App() {
   return (
     <div className="app-shell">
       <main className="phone">
-        <TopChrome tab={tab} setTab={setTab} />
-        <button className="floating-menu" onClick={()=>setMenuOpen(true)}><Menu size={28}/></button>
-
-        {tab === "overview" && <Overview {...common} setTab={setTab} />}
+{tab === "overview" && <Overview {...common} setTab={setTab} />}
         {tab === "assets" && <AssetsDebts {...common} />}
         {tab === "cash" && <CashFlow {...common} />}
         {tab === "goals" && <Goals {...common} />}
@@ -127,31 +124,16 @@ function App() {
   );
 }
 
-function TopChrome({ tab, setTab }) {
-  return (
-    <header className="top-chrome">
-      <div className="brand-row">
-        <div className="app-icon">GV</div>
-        <div>
-          <div className="brand">Grow UP</div>
-          <div className="subtitle">Personal finance PWA</div>
-        </div>
-      </div>
-      <nav className="top-tabs">
-        <button className={tab==="overview" ? "active" : ""} onClick={()=>setTab("overview")}><Home /></button>
-        <button className={tab==="assets" ? "active" : ""} onClick={()=>setTab("assets")}><CreditCard /></button>
-        <button className={tab==="cash" ? "active" : ""} onClick={()=>setTab("cash")}><Repeat2 /></button>
-        <button className={tab==="goals" ? "active" : ""} onClick={()=>setTab("goals")}><Target /></button>
-      </nav>
-    </header>
-  );
-}
-
 function ScreenTitle({ title, sub }) {
   return (
-    <section className="screen-title">
-      <h1>{title}</h1>
-      {sub && <p>{sub}</p>}
+    <section className="page-header">
+      <div>
+        <h1>{title}</h1>
+        {sub && <p>{sub}</p>}
+      </div>
+      <button className="mini-menu-btn">
+        <Menu size={20}/>
+      </button>
     </section>
   );
 }

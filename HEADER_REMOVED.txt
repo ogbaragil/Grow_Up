@@ -1,0 +1,12 @@
+This version IMPLEMENTS the cleaner layout:
+
+REMOVED:
+- large top logo header
+- top nav pills
+- floating menu button
+
+ADDED:
+- lightweight page header
+- more vertical space
+- cleaner mobile proportions
+- bottom-nav-first navigation
