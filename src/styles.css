@@ -2610,3 +2610,20 @@ button:disabled {
   background: var(--green) !important;
   color: #fff !important;
 }
+
+
+/* Smart rotating goal forecast card */
+.minimal-goal-card {
+  animation: smartGoalFade 0.55s ease;
+}
+
+@keyframes smartGoalFade {
+  from {
+    opacity: .82;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
