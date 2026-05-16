@@ -1,0 +1,6 @@
+This update wires the new small top-right menu button to open the menu sheet.
+
+Fixed:
+- mini-menu button now calls setMenuOpen(true)
+- all pages pass setMenuOpen into ScreenTitle
+- old large top header remains removed

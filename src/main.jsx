@@ -99,11 +99,11 @@ function App() {
   return (
     <div className="app-shell">
       <main className="phone">
-{tab === "overview" && <Overview {...common} setTab={setTab} />}
-        {tab === "assets" && <AssetsDebts {...common} />}
-        {tab === "cash" && <CashFlow {...common} />}
-        {tab === "goals" && <Goals {...common} />}
-        {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} />}
+{tab === "overview" && <Overview {...common} setTab={setTab} setMenuOpen={setMenuOpen} />}
+        {tab === "assets" && <AssetsDebts {...common} setMenuOpen={setMenuOpen} />}
+        {tab === "cash" && <CashFlow {...common} setMenuOpen={setMenuOpen} />}
+        {tab === "goals" && <Goals {...common} setMenuOpen={setMenuOpen} />}
+        {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} setMenuOpen={setMenuOpen} />}
 
         <BottomNav tab={tab} setTab={setTab} />
       </main>
@@ -124,14 +124,14 @@ function App() {
   );
 }
 
-function ScreenTitle({ title, sub }) {
+function ScreenTitle({ title, sub, setMenuOpen }) {
   return (
     <section className="page-header">
       <div>
         <h1>{title}</h1>
         {sub && <p>{sub}</p>}
       </div>
-      <button className="mini-menu-btn">
+      <button className="mini-menu-btn" onClick={() => setMenuOpen?.(true)} aria-label="Open menu">
         <Menu size={20}/>
       </button>
     </section>
@@ -148,7 +148,7 @@ function EmptyState({ title, text, action, onClick }) {
   );
 }
 
-function Overview({ state, totals, setEditor, setTab }) {
+function Overview({ state, totals, setEditor, setTab, setMenuOpen }) {
   const completedGoals = state.goals.filter(g => goalPct(g) >= 100).length;
   const upcoming = upcomingTransactions(state.transactions, 7);
 
@@ -158,7 +158,7 @@ function Overview({ state, totals, setEditor, setTab }) {
 
   return (
     <div className="screen">
-      <ScreenTitle title={`Welcome, ${state.firstName}`} sub={`Here's your Snapshot for ${state.month}`} />
+      <ScreenTitle title={`Welcome, ${state.firstName}`} sub={`Here's your Snapshot for ${state.month}`} setMenuOpen={setMenuOpen} />
       <span className="mode-pill">{state.mode}</span>
 
       <div className="kpi-grid">
@@ -227,7 +227,7 @@ function Kpi({ title, value, sub, icon, dot }) {
   );
 }
 
-function AssetsDebts({ state, setState, totals, setEditor }) {
+function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen }) {
   const assets = state.accounts.filter(a => a.kind === "asset");
   const debts = state.accounts.filter(a => a.kind === "debt");
 
@@ -240,7 +240,7 @@ function AssetsDebts({ state, setState, totals, setEditor }) {
 
   return (
     <div className="screen">
-      <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." />
+      <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
       <div className="month-switch"><ChevronLeft/><strong>{state.month}</strong><ChevronRight/></div>
 
       {state.accounts.length === 0 ? (
@@ -284,14 +284,14 @@ function AccountGroup({ title, sub, accounts, updateBalance }) {
   );
 }
 
-function CashFlow({ state, totals, setEditor }) {
+function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   const next7 = upcomingTransactions(state.transactions, 7);
   const recurringIncome = state.transactions.filter(t => t.recurring && t.type === "income");
   const recurringExpenses = state.transactions.filter(t => t.recurring && t.type === "expense");
 
   return (
     <div className="screen">
-      <ScreenTitle title="Cash Flow" sub="See what's coming in and what's going out." />
+      <ScreenTitle title="Cash Flow" sub="See what's coming in and what's going out." setMenuOpen={setMenuOpen} />
       <Card>
         <h2>Money In vs Out</h2>
         <div className="cash-totals">
@@ -350,13 +350,13 @@ function CompactTxn({ t }) {
   );
 }
 
-function Goals({ state, setState, setEditor }) {
+function Goals({ state, setState, setEditor, setMenuOpen }) {
   const toggle = (id) => setState(s => ({ ...s, goals:s.goals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
   const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
 
   return (
     <div className="screen">
-      <ScreenTitle title="Your Goals" sub="Big dreams? Let's make them happen — one goal at a time." />
+      <ScreenTitle title="Your Goals" sub="Big dreams? Let's make them happen — one goal at a time." setMenuOpen={setMenuOpen} />
       {state.goals.length ? state.goals.map(g => <GoalCard key={g.id} g={g} toggle={toggle} del={del} setEditor={setEditor}/>) : (
         <EmptyState title="No goals yet" text="Add your first wealth goal and track progress." action="Add goal" onClick={()=>setEditor({ type:"goal" })}/>
       )}
@@ -400,10 +400,10 @@ function GoalCard({ g, toggle, del, setEditor }) {
   );
 }
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot }) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen }) {
   return (
     <div className="screen">
-      <ScreenTitle title="Settings" sub="Manage theme, local data, and Supabase snapshots." />
+      <ScreenTitle title="Settings" sub="Manage theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
       <Card>
         <h2>Appearance</h2>
         <p>Theme: {state.theme}</p>
