@@ -1342,3 +1342,56 @@ button:disabled {
   background: #fff4d6 !important;
   color: #8a5a00 !important;
 }
+
+
+/* Final explicit Demo/Real badge classes */
+.mode-pill.demo-mode-pill,
+.screen .mode-pill.demo-mode-pill,
+.phone .mode-pill.demo-mode-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: max-content !important;
+  min-height: 32px !important;
+  padding: 7px 14px !important;
+  border-radius: 999px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+  color: #8a5a00 !important;
+  background: #fff4d6 !important;
+  border: 1px solid #f4d27a !important;
+  text-indent: 0 !important;
+  overflow: visible !important;
+}
+
+.mode-pill.real-mode-pill,
+.screen .mode-pill.real-mode-pill,
+.phone .mode-pill.real-mode-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: max-content !important;
+  min-height: 32px !important;
+  padding: 7px 14px !important;
+  border-radius: 999px !important;
+  font-size: 14px !important;
+  line-height: 1 !important;
+  font-weight: 900 !important;
+  white-space: nowrap !important;
+  color: #23854b !important;
+  background: #e8f7ee !important;
+  border: 1px solid rgba(63,164,99,.22) !important;
+  text-indent: 0 !important;
+  overflow: visible !important;
+}
+
+.mode-pill.demo-mode-pill::before,
+.mode-pill.real-mode-pill::before {
+  content: none !important;
+}

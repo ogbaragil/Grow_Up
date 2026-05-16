@@ -356,7 +356,7 @@ function App() {
   const saveSnapshot = async () => {
     if (demoMode) return readOnlyDemoAlert();
     if (!session?.user?.id) {
-      alert("Please sign in before saving to Supabase.");
+      alert("Please sign in before backing up your data.");
       return;
     }
 
@@ -411,7 +411,7 @@ function App() {
     }
 
     if (!supabase) {
-      alert("Monthly snapshot saved locally. Supabase env vars are missing.");
+      alert("Data backed up locally. Supabase env vars are missing.");
       return;
     }
 
@@ -419,19 +419,19 @@ function App() {
       .from("growup_snapshots")
       .insert({ user_id:session.user.id, app_state:nextStateForSupabase });
 
-    if (error) return alert(`Local snapshot saved, but Supabase sync failed: ${error.message}`);
-    alert(`Snapshot saved for ${monthLabel(selectedMonthForMessage)}.`);
+    if (error) return alert(`Local data saved, but cloud backup failed: ${error.message}`);
+    alert(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`);
   };
 
   const restoreSnapshot = async () => {
     if (demoMode) return readOnlyDemoAlert();
     if (!session?.user?.id) {
-      alert("Please sign in before restoring from Supabase.");
+      alert("Please sign in before restoring your saved data.");
       return;
     }
 
     if (!supabase) return alert("Supabase env vars are missing.");
-    if (!confirm("Restore your latest Supabase snapshot? This replaces local app data.")) return;
+    if (!confirm("Restore your latest saved Grow UP data? This replaces local app data.")) return;
 
     const { data, error } = await supabase
       .from("growup_snapshots")
@@ -442,13 +442,13 @@ function App() {
 
     if (error) return alert(`Restore failed: ${error.message}`);
     const restored = data?.[0]?.app_state || data?.[0]?.state;
-    if (!restored) return alert("No snapshot found for this account.");
+    if (!restored) return alert("No saved backup found for this account.");
 
     setState({ ...EMPTY_STATE, ...restored });
-    alert("Latest snapshot restored.");
+    alert("Latest saved data restored.");
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName, isDemo: demoMode };
+  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName, isDemo: demoMode};
 
   if (authLoading) {
     return (
@@ -477,7 +477,7 @@ function App() {
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
           <>
-            {tab === "overview" && <Overview {...common} setTab={setTab} />}
+            {tab === "overview" && <Overview {...common} setTab={setTab} isDemo={demoMode} />}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
             {tab === "goals" && <Goals {...common} setCompoundOpen={setCompoundOpen} />}
@@ -807,7 +807,7 @@ function sixMonthAnimationStart(state, fallbackValue) {
   return Number(fallbackValue || 0);
 }
 
-function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo=false  }) {
+function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo = false}) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const dashboardMonthLabel = monthLabel(dashboardState.selectedMonth);
@@ -825,7 +825,7 @@ function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMe
   return (
     <div className="screen">
       <ScreenTitle title={`Welcome, ${displayName || "there"}`} sub={`Here's your Snapshot for ${dashboardMonthLabel}`} setMenuOpen={setMenuOpen} />
-      <span className="mode-pill">{state.mode}</span>
+      <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>{isDemo ? "Demo Mode" : "Real Mode"}</span>
 
       <div className="kpi-grid">
         <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(dashboardTotals.assets)} sub={`${signedMoney(dashboardTotals.assets - dashboardTotals.prevAssets)} vs last month`} icon="💼" dot="green" />
@@ -1545,11 +1545,11 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
       </Card>
 
       <Card>
-        <h2>Cloud backup</h2>
-        <p>Save and restore snapshots manually. Restore never runs automatically.</p>
+        <h2>Backup & Restore</h2>
+        <p>Keep a secure cloud backup of your Grow UP data and restore your latest saved version when needed.</p>
         <div className="button-row">
-          <button className="primary" disabled={isDemo} onClick={saveSnapshot}><Save size={18}/> Save snapshot</button>
-          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest</button>
+          <button className="primary" disabled={isDemo} onClick={saveSnapshot}><Save size={18}/> Back up data</button>
+          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest saved data</button>
         </div>
       </Card>
 
@@ -1600,8 +1600,8 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <button onClick={isDemo ? exitDemoMode : enterDemoMode}><SlidersHorizontal/> {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}</button>
         <hr/>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
-        <button disabled={isDemo} onClick={saveSnapshot}><Save/> Save monthly snapshot</button>
-        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
+        <button disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
+        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore latest saved data from Supabase</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
         <button onClick={()=>{ window.location.href = "/privacy"; }}><SlidersHorizontal/> Privacy Policy</button>
         <button onClick={()=>{ window.location.href = "/terms"; }}><SlidersHorizontal/> Terms</button>
