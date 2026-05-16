@@ -1773,33 +1773,57 @@ function CompactTxn({ t }) {
 }
 
 
+
 function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDemo=false }) {
   const [goalMenuOpen, setGoalMenuOpen] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
+  const [showArchivedGoals, setShowArchivedGoals] = useState(false);
+
   const totals = computeTotals(state);
   const accountsForMonth = getAccountsForSelectedMonth(state);
 
-  const toggle = (id) => setState(s => ({ ...s, goals:s.goals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
-  const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
-  const archive = (id) => setState(s => ({
+  const allGoals = state.goals || [];
+  const activeGoals = allGoals.filter(g => !g.archived);
+  const archivedGoals = allGoals.filter(g => g.archived);
+
+  const toggle = (id) => setState(s => ({
     ...s,
-    goals: s.goals.map(g => g.id === id ? { ...g, archived:true, archivedAt:new Date().toISOString(), open:false } : g)
+    goals: (s.goals || []).map(g => g.id === id ? { ...g, open: !g.open } : g)
   }));
-  const activeGoals = state.goals.filter(g => !g.archived);
+
+  const del = (id) => setState(s => ({
+    ...s,
+    goals: (s.goals || []).filter(g => g.id !== id)
+  }));
+
+  const archive = (id) => {
+    if (isDemo) return readOnlyDemoAlert();
+    setState(s => ({
+      ...s,
+      goals: (s.goals || []).map(g => g.id === id ? { ...g, archived: true, archivedAt: new Date().toISOString(), open: false } : g)
+    }));
+    setShowArchivedGoals(true);
+  };
+
+  const restore = (id) => {
+    if (isDemo) return readOnlyDemoAlert();
+    setState(s => ({
+      ...s,
+      goals: (s.goals || []).map(g => g.id === id ? { ...g, archived: false, restoredAt: new Date().toISOString() } : g)
+    }));
+  };
 
   const moveGoal = (id, direction) => {
     if (isDemo) return readOnlyDemoAlert();
     setState(s => {
-      const activeIds = s.goals.filter(g => !g.archived).map(g => g.id);
+      const activeIds = (s.goals || []).filter(g => !g.archived).map(g => g.id);
       const activeIndex = activeIds.indexOf(id);
       const nextActiveId = activeIds[activeIndex + direction];
       if (!nextActiveId) return s;
-
-      const goals = [...s.goals];
+      const goals = [...(s.goals || [])];
       const index = goals.findIndex(g => g.id === id);
       const nextIndex = goals.findIndex(g => g.id === nextActiveId);
       if (index < 0 || nextIndex < 0) return s;
-
       [goals[index], goals[nextIndex]] = [goals[nextIndex], goals[index]];
       return { ...s, goals };
     });
@@ -1808,7 +1832,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
   const openAddGoal = () => {
     if (isDemo) return readOnlyDemoAlert();
     setGoalMenuOpen(false);
-    setEditor({ type:"goal" });
+    setEditor({ type: "goal" });
   };
 
   const openCompound = () => {
@@ -1820,31 +1844,72 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
     <div className="screen">
       <ScreenTitle title="Your Goals" sub="Big dreams? Let's make them happen — one goal at a time." setMenuOpen={setMenuOpen} />
 
-      {reorderMode && (
-        <div className="snapshot-banner">
-          Reorder mode enabled · use ↑ ↓ on each goal
-        </div>
-      )}
+      {reorderMode && <div className="snapshot-banner">Reorder mode enabled · use ↑ ↓ on each goal</div>}
 
-      {activeGoals.length ? activeGoals.map((g, index) => (
-        <GoalCard
-          key={g.id}
-          g={g}
-          totals={totals}
-          accounts={accountsForMonth}
-          state={state}
-          toggle={toggle}
-          del={del}
-          archive={archive}
-          setEditor={setEditor}
-          reorderMode={reorderMode}
-          moveGoal={moveGoal}
-          canMoveUp={index > 0}
-          canMoveDown={index < activeGoals.length - 1}
-        />
-      )) : (
-        <EmptyState title="No goals yet" text="Add your first wealth goal and track progress." action="Add goal" onClick={openAddGoal}/>
-      )}
+      <section className="goals-section active-goals-section">
+        <div className="goals-section-label"><span></span><strong>Active Goals</strong></div>
+        {activeGoals.length ? activeGoals.map((g, index) => (
+          <GoalCard
+            key={g.id}
+            g={g}
+            totals={totals}
+            accounts={accountsForMonth}
+            state={state}
+            toggle={toggle}
+            del={del}
+            archive={archive}
+            setEditor={setEditor}
+            reorderMode={reorderMode}
+            moveGoal={moveGoal}
+            canMoveUp={index > 0}
+            canMoveDown={index < activeGoals.length - 1}
+          />
+        )) : (
+          <EmptyState title="No active goals" text="Add your next wealth goal or restore one from the archive." action="Add goal" onClick={openAddGoal}/>
+        )}
+      </section>
+
+      <section className="archived-goals-wrap">
+        <button className="archived-goals-toggle" type="button" onClick={() => setShowArchivedGoals(v => !v)}>
+          <div>
+            <strong>Archived Goals</strong>
+            <span>{archivedGoals.length ? `${archivedGoals.length} completed & retired goal${archivedGoals.length === 1 ? "" : "s"}` : "No archived goals yet"}</span>
+          </div>
+          <b>{showArchivedGoals ? "−" : "+"}</b>
+        </button>
+
+        {showArchivedGoals && (
+          <div className="archived-goals-list">
+            {archivedGoals.length ? archivedGoals.map(g => {
+              let calc = calculateGoalProgress(g, totals, accountsForMonth);
+              calc = refineDebtPayoffCalcWithHistory(g, state, calc);
+              const pct = Math.round(calc.progress || 0);
+              return (
+                <article key={g.id} className={`goal-card slim archived-goal-card ${g.color || goalColorForType(g.goalType)}`}>
+                  <div className="goal-top compact">
+                    <div className="goal-icon">{g.icon || goalIconForType(g.goalType)}</div>
+                    <div className="row-main">
+                      <h2>{g.name}</h2>
+                      <span>{goalTypeLabel(g.goalType)} · archived</span>
+                    </div>
+                    <b>{pct}%</b>
+                  </div>
+                  <div className="archived-goal-meta">
+                    <span>Archived</span>
+                    <strong>{g.archivedAt ? new Date(g.archivedAt).toLocaleDateString() : "Saved"}</strong>
+                  </div>
+                  <div className="archived-goal-actions">
+                    <button type="button" className="ghost" onClick={()=>restore(g.id)}>Restore</button>
+                    <button type="button" className="danger-mini" onClick={()=>del(g.id)}>Delete</button>
+                  </div>
+                </article>
+              );
+            }) : (
+              <div className="empty-archive-note">Archive completed, paused, or retired goals here so your active list stays focused.</div>
+            )}
+          </div>
+        )}
+      </section>
 
       {goalMenuOpen && (
         <div className="goal-fab-menu">
@@ -1854,12 +1919,8 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
         </div>
       )}
 
-      <button
-        className={goalMenuOpen ? "fab edit-active" : "fab"}
-        onClick={()=> isDemo ? readOnlyDemoAlert() : setGoalMenuOpen(v=>!v)}
-        aria-label="Goal actions"
-      >
-        {goalMenuOpen ? <X size={34}/> : <Plus size={34}/>}
+      <button className={goalMenuOpen ? "fab edit-active" : "fab"} onClick={()=> isDemo ? readOnlyDemoAlert() : setGoalMenuOpen(v=>!v)} aria-label="Goal actions">
+        {goalMenuOpen ? <X size={34}/> : <Plus size={34}/>}      
       </button>
     </div>
   );
@@ -2220,7 +2281,7 @@ function EditorModal({ editor, setEditor, state, setState }) {
         deadline:form.deadline,
         open:item.open ?? true
       };
-      setState(s => ({ ...s, goals:item.id ? s.goals.map(g => g.id === item.id ? goal : g) : [...s.goals, goal] }));
+      setState(s => ({ ...s, goals:item.id ? s.activeGoals.map(g => g.id === item.id ? goal : g) : [...s.goals, goal] }));
     }
 
     setEditor(null);
