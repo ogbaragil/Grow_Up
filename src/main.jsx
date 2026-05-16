@@ -1064,6 +1064,28 @@ function sixMonthAnimationStart(state, fallbackValue) {
 }
 
 
+
+function CompactOverviewHeader({ title, sub, isDemo=false, setMenuOpen }) {
+  return (
+    <div className="compact-overview-header">
+      <div className="compact-title-block">
+        <div className="compact-title-line">
+          <h1>{title}</h1>
+          <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>
+            {isDemo ? "Demo Mode" : "Real Mode"}
+          </span>
+        </div>
+        {sub && <p>{sub}</p>}
+      </div>
+
+      <button className="top-menu-btn compact-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+        <Menu size={26}/>
+      </button>
+    </div>
+  );
+}
+
+
 function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
@@ -1097,15 +1119,17 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
 
   return (
     <div className="screen minimal-dashboard-screen">
-      <div className="minimal-dashboard-head">
-        <div>
-          <p>Welcome back</p>
+      <div className="minimal-dashboard-head compact-minimal-head">
+        <div className="minimal-title-block">
+          <div className="minimal-greeting-line">
+            <p>Welcome back</p>
+            <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>
+              {isDemo ? "Demo Mode" : "Real Mode"}
+            </span>
+          </div>
           <h1>{displayName || "there"}</h1>
-          <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>
-            {isDemo ? "Demo Mode" : "Real Mode"}
-          </span>
         </div>
-        <button className="top-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+        <button className="top-menu-btn compact-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
           <Menu size={26}/>
         </button>
       </div>
@@ -1174,8 +1198,12 @@ function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMe
 
   return (
     <div className="screen">
-      <ScreenTitle title={`Welcome, ${displayName || "there"}`} sub={`Here's your Snapshot for ${dashboardMonthLabel}`} setMenuOpen={setMenuOpen} />
-      <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>{isDemo ? "Demo Mode" : "Real Mode"}</span>
+      <CompactOverviewHeader
+        title={`Welcome, ${displayName || "there"}`}
+        sub={`Here's your Snapshot for ${dashboardMonthLabel}`}
+        isDemo={isDemo}
+        setMenuOpen={setMenuOpen}
+      />
 
       <div className="kpi-grid">
         <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(dashboardTotals.assets)} sub={`${signedMoney(dashboardTotals.assets - dashboardTotals.prevAssets)} vs last month`} icon="💼" dot="green" />
