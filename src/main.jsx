@@ -1,318 +1,565 @@
-import React, { useMemo, useState, useEffect } from 'react';
-import { createRoot } from 'react-dom/client';
-import { Plus, Moon, Sun, Wallet, Target, Settings, LayoutDashboard, PiggyBank, TrendingUp, Trash2, Pencil, Archive, RotateCcw, X, Check, ReceiptText, CalendarDays, Flag } from 'lucide-react';
-import { supabase } from './supabaseClient';
-import './styles.css';
 
-const STORAGE_KEY = 'growup_pwa_state_v2';
+import React, { useEffect, useMemo, useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
+  ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Sun, Moon, RefreshCcw,
+  TrendingUp, Wallet, PiggyBank, CircleDollarSign, SlidersHorizontal, X,
+  Save, DownloadCloud, RotateCcw
+} from "lucide-react";
+import {
+  ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, BarChart, Bar
+} from "recharts";
+import { supabase } from "./supabaseClient";
+import "./styles.css";
 
-const makeId = () => crypto.randomUUID();
-const money = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0}).format(Number(n||0));
+const STORAGE_KEY = "growup_faithful_state_v1";
 
-const demoAccounts = [
-  { id: makeId(), name: 'Retirement Account', category: 'asset', balance: 100000, archived: false },
-  { id: makeId(), name: 'Savings Account', category: 'asset', balance: 50000, archived: false },
-  { id: makeId(), name: 'Brokerage Account', category: 'asset', balance: 454000, archived: false },
-  { id: makeId(), name: 'Credit Card', category: 'debt', balance: 5000, archived: false },
-  { id: makeId(), name: 'Personal Loan', category: 'debt', balance: 75000, archived: false },
-];
+const money = (n) => new Intl.NumberFormat("en-US", {
+  style: "currency", currency: "USD", maximumFractionDigits: 0
+}).format(Number(n || 0));
 
-const initialState = { onboarded:false, firstName:'', theme:'dark', accounts:[], goals:[], transactions:[] };
+const today = new Date();
+const addDays = (d, days) => {
+  const x = new Date(d);
+  x.setDate(x.getDate() + days);
+  return x;
+};
+const fmtDate = (iso) => {
+  const d = new Date(iso);
+  return `${d.getDate()}/${d.getMonth()+1}/${d.getFullYear()}`;
+};
+const relDate = (iso) => {
+  const d = new Date(iso);
+  const diff = Math.round((d - new Date(today.getFullYear(), today.getMonth(), today.getDate())) / 86400000);
+  if (diff === 0) return "today";
+  if (diff === 1) return "tomorrow";
+  if (diff < 0) return `${Math.abs(diff)} days ago`;
+  return `in ${diff} days`;
+};
 
-function normalizeState(saved){
-  const merged = { ...initialState, ...(saved || {}) };
-  merged.accounts = Array.isArray(merged.accounts) ? merged.accounts.map(a => ({ archived:false, ...a, balance:Number(a.balance||0) })) : [];
-  merged.goals = Array.isArray(merged.goals) ? merged.goals.map(g => ({ deadline:'', status:'active', ...g, targetAmount:Number(g.targetAmount||0), currentAmount:g.currentAmount==null?'':Number(g.currentAmount||0) })) : [];
-  merged.transactions = Array.isArray(merged.transactions) ? merged.transactions.map(t => ({ type:'expense', date:new Date().toISOString().slice(0,10), category:'General', note:'', ...t, amount:Number(t.amount||0) })) : [];
-  return merged;
+const seed = {
+  firstName: "Gil",
+  mode: "Real Mode",
+  theme: "light",
+  month: "May 2026",
+  accounts: [
+    { id: "a1", name: "Hesta Super", kind: "asset", icon: "💼", balance: 72726, previous: 72000 },
+    { id: "a2", name: "Stocks", kind: "asset", icon: "📊", balance: 28000, previous: 56000 },
+    { id: "a3", name: "Tesla Model 3", kind: "asset", icon: "🚗", balance: 28000, previous: 56000 },
+    { id: "a4", name: "Business Asset", kind: "asset", icon: "👔", balance: 0, previous: 0 },
+    { id: "d1", name: "Personal Loan", kind: "debt", icon: "💳", balance: 41474, previous: 30000 },
+    { id: "d2", name: "Income Tax Debt", kind: "debt", icon: "🏦", balance: 6049, previous: 0 },
+  ],
+  transactions: [
+    { id:"t1", type:"expense", name:"Etoro", icon:"🌱", amount:2500, date:addDays(today,1).toISOString(), recurring:false, category:"Investment" },
+    { id:"t2", type:"expense", name:"Dinner With Kids", icon:"👧🏽", amount:100, date:addDays(today,2).toISOString(), recurring:false, category:"Family" },
+    { id:"t3", type:"expense", name:"Rent", icon:"🏡", amount:2300, date:addDays(today,3).toISOString(), recurring:true, category:"Housing" },
+    { id:"t4", type:"expense", name:"Gym", icon:"🏋️", amount:23, date:addDays(today,6).toISOString(), recurring:true, category:"Health" },
+    { id:"t5", type:"income", name:"Salary", icon:"💵", amount:2950, date:addDays(today,11).toISOString(), recurring:true, category:"Work" },
+    { id:"t6", type:"expense", name:"Allianz Car Insurance", icon:"🚗", amount:178, date:addDays(today,29).toISOString(), recurring:true, category:"Insurance" },
+    { id:"t7", type:"expense", name:"Personal Loan Install", icon:"💳", amount:200, date:addDays(today,12).toISOString(), recurring:true, category:"Debt" },
+    { id:"t8", type:"expense", name:"Fine, VIC", icon:"💳", amount:30, date:addDays(today,17).toISOString(), recurring:true, category:"Admin" },
+    { id:"t9", type:"expense", name:"Recharge Work Mobile", icon:"📱", amount:80, date:addDays(today,17).toISOString(), recurring:true, category:"Phone" },
+    { id:"t10", type:"expense", name:"Child Support", icon:"👧🏽", amount:550, date:addDays(today,22).toISOString(), recurring:true, category:"Family" },
+  ],
+  goals: [
+    { id:"g1", name:"Hit 100k Net", account:"Net Worth", icon:"🎯", color:"purple", target:100000, current:81203, deadline:"2026-10-01", status:"active", open:true },
+    { id:"g2", name:"Reach 100k in Super", account:"Hesta Super", icon:"$", color:"green", target:100000, current:73000, deadline:"2026-12-01", status:"active", open:false },
+    { id:"g3", name:"Investment Milestone 2026", account:"Stocks", icon:"$", color:"green", target:100000, current:47000, deadline:"2026-12-31", status:"behind", open:false },
+    { id:"g4", name:"Pay off loan", account:"Personal Loan", icon:"⚡", color:"red", target:0, current:32000, start:47000, deadline:"2026-06-01", status:"active", open:false },
+    { id:"g5", name:"Invest Milestone 2025", account:"Stocks", icon:"$", color:"green", target:50000, current:50000, deadline:"2025-12-31", status:"complete", open:false },
+  ],
+  monthlyNetWorth: [
+    { m:"Jun", net:28000 }, { m:"Jul", net:42000 }, { m:"Aug", net:47000 }, { m:"Sep", net:53000 },
+    { m:"Oct", net:59000 }, { m:"Nov", net:65000 }, { m:"Dec", net:70000 }, { m:"Jan", net:76000 },
+    { m:"Feb", net:82000 }, { m:"Mar", net:90000 }, { m:"Apr", net:81203 }, { m:"May", net:98000 },
+  ]
+};
+
+function useGrowState() {
+  const [state, setState] = useState(() => {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? { ...seed, ...JSON.parse(raw) } : seed;
+    } catch { return seed; }
+  });
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [state]);
+  return [state, setState];
 }
 
-function App(){
-  const [state,setState] = useState(()=>{
-    try {
-      const v2 = localStorage.getItem(STORAGE_KEY);
-      const v1 = localStorage.getItem('growup_pwa_state_v1');
-      return normalizeState(JSON.parse(v2 || v1) || initialState);
-    } catch { return initialState }
-  });
-  const [tab,setTab] = useState('dashboard');
-  const [syncStatus,setSyncStatus] = useState('Local-first mode');
+function App() {
+  const [state, setState] = useGrowState();
+  const [tab, setTab] = useState("overview");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [editor, setEditor] = useState(null);
+  const dark = state.theme === "dark";
 
-  useEffect(()=>localStorage.setItem(STORAGE_KEY, JSON.stringify(state)),[state]);
-  useEffect(()=>{document.documentElement.dataset.theme=state.theme},[state.theme]);
-  useEffect(()=>{ if('serviceWorker' in navigator) navigator.serviceWorker.register('/service-worker.js') },[]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = state.theme;
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(()=>{});
+  }, [state.theme]);
 
-  const activeAccounts = useMemo(()=>state.accounts.filter(a=>!a.archived),[state.accounts]);
-  const archivedAccounts = useMemo(()=>state.accounts.filter(a=>a.archived),[state.accounts]);
-  const totals = useMemo(()=>{
-    const assets = activeAccounts.filter(a=>a.category==='asset').reduce((s,a)=>s+Number(a.balance||0),0);
-    const debts = activeAccounts.filter(a=>a.category==='debt').reduce((s,a)=>s+Number(a.balance||0),0);
-    const income = state.transactions.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
-    const expenses = state.transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
-    return {assets, debts, netWorth: assets-debts, income, expenses, cashFlow: income-expenses};
-  },[activeAccounts,state.transactions]);
+  const totals = useMemo(() => {
+    const assets = state.accounts.filter(a=>a.kind==="asset").reduce((s,a)=>s+Number(a.balance||0),0);
+    const debts = state.accounts.filter(a=>a.kind==="debt").reduce((s,a)=>s+Number(a.balance||0),0);
+    const prevAssets = state.accounts.filter(a=>a.kind==="asset").reduce((s,a)=>s+Number(a.previous||0),0);
+    const prevDebts = state.accounts.filter(a=>a.kind==="debt").reduce((s,a)=>s+Number(a.previous||0),0);
+    const income = state.transactions.filter(t=>t.type==="income" && t.recurring).reduce((s,t)=>s+Number(t.amount||0),0) * 2.1668;
+    const expenses = state.transactions.filter(t=>t.type==="expense" && t.recurring).reduce((s,t)=>s+Number(t.amount||0),0);
+    return { assets, debts, net: assets-debts, prevAssets, prevDebts, prevNet: prevAssets-prevDebts, income, expenses };
+  }, [state]);
 
-  const update = patch => setState(s=>({...s,...patch}));
-  const updateAccounts = accounts => update({ accounts });
-  const seedDemo = () => update({ onboarded:true, firstName:'Gil', accounts:demoAccounts, goals:[{id:makeId(),name:'Achieve $750k Net Worth', targetAmount:750000, accountId:'NET_WORTH'}], transactions:[{id:makeId(),type:'income',description:'Paycheck',category:'Salary',amount:4500,date:new Date().toISOString().slice(0,10),accountId:'',note:'Demo income'},{id:makeId(),type:'expense',description:'Groceries',category:'Food',amount:142,date:new Date().toISOString().slice(0,10),accountId:'',note:'Demo expense'}] });
+  const update = (patch) => setState(s => ({...s, ...patch}));
 
   const saveSnapshot = async () => {
-    if(!supabase){ setSyncStatus('Add Supabase variables in Cloudflare to enable cloud sync.'); return; }
-    const { error } = await supabase.from('growup_snapshots').insert({ app_state: state });
-    setSyncStatus(error ? `Supabase sync failed: ${error.message}` : `Snapshot saved to Supabase at ${new Date().toLocaleTimeString()}.`);
+    if (!supabase) return alert("Supabase env vars are missing.");
+    const { error } = await supabase.from("growup_snapshots").insert({
+      user_id: "gil",
+      app_state: state
+    });
+    if (error) return alert(`Supabase sync failed: ${error.message}`);
+    alert("Snapshot saved to Supabase.");
   };
 
-  const restoreLatestSnapshot = async () => {
-    if(!supabase){ setSyncStatus('Add Supabase variables in Cloudflare to enable cloud sync.'); return; }
-    const confirmed = confirm('Restore your latest Supabase snapshot? This will replace the data currently stored on this device.');
-    if(!confirmed) return;
-
+  const restoreSnapshot = async () => {
+    if (!supabase) return alert("Supabase env vars are missing.");
+    const ok = confirm("Restore the latest Supabase snapshot? This replaces local app data.");
+    if (!ok) return;
     const { data, error } = await supabase
-      .from('growup_snapshots')
-      .select('app_state,state,created_at')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    if(error){
-      setSyncStatus(`Supabase restore failed: ${error.message}`);
-      return;
-    }
-
-    const snapshot = data?.app_state || data?.state;
-    if(!snapshot){
-      setSyncStatus('No Supabase snapshot found yet. Save a snapshot first.');
-      return;
-    }
-
-    const restored = normalizeState(snapshot);
-    setState(restored);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(restored));
-    setSyncStatus(`Restored latest Supabase snapshot from ${new Date(data.created_at).toLocaleString()}.`);
+      .from("growup_snapshots")
+      .select("app_state, state, created_at")
+      .order("created_at", { ascending:false })
+      .limit(1);
+    if (error) return alert(`Restore failed: ${error.message}`);
+    const restored = data?.[0]?.app_state || data?.[0]?.state;
+    if (!restored) return alert("No snapshot found.");
+    setState({...seed, ...restored});
+    alert("Latest snapshot restored.");
   };
 
-  if(!state.onboarded) return <Onboarding update={update} seedDemo={seedDemo} />;
-  return <div className="app-shell">
-    <aside className="sidebar">
-      <div className="brand"><span>GV</span><div><strong>Grow UP</strong><small>Personal finance PWA</small></div></div>
-      <Nav tab={tab} setTab={setTab}/>
-    </aside>
-    <main className="main">
-      <header className="topbar"><div><p>Welcome back,</p><h1>{state.firstName || 'Gil'}</h1></div><button className="icon-btn" onClick={()=>update({theme:state.theme==='dark'?'light':'dark'})}>{state.theme==='dark'?<Sun/>:<Moon/>}</button></header>
-      {tab==='dashboard' && <Dashboard totals={totals} accounts={activeAccounts} archivedCount={archivedAccounts.length} goals={state.goals} transactions={state.transactions} setTab={setTab}/>}  
-      {tab==='accounts' && <Accounts accounts={state.accounts} setAccounts={updateAccounts}/>} 
-      {tab==='transactions' && <Transactions transactions={state.transactions} setTransactions={transactions=>update({transactions})} accounts={activeAccounts}/>} 
-      {tab==='goals' && <Goals goals={state.goals} setGoals={goals=>update({goals})} accounts={activeAccounts}/>} 
-      {tab==='settings' && <SettingsPanel state={state} update={update} saveSnapshot={saveSnapshot} restoreLatestSnapshot={restoreLatestSnapshot} syncStatus={syncStatus}/>} 
-    </main>
-  </div>
+  const common = { state, setState, totals, setEditor };
+
+  return (
+    <div className="app-shell">
+      <main className="phone">
+        <TopChrome state={state} setTab={setTab} tab={tab} setMenuOpen={setMenuOpen} />
+        <button className="floating-menu" onClick={()=>setMenuOpen(true)} aria-label="Menu"><Menu size={34}/></button>
+        {tab === "overview" && <Overview {...common} setTab={setTab} />}
+        {tab === "assets" && <AssetsDebts {...common} />}
+        {tab === "cash" && <CashFlow {...common} />}
+        {tab === "goals" && <Goals {...common} />}
+        {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} />}
+        <BottomNav tab={tab} setTab={setTab} />
+      </main>
+      {menuOpen && <MenuSheet state={state} setMenuOpen={setMenuOpen} setTab={setTab} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} />}
+      {editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState}/>}
+    </div>
+  );
 }
 
-function Onboarding({update, seedDemo}){ 
-  const [name,setName]=useState(''); 
-  return <div className="onboarding"><div className="welcome-card"><div className="logo">GV</div><h1>Welcome to Grow UP</h1><p>Your personal finance companion for tracking assets, debts and goals.</p><button onClick={seedDemo}>Try Demo</button><div className="divider">or</div><input placeholder="Your first name" value={name} onChange={e=>setName(e.target.value)}/><button className="secondary" disabled={!name.trim()} onClick={()=>update({onboarded:true, firstName:name.trim()})}>Start with my data</button></div></div> 
+function TopChrome({ state, setTab, tab }) {
+  return (
+    <header className="top-chrome">
+      <div className="brand-row">
+        <div className="app-icon">GV</div>
+        <div>
+          <div className="brand">Grow UP</div>
+          <div className="subtitle">Personal finance PWA</div>
+        </div>
+      </div>
+      <nav className="top-tabs">
+        <button className={tab==="overview" ? "active":""} onClick={()=>setTab("overview")}><Home size={30}/></button>
+        <button className={tab==="assets" ? "active":""} onClick={()=>setTab("assets")}><CreditCard size={30}/></button>
+        <button className={tab==="cash" ? "active":""} onClick={()=>setTab("cash")}><Repeat2 size={30}/></button>
+        <button className={tab==="goals" ? "active":""} onClick={()=>setTab("goals")}><Target size={30}/></button>
+      </nav>
+    </header>
+  );
 }
 
-function Nav({tab,setTab}){ 
-  const items=[['dashboard',LayoutDashboard],['accounts',Wallet],['transactions',ReceiptText],['goals',Target],['settings',Settings]]; 
-  return <nav>{items.map(([id,Icon])=><button key={id} className={tab===id?'active':''} onClick={()=>setTab(id)}><Icon size={18}/>{id}</button>)}</nav> 
+function ScreenTitle({ title, sub, state }) {
+  return (
+    <section className="screen-title">
+      <h1>{title}</h1>
+      {sub && <p>{sub}</p>}
+    </section>
+  );
 }
 
-function Dashboard({totals,accounts,archivedCount,goals,transactions,setTab}){ 
-  const recent = [...transactions].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,5);
-  return <section>
-    <div className="grid"><Metric icon={<PiggyBank/>} label="Assets" value={money(totals.assets)}/><Metric icon={<Wallet/>} label="Debts" value={money(totals.debts)}/><Metric icon={<TrendingUp/>} label="Net Worth" value={money(totals.netWorth)}/><Metric icon={<ReceiptText/>} label="Cash Flow" value={money(totals.cashFlow)}/></div>
-    <div className="panel"><div className="section-head"><div><h2>Quick overview</h2><p>You have {accounts.length} active accounts, {goals.length} active goals, and {transactions.length} transactions. {archivedCount ? `${archivedCount} account${archivedCount>1?'s are':' is'} archived and excluded from totals.` : 'No archived accounts yet.'}</p></div><button className="secondary small-btn" onClick={()=>setTab('transactions')}>Add transaction</button></div></div>
-    <div className="panel"><div className="section-head"><div><h2>Goal summary</h2><p>Track the next milestone you are working toward.</p></div><button className="secondary small-btn" onClick={()=>setTab('goals')}>View goals</button></div><div className="list">{goals.length===0 && <div className="empty">No goals yet.</div>}{goals.slice(0,3).map(g=>{const pct=Math.min(100, Math.round(((Number(g.currentAmount)||0)/(Number(g.targetAmount)||1))*100)); return <div className="list-row" key={g.id}><span>{g.name}<small>{pct}% complete · {g.deadline ? `Due ${g.deadline}` : 'No deadline'}</small><span className="progress-track"><span style={{width:`${pct}%`}} /></span></span><strong>{money(g.currentAmount || 0)} / {money(g.targetAmount)}</strong></div>})}</div></div>
-    <div className="panel"><div className="section-head"><div><h2>Recent transactions</h2><p>Your latest income and expenses.</p></div><button className="secondary small-btn" onClick={()=>setTab('transactions')}>View all</button></div><div className="list">{recent.length===0 && <div className="empty">No transactions yet.</div>}{recent.map(t=><div className={`list-row transaction-row ${t.type==='income'?'income-row':'expense-row'}`} key={t.id}><span>{t.description}<small>{t.date} · {t.category || 'General'} · {t.type}</small></span><strong className={t.type==='income'?'good':'bad'}>{t.type==='income'?'+':'-'}{money(t.amount)}</strong></div>)}</div></div>
-  </section> 
-}
-function Metric({icon,label,value}){ return <div className="metric"><div className="metric-icon">{icon}</div><span>{label}</span><strong>{value}</strong></div> }
+function Overview({ state, totals, setTab }) {
+  const goalsDone = state.goals.filter(g=>goalPct(g)>=100).length;
+  const upcoming = state.transactions
+    .filter(t => (new Date(t.date)-today) >= 0 && (new Date(t.date)-today) <= 7*86400000)
+    .sort((a,b)=>new Date(a.date)-new Date(b.date));
 
-function AccountForm({onSave,onCancel,initial}){
-  const [name,setName]=useState(initial?.name || '');
-  const [balance,setBalance]=useState(initial?.balance ?? '');
-  const [category,setCategory]=useState(initial?.category || 'asset');
-  const valid = name.trim().length >= 2 && Number.isFinite(Number(balance || 0));
-  const submit = (e) => {
-    e.preventDefault();
-    if(!valid) return;
-    onSave({ name:name.trim(), category, balance:Number(balance || 0) });
+  return (
+    <div className="screen">
+      <ScreenTitle title={`Welcome, ${state.firstName}`} sub={`Here's your Snapshot for ${state.month}`} />
+      <span className="mode-pill">{state.mode}</span>
+      <div className="kpi-grid">
+        <Kpi title="Total Assets" value={money(totals.assets)} sub={`${totals.assets-totals.prevAssets>=0?"+":""}${money(totals.assets-totals.prevAssets)} vs last month`} icon="💼" dot="green"/>
+        <Kpi title="Total Debts" value={money(totals.debts)} sub={`${totals.debts-totals.prevDebts>=0?"+":""}${money(totals.debts-totals.prevDebts)} vs last month`} icon="💳" dot="red"/>
+        <Kpi title="Net Worth" value={money(totals.net)} sub={`${totals.net-totals.prevNet>=0?"+":""}${money(totals.net-totals.prevNet)} vs last month`} icon="$" dot="blue"/>
+        <Kpi title="Goals" value={`${goalsDone} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple"/>
+      </div>
+      <Card className="trend">
+        <div className="card-head">
+          <span className="green-square"><TrendingUp size={28}/></span>
+          <div><h2>Net Worth Trend</h2><p>12-month overview</p></div>
+          <ChevronDown className="muted-icon"/>
+        </div>
+        <div className="trend-box">
+          <div><span>Current Net Worth</span><strong>{money(totals.net)}</strong></div>
+          <div><span>Growth</span><strong className="success">+250.5%</strong></div>
+        </div>
+        <div className="chart-holder">
+          <ResponsiveContainer width="100%" height={150}>
+            <LineChart data={state.monthlyNetWorth}>
+              <XAxis dataKey="m" hide/>
+              <YAxis hide/>
+              <Tooltip formatter={(v)=>money(v)} />
+              <Line type="monotone" dataKey="net" stroke="#3fa463" strokeWidth={4} dot={false}/>
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </Card>
+      <Card className="cash-card" onClick={()=>setTab("cash")}>
+        <div className="card-head">
+          <span className="blue-square"><Repeat2 size={28}/></span>
+          <h2>Cash Flow</h2>
+        </div>
+        <div className="mini-pair">
+          <div><span>Money In (monthly)</span><strong>{money(totals.income)}</strong></div>
+          <div><span>Money Out (monthly)</span><strong>{money(totals.expenses)}</strong></div>
+        </div>
+        <div className="upcoming-head"><h3>Upcoming <span>· Next 7 days</span></h3><span>{money(0)} in · {money(upcoming.reduce((s,t)=>s+(t.type==="expense"?t.amount:0),0))} out</span></div>
+        {upcoming.slice(0,4).map(t => <CompactTxn key={t.id} t={t}/>)}
+      </Card>
+    </div>
+  );
+}
+
+function Kpi({ title, value, sub, icon, dot }) {
+  return (
+    <div className="kpi">
+      <div className={`emoji-badge ${dot}`}>{icon}</div>
+      <span className={`dot ${dot}`}></span>
+      <p>{title}</p>
+      <h2>{value}</h2>
+      <small>{sub}</small>
+    </div>
+  );
+}
+
+function AssetsDebts({ state, setState, totals, setEditor }) {
+  const [monthOffset, setMonthOffset] = useState(0);
+  const updateBalance = (id, value) => {
+    setState(s => ({...s, accounts:s.accounts.map(a=>a.id===id?{...a,balance:Number(value||0)}:a)}));
   };
-  return <form className="form-row account-form" onSubmit={submit}>
-    <input placeholder="Account name" value={name} onChange={e=>setName(e.target.value)}/>
-    <input placeholder="Balance" inputMode="decimal" type="number" value={balance} onChange={e=>setBalance(e.target.value)}/>
-    <select value={category} onChange={e=>setCategory(e.target.value)}><option value="asset">Asset</option><option value="debt">Debt</option></select>
-    <button disabled={!valid} type="submit"><Check size={16}/>{initial?'Save':'Add'}</button>
-    {onCancel && <button className="ghost" type="button" onClick={onCancel}><X size={16}/>Cancel</button>}
-  </form>
+  const assets = state.accounts.filter(a=>a.kind==="asset");
+  const debts = state.accounts.filter(a=>a.kind==="debt");
+  return (
+    <div className="screen">
+      <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." />
+      <div className="month-switch"><ChevronLeft onClick={()=>setMonthOffset(monthOffset-1)}/><strong>{state.month}</strong><ChevronRight onClick={()=>setMonthOffset(monthOffset+1)}/></div>
+      <AccountGroup title={`Assets (${assets.length})`} sub="Enter this month’s values; see last month + change." accounts={assets} updateBalance={updateBalance}/>
+      <AccountGroup title={`Debts (${debts.length})`} sub="Enter this month’s amounts owed; see last month + change." accounts={debts} updateBalance={updateBalance}/>
+      <Card className="summary-list">
+        <div><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
+        <div><span>Debts (this month)</span><strong>{money(totals.debts)}</strong></div>
+        <div className="bold"><span>Net Worth</span><strong>{money(totals.net)}</strong></div>
+      </Card>
+      <button className="fab" onClick={()=>setEditor({type:"account"})}><Plus size={42}/></button>
+    </div>
+  );
 }
 
-function Accounts({accounts,setAccounts}){ 
-  const [editingId,setEditingId]=useState(null); 
-  const [showArchived,setShowArchived]=useState(false);
-  const visible = showArchived ? accounts : accounts.filter(a=>!a.archived);
-  const activeCount = accounts.filter(a=>!a.archived).length;
-  const archivedCount = accounts.length - activeCount;
-  const add = payload => setAccounts([...accounts,{id:makeId(), archived:false, ...payload}]);
-  const patch = (id,payload) => setAccounts(accounts.map(a=>a.id===id?{...a,...payload}:a));
-  const archive = id => patch(id,{archived:true});
-  const restore = id => patch(id,{archived:false});
-  const removeForever = id => setAccounts(accounts.filter(a=>a.id!==id));
-  return <section className="panel"><div className="section-head"><div><h2>Accounts</h2><p>Create, edit, archive, restore, or delete accounts. Dashboard totals only use active accounts.</p></div><button className="secondary small-btn" onClick={()=>setShowArchived(!showArchived)}>{showArchived?'Hide archived':'Show archived'} ({archivedCount})</button></div>
-    <AccountForm onSave={add}/>
-    <div className="list">
-      {visible.length === 0 && <div className="empty">No {showArchived?'':'active '}accounts yet.</div>}
-      {visible.map(a=> editingId===a.id ?
-        <div className="edit-card" key={a.id}><AccountForm initial={a} onSave={payload=>{patch(a.id,payload); setEditingId(null)}} onCancel={()=>setEditingId(null)}/></div>
-        : <div className={`list-row ${a.archived?'muted-row':''}`} key={a.id}>
-          <span>{a.name}<small>{a.category}{a.archived?' · archived':''}</small></span>
-          <strong>{money(a.balance)}</strong>
-          <div className="row-actions">
-            <button className="ghost" title="Edit" onClick={()=>setEditingId(a.id)}><Pencil size={16}/></button>
-            {a.archived ? <button className="ghost" title="Restore" onClick={()=>restore(a.id)}><RotateCcw size={16}/></button> : <button className="ghost" title="Archive" onClick={()=>archive(a.id)}><Archive size={16}/></button>}
-            <button className="ghost danger-text" title="Delete forever" onClick={()=>confirm(`Delete ${a.name} forever?`) && removeForever(a.id)}><Trash2 size={16}/></button>
+function AccountGroup({ title, sub, accounts, updateBalance }) {
+  return (
+    <Card className="account-group">
+      <h2>{title}</h2><p>{sub}</p>
+      {accounts.map(a => {
+        const delta = Number(a.balance||0) - Number(a.previous||0);
+        return (
+          <div className="account-row" key={a.id}>
+            <div className={`round-icon ${a.kind==="debt"?"debt":"asset"}`}>{a.icon}</div>
+            <div className="row-main">
+              <strong>{a.name}</strong>
+              <span>Prev: {money(a.previous)} {delta<0?"↓":delta>0?"↑":"—"} {money(Math.abs(delta))}</span>
+            </div>
+            <input value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
           </div>
-        </div>)}
+        );
+      })}
+    </Card>
+  );
+}
+
+function CashFlow({ state, setState, totals, setEditor }) {
+  const next7 = state.transactions
+    .filter(t => (new Date(t.date)-today) >= 0 && (new Date(t.date)-today) <= 7*86400000)
+    .sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const recurringIncome = state.transactions.filter(t=>t.recurring && t.type==="income");
+  const recurringExpenses = state.transactions.filter(t=>t.recurring && t.type==="expense");
+  return (
+    <div className="screen">
+      <ScreenTitle title="Cash Flow" sub="See what’s coming in and what’s going out." />
+      <Card>
+        <h2>Money In vs Out</h2>
+        <div className="cash-totals">
+          <div><span>Monthly Income</span><strong className="success">{money(totals.income)}</strong></div>
+          <div><span>Monthly Expenses</span><strong className="danger">{money(totals.expenses)}</strong></div>
+        </div>
+        <div className="net-line"><span>Net</span><strong className={totals.income-totals.expenses >=0 ? "success":"danger"}>{money(totals.income-totals.expenses)}</strong></div>
+      </Card>
+      <Card>
+        <div className="section-title"><h2>Next 7 Days <ChevronDown/></h2><b>{next7.length} upcoming</b></div>
+        <p className="muted">{money(next7.filter(t=>t.type==="income").reduce((s,t)=>s+t.amount,0))} in · {money(next7.filter(t=>t.type==="expense").reduce((s,t)=>s+t.amount,0))} out</p>
+        {next7.map(t=><TransactionRow key={t.id} t={t} setEditor={setEditor}/>)}
+      </Card>
+      <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
+      <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+      <button className="fab" onClick={()=>setEditor({type:"transaction"})}><Plus size={42}/></button>
     </div>
-  </section> 
+  );
 }
 
-
-function TransactionForm({onSave,onCancel,initial,accounts}){
-  const [type,setType]=useState(initial?.type || 'expense');
-  const [description,setDescription]=useState(initial?.description || '');
-  const [category,setCategory]=useState(initial?.category || (initial?.type === 'income' ? 'Salary' : 'General'));
-  const [amount,setAmount]=useState(initial?.amount ?? '');
-  const [date,setDate]=useState(initial?.date || new Date().toISOString().slice(0,10));
-  const [accountId,setAccountId]=useState(initial?.accountId || '');
-  const [note,setNote]=useState(initial?.note || '');
-  const valid = description.trim().length >= 2 && Number(amount) > 0;
-  const submit = e => {
-    e.preventDefault();
-    if(!valid) return;
-    onSave({ type, description:description.trim(), category:category.trim() || 'General', amount:Number(amount), date, accountId, note:note.trim() });
-  };
-  return <form className="form-row transaction-form tx-form-v2" onSubmit={submit}>
-    <select value={type} onChange={e=>{setType(e.target.value); if(!category || category==='General' || category==='Salary') setCategory(e.target.value==='income'?'Salary':'General')}}><option value="income">Income</option><option value="expense">Expense</option></select>
-    <input placeholder="Description" value={description} onChange={e=>setDescription(e.target.value)}/>
-    <input placeholder="Category" value={category} onChange={e=>setCategory(e.target.value)}/>
-    <input placeholder="Amount" inputMode="decimal" type="number" value={amount} onChange={e=>setAmount(e.target.value)}/>
-    <input type="date" value={date} onChange={e=>setDate(e.target.value)}/>
-    <select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="">No account</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>
-    <input placeholder="Note (optional)" value={note} onChange={e=>setNote(e.target.value)}/>
-    <button disabled={!valid} type="submit"><Check size={16}/>{initial?'Save':'Add'}</button>
-    {onCancel && <button className="ghost" type="button" onClick={onCancel}><X size={16}/>Cancel</button>}
-  </form>
+function TransactionGroup({ title, total, color, txns, setEditor }) {
+  return (
+    <Card>
+      <h2>{title}</h2>
+      <p className={color}>Total Monthly: {money(total)}</p>
+      {txns.map(t=><TransactionRow key={t.id} t={t} setEditor={setEditor} controls />)}
+    </Card>
+  )
 }
 
-function Transactions({transactions,setTransactions,accounts}){
-  const [editingId,setEditingId]=useState(null);
-  const [filter,setFilter]=useState('all');
-  const [search,setSearch]=useState('');
-  const income = transactions.filter(t=>t.type==='income').reduce((s,t)=>s+Number(t.amount||0),0);
-  const expenses = transactions.filter(t=>t.type==='expense').reduce((s,t)=>s+Number(t.amount||0),0);
-  const filtered = transactions.filter(t=>{
-    const matchesType = filter==='all' || t.type===filter;
-    const q = search.trim().toLowerCase();
-    const matchesSearch = !q || [t.description,t.category,t.note].some(v=>String(v||'').toLowerCase().includes(q));
-    return matchesType && matchesSearch;
+function TransactionRow({ t, setEditor, controls=false }) {
+  return (
+    <div className="transaction-row">
+      <div className={`round-icon ${t.type==="income"?"asset":"debt"}`}>{t.icon}</div>
+      <div className="row-main">
+        <strong>{t.name}</strong>
+        <span>{fmtDate(t.date)} · {relDate(t.date)}</span>
+      </div>
+      <strong className={t.type==="income" ? "success":"danger"}>{t.type==="income" ? "+" : "-"}{money(t.amount)}</strong>
+      {controls && <>
+        <button className="icon-btn" onClick={()=>setEditor({type:"transaction", item:t})}><Pencil/></button>
+        <button className="icon-btn" onClick={()=>setEditor({type:"deleteTransaction", item:t})}><Trash2/></button>
+      </>}
+    </div>
+  );
+}
+
+function CompactTxn({ t }) {
+  const d = new Date(t.date);
+  return (
+    <div className="compact-txn">
+      <strong>{d.toLocaleString("en-US", { weekday:"short", day:"numeric", month:"short" })}</strong>
+      <span>{t.icon}</span>
+      <p>{t.name}</p>
+      <b className={t.type==="income"?"success":"danger"}>{money(t.amount)} {t.type==="expense" ? "↓":"↑"}</b>
+    </div>
+  )
+}
+
+function Goals({ state, setState, totals, setEditor }) {
+  const toggle = (id) => setState(s=>({...s, goals:s.goals.map(g=>g.id===id?{...g,open:!g.open}:g)}));
+  const del = (id) => setState(s=>({...s, goals:s.goals.filter(g=>g.id!==id)}));
+  return (
+    <div className="screen">
+      <ScreenTitle title="Your Goals" sub="Big dreams? Let’s make them happen — one goal at a time." />
+      {state.goals.map(g => <GoalCard key={g.id} g={g} toggle={toggle} del={del} setEditor={setEditor}/>)}
+      <button className="fab" onClick={()=>setEditor({type:"goal"})}><Plus size={42}/></button>
+    </div>
+  );
+}
+
+function goalPct(g) {
+  if (g.target === 0 && g.start) {
+    return Math.max(0, Math.min(100, ((g.start - g.current)/g.start)*100));
+  }
+  return Math.max(0, Math.min(100, (Number(g.current||0)/Number(g.target||1))*100));
+}
+
+function GoalCard({ g, toggle, del, setEditor }) {
+  const pct = Math.round(goalPct(g));
+  const remaining = g.target === 0 ? g.current : Math.max(0, g.target - g.current);
+  return (
+    <div className={`goal-card ${g.color || "green"} ${g.open ? "open":""}`}>
+      <div className="goal-top" onClick={()=>toggle(g.id)}>
+        <div className="goal-icon">{g.icon}</div>
+        <div className="row-main">
+          <h2>{g.name}</h2>
+          <span>{g.account}</span>
+        </div>
+        <b>{pct}%</b>
+        <span className={`status-dot ${g.status}`}></span>
+        {g.open ? <ChevronUp/> : <ChevronDown/>}
+      </div>
+      {g.open && (
+        <div className="goal-details">
+          <div className="progress-line"><span>{money(g.current)} / {money(g.target)}</span><b>{pct}%</b></div>
+          <div className="bar"><i style={{width:`${pct}%`}}></i></div>
+          <dl>
+            <dt>Target</dt><dd>{money(g.target)}</dd>
+            <dt>Current balance</dt><dd>{money(g.current)}</dd>
+            <dt>Remaining</dt><dd>{money(remaining)}</dd>
+            <dt>Deadline</dt><dd>{new Date(g.deadline).toLocaleDateString("en-US", {month:"short", year:"numeric"})}</dd>
+          </dl>
+          <div className="pace-card"><h3>🎉 Ahead</h3><span>Pace finish: Sep 2026</span><p>Need {money(3800)}/mo · Pace {money(4800)}/mo</p></div>
+          <div className="goal-actions">
+            <button onClick={()=>setEditor({type:"goal", item:g})}><Pencil/>Edit</button>
+            <button className="archive"><Archive/>Archive</button>
+            <button className="delete" onClick={()=>del(g.id)}><Trash2/>Delete</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function Settings({ state, update, saveSnapshot, restoreSnapshot }) {
+  return (
+    <div className="screen">
+      <ScreenTitle title="Settings" sub="Manage theme, local data, and Supabase snapshots." />
+      <Card>
+        <h2>Appearance</h2>
+        <p>Theme: {state.theme}</p>
+        <button className="primary" onClick={()=>update({theme:state.theme==="light"?"dark":"light"})}>{state.theme==="light"?<Moon/>:<Sun/>} Toggle theme</button>
+      </Card>
+      <Card>
+        <h2>Cloud backup</h2>
+        <p>Save and restore snapshots manually. Restore never runs automatically.</p>
+        <div className="button-row">
+          <button className="primary" onClick={saveSnapshot}><Save/> Save snapshot</button>
+          <button className="secondary" onClick={restoreSnapshot}><DownloadCloud/> Restore latest</button>
+        </div>
+      </Card>
+      <Card>
+        <h2>Danger zone</h2>
+        <button className="danger-btn" onClick={()=>{ if(confirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw/> Reset local data</button>
+      </Card>
+    </div>
+  );
+}
+
+function BottomNav({ tab, setTab }) {
+  const items = [
+    ["overview", Home, "Overview"],
+    ["assets", CreditCard, "Assets & De..."],
+    ["cash", Repeat2, "Cash Flow"],
+    ["goals", Target, "Wealth Goals"],
+  ];
+  return (
+    <nav className="bottom-nav">
+      {items.map(([id, Icon, label])=>(
+        <button key={id} className={tab===id?"active":""} onClick={()=>setTab(id)}>
+          <Icon size={31}/><span>{label}</span>
+        </button>
+      ))}
+    </nav>
+  )
+}
+
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot }) {
+  return (
+    <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
+      <div className="menu-sheet" onClick={(e)=>e.stopPropagation()}>
+        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>Grow UP</h2><p>Personal finance PWA</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
+        <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
+        <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
+        <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
+        <button onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
+        <hr/>
+        <button onClick={()=>update({theme:state.theme==="light"?"dark":"light"})}>{state.theme==="light"?<Moon/>:<Sun/>} Toggle theme</button>
+        <button onClick={saveSnapshot}><Save/> Save snapshot to Supabase</button>
+        <button onClick={restoreSnapshot}><DownloadCloud/> Restore latest from Supabase</button>
+        <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
+      </div>
+    </div>
+  );
+}
+
+function EditorModal({ editor, setEditor, state, setState }) {
+  if (editor.type === "deleteTransaction") {
+    setState(s=>({...s, transactions:s.transactions.filter(t=>t.id!==editor.item.id)}));
+    setTimeout(()=>setEditor(null), 0);
+    return null;
+  }
+
+  const isTxn = editor.type==="transaction";
+  const isGoal = editor.type==="goal";
+  const isAcct = editor.type==="account";
+  const item = editor.item || {};
+  const [form, setForm] = useState({
+    name:item.name || "",
+    amount:item.amount || "",
+    balance:item.balance || "",
+    kind:item.kind || "asset",
+    type:item.type || "expense",
+    category:item.category || "",
+    icon:item.icon || (isGoal ? "🎯" : isAcct ? "💼" : "💳"),
+    date:item.date ? item.date.slice(0,10) : new Date().toISOString().slice(0,10),
+    recurring:item.recurring || false,
+    account:item.account || "Net Worth",
+    current:item.current || "",
+    target:item.target ?? "",
+    deadline:item.deadline || "2026-12-31",
+    color:item.color || "green"
   });
-  const sorted = [...filtered].sort((a,b)=>String(b.date).localeCompare(String(a.date)));
-  const add = payload => setTransactions([{id:makeId(), ...payload}, ...transactions]);
-  const patch = (id,payload) => setTransactions(transactions.map(t=>t.id===id?{...t,...payload}:t));
-  const remove = id => setTransactions(transactions.filter(t=>t.id!==id));
-  const accountName = id => accounts.find(a=>a.id===id)?.name || 'No account';
-  return <section className="panel"><div className="section-head"><div><h2>Transactions</h2><p>Add income and expenses. Cash flow updates automatically on the dashboard.</p></div></div>
-    <div className="mini-grid"><Metric icon={<TrendingUp/>} label="Income" value={money(income)}/><Metric icon={<Wallet/>} label="Expenses" value={money(expenses)}/><Metric icon={<ReceiptText/>} label="Net Cash Flow" value={money(income-expenses)}/></div>
-    <TransactionForm onSave={add} accounts={accounts}/>
-    <div className="filter-bar"><input placeholder="Search description, category, or note" value={search} onChange={e=>setSearch(e.target.value)}/><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="all">All transactions</option><option value="income">Income only</option><option value="expense">Expenses only</option></select></div>
-    <div className="list">
-      {sorted.length===0 && <div className="empty">No matching transactions. Add one above or clear filters.</div>}
-      {sorted.map(t=> editingId===t.id ?
-        <div className="edit-card" key={t.id}><TransactionForm initial={t} accounts={accounts} onSave={payload=>{patch(t.id,payload); setEditingId(null)}} onCancel={()=>setEditingId(null)}/></div>
-        : <div className={`list-row transaction-row ${t.type==='income'?'income-row':'expense-row'}`} key={t.id}>
-          <span>{t.description}<small>{t.date} · {t.category || 'General'} · {accountName(t.accountId)} · {t.type}{t.note ? ` · ${t.note}` : ''}</small></span>
-          <strong className={t.type==='income'?'good':'bad'}>{t.type==='income'?'+':'-'}{money(t.amount)}</strong>
-          <div className="row-actions"><button className="ghost" title="Edit" onClick={()=>setEditingId(t.id)}><Pencil size={16}/></button><button className="ghost danger-text" title="Delete" onClick={()=>confirm(`Delete ${t.description}?`) && remove(t.id)}><Trash2 size={16}/></button></div>
-        </div>)}
-    </div>
-  </section>
-}
-
-
-function GoalForm({onSave,onCancel,initial,accounts,totals}){
-  const [name,setName]=useState(initial?.name || '');
-  const [target,setTarget]=useState(initial?.targetAmount ?? '');
-  const [current,setCurrent]=useState(initial?.currentAmount ?? '');
-  const [deadline,setDeadline]=useState(initial?.deadline || '');
-  const [accountId,setAccountId]=useState(initial?.accountId || 'NET_WORTH');
-  const [status,setStatus]=useState(initial?.status || 'active');
-  const valid = name.trim().length >= 2 && Number(target) > 0;
-  const accountCurrent = accountId === 'NET_WORTH' ? totals.netWorth : Number(accounts.find(a=>a.id===accountId)?.balance || 0);
-  const submit = e => {
-    e.preventDefault();
-    if(!valid) return;
-    onSave({ name:name.trim(), targetAmount:Number(target), currentAmount: current === '' ? accountCurrent : Number(current), deadline, accountId, status });
+  const change = (k,v) => setForm(f=>({...f,[k]:v}));
+  const save = () => {
+    if (isTxn) {
+      const tx = { id:item.id || crypto.randomUUID(), type:form.type, name:form.name || "Transaction", icon:form.icon, amount:Number(form.amount||0), date:new Date(form.date).toISOString(), recurring:!!form.recurring, category:form.category };
+      setState(s=>({...s, transactions:item.id ? s.transactions.map(t=>t.id===item.id?tx:t) : [tx, ...s.transactions]}));
+    }
+    if (isAcct) {
+      const acct = { id:item.id || crypto.randomUUID(), name:form.name || "Account", icon:form.icon, kind:form.kind, balance:Number(form.balance||0), previous:Number(form.balance||0) };
+      setState(s=>({...s, accounts:item.id ? s.accounts.map(a=>a.id===item.id?acct:a) : [acct, ...s.accounts]}));
+    }
+    if (isGoal) {
+      const goal = { id:item.id || crypto.randomUUID(), name:form.name || "Goal", account:form.account, icon:form.icon, color:form.color, target:Number(form.target||0), current:Number(form.current||0), deadline:form.deadline, status:"active", open:item.open ?? true };
+      setState(s=>({...s, goals:item.id ? s.goals.map(g=>g.id===item.id?goal:g) : [goal, ...s.goals]}));
+    }
+    setEditor(null);
   };
-  return <form className="form-row goal-form-v2" onSubmit={submit}>
-    <input placeholder="Goal name" value={name} onChange={e=>setName(e.target.value)}/>
-    <input placeholder="Target amount" type="number" inputMode="decimal" value={target} onChange={e=>setTarget(e.target.value)}/>
-    <input placeholder={`Current (${money(accountCurrent)})`} type="number" inputMode="decimal" value={current} onChange={e=>setCurrent(e.target.value)}/>
-    <input type="date" value={deadline} onChange={e=>setDeadline(e.target.value)}/>
-    <select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="NET_WORTH">Net Worth</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>
-    <select value={status} onChange={e=>setStatus(e.target.value)}><option value="active">Active</option><option value="completed">Completed</option><option value="paused">Paused</option></select>
-    <button disabled={!valid} type="submit"><Check size={16}/>{initial?'Save':'Add'}</button>
-    {onCancel && <button className="ghost" type="button" onClick={onCancel}><X size={16}/>Cancel</button>}
-  </form>
-}
 
-function Goals({goals,setGoals,accounts}){
-  const [editingId,setEditingId]=useState(null);
-  const [filter,setFilter]=useState('active');
-  const totals = useMemo(()=>{
-    const assets = accounts.filter(a=>a.category==='asset').reduce((s,a)=>s+Number(a.balance||0),0);
-    const debts = accounts.filter(a=>a.category==='debt').reduce((s,a)=>s+Number(a.balance||0),0);
-    return { assets, debts, netWorth: assets-debts };
-  },[accounts]);
-  const add = payload => setGoals([{id:makeId(), ...payload}, ...goals]);
-  const patch = (id,payload) => setGoals(goals.map(g=>g.id===id?{...g,...payload}:g));
-  const remove = id => setGoals(goals.filter(g=>g.id!==id));
-  const visible = goals.filter(g=>filter==='all' || (g.status || 'active')===filter);
-  const goalStats = useMemo(()=>{
-    const active = goals.filter(g=>(g.status || 'active')==='active');
-    const completed = goals.filter(g=>(g.status || 'active')==='completed');
-    const avg = goals.length ? Math.round(goals.reduce((s,g)=>s+Math.min(100, ((Number(g.currentAmount)||0)/(Number(g.targetAmount)||1))*100),0)/goals.length) : 0;
-    return { active: active.length, completed: completed.length, avg };
-  },[goals]);
-  const accountLabel = id => id==='NET_WORTH' ? 'Net Worth' : accounts.find(a=>a.id===id)?.name || 'Account goal';
-  const progress = g => Math.min(100, Math.max(0, Math.round(((Number(g.currentAmount)||0)/(Number(g.targetAmount)||1))*100)));
-  const monthlyNeeded = g => {
-    if(!g.deadline) return null;
-    const now = new Date(); const due = new Date(g.deadline + 'T00:00:00');
-    const months = Math.max(1, Math.ceil((due - now) / (1000*60*60*24*30.4375)));
-    const remaining = Math.max(0, Number(g.targetAmount||0) - Number(g.currentAmount||0));
-    return remaining / months;
-  };
-  return <section className="panel"><div className="section-head"><div><h2>Goals</h2><p>Set financial targets, track progress, and estimate what you need monthly to stay on pace.</p></div><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="active">Active goals</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="all">All goals</option></select></div>
-    <div className="mini-grid"><Metric icon={<Target/>} label="Active Goals" value={goalStats.active}/><Metric icon={<Check/>} label="Completed" value={goalStats.completed}/><Metric icon={<Flag/>} label="Average Progress" value={`${goalStats.avg}%`}/></div>
-    <GoalForm onSave={add} accounts={accounts} totals={totals}/>
-    <div className="list">
-      {visible.length===0 && <div className="empty">No {filter==='all'?'':filter} goals yet.</div>}
-      {visible.map(g=> editingId===g.id ?
-        <div className="edit-card" key={g.id}><GoalForm initial={g} accounts={accounts} totals={totals} onSave={payload=>{patch(g.id,payload); setEditingId(null)}} onCancel={()=>setEditingId(null)}/></div>
-        : <div className={`list-row goal-row ${g.status==='completed'?'completed-row':''}`} key={g.id}>
-          <span><strong>{g.name}</strong><small>{accountLabel(g.accountId)} · {(g.status || 'active')} {g.deadline ? `· Due ${g.deadline}` : '· No deadline'}{monthlyNeeded(g) !== null ? ` · ${money(monthlyNeeded(g))}/mo needed` : ''}</small><span className="progress-track"><span style={{width:`${progress(g)}%`}} /></span></span>
-          <strong>{progress(g)}%<small>{money(g.currentAmount || 0)} / {money(g.targetAmount)}</small></strong>
-          <div className="row-actions"><button className="ghost" title="Edit" onClick={()=>setEditingId(g.id)}><Pencil size={16}/></button><button className="ghost" title="Mark complete" onClick={()=>patch(g.id,{status:g.status==='completed'?'active':'completed'})}><Check size={16}/></button><button className="ghost danger-text" title="Delete" onClick={()=>confirm(`Delete ${g.name}?`) && remove(g.id)}><Trash2 size={16}/></button></div>
-        </div>)}
+  return (
+    <div className="modal-backdrop">
+      <div className="editor-modal">
+        <div className="modal-head"><h2>{item.id ? "Edit" : "Add"} {isTxn?"Transaction":isAcct?"Account":"Goal"}</h2><button onClick={()=>setEditor(null)}><X/></button></div>
+        <label>Name<input value={form.name} onChange={e=>change("name", e.target.value)} /></label>
+        <label>Icon<input value={form.icon} onChange={e=>change("icon", e.target.value)} /></label>
+        {isTxn && <>
+          <label>Type<select value={form.type} onChange={e=>change("type", e.target.value)}><option value="income">Income</option><option value="expense">Expense</option></select></label>
+          <label>Amount<input type="number" value={form.amount} onChange={e=>change("amount", e.target.value)} /></label>
+          <label>Category<input value={form.category} onChange={e=>change("category", e.target.value)} /></label>
+          <label>Date<input type="date" value={form.date} onChange={e=>change("date", e.target.value)} /></label>
+          <label className="checkbox"><input type="checkbox" checked={form.recurring} onChange={e=>change("recurring", e.target.checked)} /> Recurring</label>
+        </>}
+        {isAcct && <>
+          <label>Kind<select value={form.kind} onChange={e=>change("kind", e.target.value)}><option value="asset">Asset</option><option value="debt">Debt</option></select></label>
+          <label>Balance<input type="number" value={form.balance} onChange={e=>change("balance", e.target.value)} /></label>
+        </>}
+        {isGoal && <>
+          <label>Account / Metric<input value={form.account} onChange={e=>change("account", e.target.value)} /></label>
+          <label>Current<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} /></label>
+          <label>Target<input type="number" value={form.target} onChange={e=>change("target", e.target.value)} /></label>
+          <label>Deadline<input type="date" value={form.deadline} onChange={e=>change("deadline", e.target.value)} /></label>
+          <label>Color<select value={form.color} onChange={e=>change("color", e.target.value)}><option value="green">Green</option><option value="purple">Purple</option><option value="red">Red</option></select></label>
+        </>}
+        <button className="primary full" onClick={save}>Save</button>
+      </div>
     </div>
-  </section>
+  );
 }
 
-
-function SettingsPanel({state,update,saveSnapshot,restoreLatestSnapshot,syncStatus}){ 
-  return <section className="panel"><h2>Settings</h2><p>Theme: {state.theme}</p><button onClick={()=>update({theme:state.theme==='dark'?'light':'dark'})}>Toggle theme</button><button onClick={saveSnapshot}>Save snapshot to Supabase</button><button onClick={restoreLatestSnapshot}>Restore latest from Supabase</button><p className="status">{syncStatus}</p><button className="danger" onClick={()=>{localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('growup_pwa_state_v1'); location.reload();}}>Reset local data</button></section> 
+function Card({ children, className="", onClick }) {
+  return <section className={`card ${className}`} onClick={onClick}>{children}</section>
 }
 
-createRoot(document.getElementById('root')).render(<App/>);
+createRoot(document.getElementById("root")).render(<App />);

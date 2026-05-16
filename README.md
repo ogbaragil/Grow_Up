@@ -1,13 +1,19 @@
-# Grow UP PWA — Goals v2
+# Grow UP Faithful UI Rebuild
 
-Adds real goal tracking:
+A mobile-first Vite + React PWA rebuild that follows the uploaded Grow UP app screenshots:
+- Overview
+- Assets & Debts
+- Cash Flow
+- Wealth Goals
+- Menu / Settings
+- Supabase save + optional restore latest snapshot
 
-- goal progress percentages
-- current amount and target amount
-- deadline tracking
-- monthly target needed
-- active/completed/paused status
-- edit/delete goals
-- dashboard goal summary
+## Cloudflare Pages
+Build command: `npm run build`
+Build output directory: `dist`
 
-Upload the contents of this folder to GitHub and replace existing files. Cloudflare Pages will auto-deploy after the commit.
+## Supabase env vars
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+Run `supabase/schema.sql` in Supabase if needed.
