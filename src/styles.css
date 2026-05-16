@@ -853,3 +853,51 @@ dd { margin:0; font-weight:900; }
 .menu-danger {
   color: var(--red) !important;
 }
+
+
+/* Google sign-in */
+.google-auth-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 15px;
+  box-shadow: 0 6px 16px rgba(15,23,42,.05);
+}
+
+.google-auth-btn span {
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: #4285f4;
+  font-weight: 950;
+}
+
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 850;
+  margin: 16px 0 4px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  height: 1px;
+  background: var(--line);
+  flex: 1;
+}

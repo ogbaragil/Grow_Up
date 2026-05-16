@@ -325,6 +325,24 @@ function AuthScreen() {
     }
   };
 
+  const signInWithGoogle = async () => {
+    setMessage("");
+
+    if (!supabase) {
+      setMessage("Supabase is not configured.");
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+
+    if (error) setMessage(error.message || "Google sign-in failed.");
+  };
+
   const resetPassword = async () => {
     if (!supabase) {
       setMessage("Supabase is not configured.");
@@ -356,6 +374,13 @@ function AuthScreen() {
             <button className={mode === "signIn" ? "active" : ""} onClick={()=>setMode("signIn")}>Sign in</button>
             <button className={mode === "signUp" ? "active" : ""} onClick={()=>setMode("signUp")}>Create account</button>
           </div>
+
+          <button className="google-auth-btn" onClick={signInWithGoogle} type="button">
+            <span>G</span>
+            Continue with Google
+          </button>
+
+          <div className="auth-divider"><span>or</span></div>
 
           <form onSubmit={submit}>
             {mode === "signUp" && (

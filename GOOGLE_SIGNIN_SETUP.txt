@@ -1,0 +1,31 @@
+Google sign-in added.
+
+App changes:
+- Added "Continue with Google" button on Auth screen.
+- Uses supabase.auth.signInWithOAuth({ provider: "google" }).
+- Redirects back to window.location.origin.
+
+Supabase setup:
+1. Go to Supabase > Authentication > Providers.
+2. Enable Google.
+3. Add your Google Client ID and Client Secret.
+4. In Supabase > Authentication > URL Configuration:
+   Site URL:
+   https://growupapp.app
+
+   Redirect URLs:
+   https://growupapp.app
+   https://growupapp.app/
+   https://*.pages.dev
+
+Google Cloud setup:
+1. Go to Google Cloud Console.
+2. Create/select OAuth Client ID for Web application.
+3. Add Authorized JavaScript origin:
+   https://growupapp.app
+
+4. Add Authorized redirect URI from Supabase Google provider page.
+   It usually looks like:
+   https://YOUR_PROJECT_REF.supabase.co/auth/v1/callback
+
+Then redeploy the app.
