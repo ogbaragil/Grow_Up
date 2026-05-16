@@ -65,6 +65,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [editor, setEditor] = useState(null);
   const [historyMetric, setHistoryMetric] = useState(null);
+  const [compoundOpen, setCompoundOpen] = useState(false);
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
@@ -170,14 +171,16 @@ function App() {
   return (
     <div className="app-shell">
       <main className="phone">
-        {historyMetric ? (
+        {compoundOpen ? (
+          <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} />
+        ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
           <>
             {tab === "overview" && <Overview {...common} setTab={setTab} />}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
-            {tab === "goals" && <Goals {...common} />}
+            {tab === "goals" && <Goals {...common} setCompoundOpen={setCompoundOpen} />}
             {tab === "settings" && <Settings state={state} update={update} saveSnapshot={saveSnapshot} restoreSnapshot={restoreSnapshot} setMenuOpen={setMenuOpen} />}
             <BottomNav tab={tab} setTab={setTab} />
           </>
@@ -259,7 +262,7 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
         <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(totals.assets)} sub={`${signedMoney(totals.assets - totals.prevAssets)} vs last month`} icon="💼" dot="green" />
         <Kpi onClick={()=>setHistoryMetric("debts")} title="Total Debts" value={money(totals.debts)} sub={`${signedMoney(totals.debts - totals.prevDebts)} vs last month`} icon="💳" dot="red" />
         <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(totals.net)} sub={`${signedMoney(totals.net - totals.prevNet)} vs last month`} icon="$" dot="blue" />
-        <Kpi title="Goals" value={`${completedGoals} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple" />
+        <Kpi onClick={()=>setTab("goals")} title="Goals" value={`${completedGoals} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple" />
       </div>
 
       {state.accounts.length === 0 && state.goals.length === 0 && state.transactions.length === 0 && (
@@ -604,17 +607,48 @@ function CompactTxn({ t }) {
   );
 }
 
-function Goals({ state, setState, setEditor, setMenuOpen }) {
+
+function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen }) {
+  const [goalMenuOpen, setGoalMenuOpen] = useState(false);
+  const [reorderMode, setReorderMode] = useState(false);
   const totals = computeTotals(state);
   const accountsForMonth = getAccountsForSelectedMonth(state);
 
   const toggle = (id) => setState(s => ({ ...s, goals:s.goals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
   const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
 
+  const moveGoal = (id, direction) => {
+    setState(s => {
+      const goals = [...s.goals];
+      const index = goals.findIndex(g => g.id === id);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= goals.length) return s;
+      [goals[index], goals[nextIndex]] = [goals[nextIndex], goals[index]];
+      return { ...s, goals };
+    });
+  };
+
+  const openAddGoal = () => {
+    setGoalMenuOpen(false);
+    setEditor({ type:"goal" });
+  };
+
+  const openCompound = () => {
+    setGoalMenuOpen(false);
+    setCompoundOpen(true);
+  };
+
   return (
     <div className="screen">
       <ScreenTitle title="Your Goals" sub="Big dreams? Let's make them happen — one goal at a time." setMenuOpen={setMenuOpen} />
-      {state.goals.length ? state.goals.map(g => (
+
+      {reorderMode && (
+        <div className="snapshot-banner">
+          Reorder mode enabled · use ↑ ↓ on each goal
+        </div>
+      )}
+
+      {state.goals.length ? state.goals.map((g, index) => (
         <GoalCard
           key={g.id}
           g={g}
@@ -623,32 +657,58 @@ function Goals({ state, setState, setEditor, setMenuOpen }) {
           toggle={toggle}
           del={del}
           setEditor={setEditor}
+          reorderMode={reorderMode}
+          moveGoal={moveGoal}
+          canMoveUp={index > 0}
+          canMoveDown={index < state.goals.length - 1}
         />
       )) : (
-        <EmptyState title="No goals yet" text="Add your first wealth goal and track progress." action="Add goal" onClick={()=>setEditor({ type:"goal" })}/>
+        <EmptyState title="No goals yet" text="Add your first wealth goal and track progress." action="Add goal" onClick={openAddGoal}/>
       )}
-      <button className="fab" onClick={()=>setEditor({ type:"goal" })}><Plus size={34}/></button>
+
+      {goalMenuOpen && (
+        <div className="goal-fab-menu">
+          <button onClick={openAddGoal}><span className="menu-icon green">+</span><b>Add goal</b></button>
+          <button onClick={()=>{ setReorderMode(v=>!v); setGoalMenuOpen(false); }}><span className="menu-icon gray">↕</span><b>{reorderMode ? "Done reorder" : "Reorder goals"}</b></button>
+          <button onClick={openCompound}><span className="menu-icon gray">%</span><b>Compound Wealth</b></button>
+        </div>
+      )}
+
+      <button
+        className={goalMenuOpen ? "fab edit-active" : "fab"}
+        onClick={()=>setGoalMenuOpen(v=>!v)}
+        aria-label="Goal actions"
+      >
+        {goalMenuOpen ? <X size={34}/> : <Plus size={34}/>}
+      </button>
     </div>
   );
 }
 
-function GoalCard({ g, totals, accounts, toggle, del, setEditor }) {
+function GoalCard({ g, totals, accounts, toggle, del, setEditor, reorderMode, moveGoal, canMoveUp, canMoveDown }) {
   const calc = calculateGoalProgress(g, totals, accounts);
   const pct = Math.round(calc.progress);
   const status = goalStatus(calc, g);
 
   return (
-    <div className={`goal-card ${g.color || goalColorForType(g.goalType)} ${g.open ? "open":""}`}>
-      <div className="goal-top" onClick={()=>toggle(g.id)}>
+    <div className={`goal-card slim ${g.color || goalColorForType(g.goalType)} ${g.open ? "open":""}`}>
+      <div className="goal-top compact" onClick={()=>!reorderMode && toggle(g.id)}>
         <div className="goal-icon">{g.icon || goalIconForType(g.goalType)}</div>
         <div className="row-main">
           <h2>{g.name}</h2>
           <span>{goalTypeLabel(g.goalType)} · {calc.sourceLabel}</span>
         </div>
         <b>{pct}%</b>
-        {g.open ? <ChevronUp size={22}/> : <ChevronDown size={22}/>}
+        {reorderMode ? (
+          <div className="reorder-controls" onClick={(e)=>e.stopPropagation()}>
+            <button disabled={!canMoveUp} onClick={()=>moveGoal(g.id, -1)}>↑</button>
+            <button disabled={!canMoveDown} onClick={()=>moveGoal(g.id, 1)}>↓</button>
+          </div>
+        ) : (
+          g.open ? <ChevronUp size={22}/> : <ChevronDown size={22}/>
+        )}
       </div>
-      {g.open && (
+      {g.open && !reorderMode && (
         <div className="goal-details">
           <div className="progress-line"><span>{money(calc.current)} / {money(calc.target)}</span><b>{pct}%</b></div>
           <div className="bar"><i style={{width:`${pct}%`}}></i></div>
@@ -675,6 +735,104 @@ function GoalCard({ g, totals, accounts, toggle, del, setEditor }) {
       )}
     </div>
   );
+}
+
+function CompoundWealthPage({ setCompoundOpen, setMenuOpen }) {
+  const [inputs, setInputs] = useState({
+    start: 20000,
+    monthly: 2100,
+    years: 16,
+    rate: 10,
+    startYear: new Date().getFullYear(),
+    age: 35
+  });
+
+  const change = (key, value) => setInputs(s => ({ ...s, [key]: Number(value || 0) }));
+
+  const rows = useMemo(() => {
+    let value = Number(inputs.start || 0);
+    const annualContribution = Number(inputs.monthly || 0) * 12;
+    const rate = Number(inputs.rate || 0) / 100;
+    const out = [];
+
+    for (let i = 0; i <= Number(inputs.years || 0); i++) {
+      const year = Number(inputs.startYear || new Date().getFullYear()) + i;
+      const age = Number(inputs.age || 0) + i;
+      const contribution = annualContribution * (i + 1);
+      const beforeGrowth = value + annualContribution;
+      const growth = beforeGrowth * rate;
+      value = beforeGrowth + growth;
+
+      out.push({
+        year,
+        age,
+        contribution,
+        growth,
+        value
+      });
+    }
+
+    return out;
+  }, [inputs]);
+
+  const futureValue = rows.at(-1)?.value || Number(inputs.start || 0);
+  const totalContributions = Number(inputs.start || 0) + (Number(inputs.monthly || 0) * 12 * Number(inputs.years || 0));
+  const totalGrowth = Math.max(0, futureValue - totalContributions);
+
+  const reset = () => setInputs({ start:20000, monthly:2100, years:16, rate:10, startYear:new Date().getFullYear(), age:35 });
+
+  return (
+    <div className="screen compound-screen">
+      <section className="compound-header">
+        <button className="round-nav-btn" onClick={()=>setCompoundOpen(false)}><ArrowLeft size={24}/></button>
+        <div>
+          <h1>Compound Wealth</h1>
+          <p>Run your rich-life scenarios and see how time turns habits into wealth.</p>
+        </div>
+        <button className="reset-btn" onClick={reset}>Reset</button>
+      </section>
+
+      <Card>
+        <span className="section-chip">Scenario inputs</span>
+        <div className="compound-grid">
+          <label>Starting amount ($)<input type="number" value={inputs.start} onChange={e=>change("start", e.target.value)} /></label>
+          <label>Monthly contribution ($)<input type="number" value={inputs.monthly} onChange={e=>change("monthly", e.target.value)} /></label>
+          <label>Years<input type="number" value={inputs.years} onChange={e=>change("years", e.target.value)} /></label>
+          <label>Annual rate (%)<input type="number" value={inputs.rate} onChange={e=>change("rate", e.target.value)} /></label>
+          <label>Start year (calendar)<input type="number" value={inputs.startYear} onChange={e=>change("startYear", e.target.value)} /></label>
+          <label>Your age at start year<input type="number" value={inputs.age} onChange={e=>change("age", e.target.value)} /></label>
+        </div>
+      </Card>
+
+      <div className="future-value"><span>Future value</span><b>{money(futureValue)}</b></div>
+      <div className="simple-row"><span>Your total contributions</span><b>{money(totalContributions)}</b></div>
+      <div className="simple-row"><span>Total growth</span><b>{money(totalGrowth)}</b></div>
+
+      <div className="checkpoint-label"><i></i><b>Yearly checkpoints</b></div>
+
+      <Card className="checkpoint-card">
+        <h2>Yearly Checkpoints</h2>
+        <div className="checkpoint-head"><span>Year</span><span>Age</span><span>Contr.</span><span>Growth</span><span>Value</span></div>
+        {rows.map(row => (
+          <div className="checkpoint-row" key={row.year}>
+            <span>{row.year}</span>
+            <span>{row.age}</span>
+            <span>{compactMoney(row.contribution)}</span>
+            <span className="success">+{compactMoney(row.growth)}</span>
+            <span>{compactMoney(row.value)}</span>
+          </div>
+        ))}
+      </Card>
+    </div>
+  );
+}
+
+function compactMoney(value) {
+  const n = Number(value || 0);
+  if (Math.abs(n) >= 1000000) return `$${(n/1000000).toFixed(1)}M`;
+  if (Math.abs(n) >= 10000) return `$${Math.round(n).toLocaleString("en-US")}`;
+  if (Math.abs(n) >= 1000) return `$${(n/1000).toFixed(1)}k`;
+  return money(n);
 }
 
 function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen }) {

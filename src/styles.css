@@ -221,3 +221,268 @@ dd { margin:0; font-weight:900; }
   background: var(--purple2);
   color: var(--purple);
 }
+
+
+/* Goals v3 slimming + action menu */
+.goal-card.slim {
+  margin: 14px 0;
+  border-radius: 19px;
+}
+
+.goal-top.compact {
+  min-height: 118px;
+  padding: 18px 18px;
+  gap: 14px;
+}
+
+.goal-top.compact .goal-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  font-size: 28px;
+}
+
+.goal-top.compact .row-main h2 {
+  font-size: 23px;
+  line-height: 1.05;
+  max-width: 170px;
+}
+
+.goal-top.compact .row-main span {
+  font-size: 16px;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.goal-top.compact > b {
+  font-size: 32px;
+  min-width: 72px;
+  text-align: right;
+}
+
+.goal-fab-menu {
+  position: fixed;
+  right: 38px;
+  bottom: 190px;
+  width: 262px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  box-shadow: 0 18px 50px rgba(0,0,0,.18);
+  z-index: 18;
+  overflow: hidden;
+}
+
+.goal-fab-menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line);
+  font-size: 17px;
+  text-align: left;
+}
+
+.goal-fab-menu button:last-child {
+  border-bottom: 0;
+}
+
+.goal-fab-menu b {
+  font-size: 17px;
+}
+
+.menu-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-size: 23px;
+  font-weight: 900;
+  flex: 0 0 auto;
+}
+
+.menu-icon.green {
+  background: var(--green);
+  color: white;
+}
+
+.menu-icon.gray {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.reorder-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.reorder-controls button {
+  width: 34px;
+  height: 28px;
+  border-radius: 10px;
+  background: rgba(255,255,255,.55);
+  border: 1px solid rgba(0,0,0,.08);
+  font-weight: 900;
+}
+
+.reorder-controls button:disabled {
+  opacity: .32;
+}
+
+/* Compound Wealth */
+.compound-screen {
+  padding-top: 28px;
+}
+
+.compound-header {
+  display: grid;
+  grid-template-columns: 48px 1fr 78px;
+  gap: 10px;
+  align-items: start;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.compound-header h1 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: -.05em;
+}
+
+.compound-header p {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.25;
+}
+
+.reset-btn {
+  height: 46px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--muted);
+  font-weight: 900;
+  box-shadow: var(--shadow);
+}
+
+.section-chip {
+  display: inline-flex;
+  border: 1.5px solid var(--green);
+  color: var(--green);
+  background: var(--green2);
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 900;
+  margin-bottom: 16px;
+}
+
+.compound-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px 12px;
+}
+
+.compound-grid label {
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 750;
+}
+
+.compound-grid input {
+  width: 100%;
+  height: 54px;
+  margin-top: 8px;
+  border-radius: 13px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  font-size: 20px;
+  padding: 0 14px;
+}
+
+.future-value {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1.5px solid var(--green);
+  background: var(--green2);
+  border-radius: 18px;
+  padding: 18px;
+  margin: 22px 0;
+}
+
+.future-value span,
+.simple-row span {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.future-value b {
+  color: var(--green);
+  font-size: 27px;
+}
+
+.simple-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 17px;
+  padding: 18px;
+  margin: 16px 0;
+  box-shadow: var(--shadow);
+}
+
+.simple-row b {
+  font-size: 24px;
+}
+
+.checkpoint-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 17px;
+  margin: 26px 0 8px;
+}
+
+.checkpoint-label i {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--green);
+}
+
+.checkpoint-card {
+  overflow: auto;
+}
+
+.checkpoint-head,
+.checkpoint-row {
+  display: grid;
+  grid-template-columns: .75fr .55fr 1fr 1fr 1.1fr;
+  gap: 8px;
+  align-items: center;
+  min-width: 360px;
+}
+
+.checkpoint-head {
+  color: var(--muted);
+  font-weight: 900;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.checkpoint-row {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 15px;
+}

@@ -1,0 +1,7 @@
+Implemented:
+- Slimmer goal cards.
+- Dashboard Goals card links to Goals page.
+- Goals floating button opens action menu.
+- Action menu includes Add Goal, Reorder Goals, Compound Wealth.
+- Reorder mode supports moving goals up/down.
+- Compound Wealth page added with editable inputs, future value, contributions, growth, yearly checkpoints.
