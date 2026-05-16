@@ -1090,6 +1090,13 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
+  const topAsset = accounts
+    .filter(a => a.kind === "asset" && Number(a.balance || 0) > 0)
+    .sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0))[0];
+  const topAssetPercent = topAsset && dashboardTotals.assets
+    ? Math.round((Number(topAsset.balance || 0) / Math.max(1, dashboardTotals.assets)) * 1000) / 10
+    : 0;
+  const topAssetCirc = 2 * Math.PI * 42;
   const goals = dashboardState.goals.filter(g => !g.archived);
   const primaryGoal = goals[0];
 
@@ -1172,6 +1179,35 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
           <polyline points={points} />
         </svg>
       </section>
+
+      {topAsset && (
+        <section className="minimal-top-asset-card" onClick={()=>setHistoryMetric("assets")}>
+          <div className="minimal-top-asset-copy">
+            <div className="top-asset-label">
+              <span>◔</span>
+              <b>Top Asset</b>
+            </div>
+            <p>{topAsset.name}</p>
+            <h2>{money(topAsset.balance)}</h2>
+            <small>{topAssetPercent}% of total assets</small>
+          </div>
+
+          <div className="top-asset-ring" style={{ "--assetPercent": topAssetPercent }}>
+            <svg viewBox="0 0 100 100">
+              <circle className="ring-bg" cx="50" cy="50" r="42" />
+              <circle
+                className="ring-fill"
+                cx="50"
+                cy="50"
+                r="42"
+                strokeDasharray={topAssetCirc}
+                strokeDashoffset={topAssetCirc - (topAssetCirc * topAssetPercent / 100)}
+              />
+            </svg>
+            <strong>{topAssetPercent}%</strong>
+          </div>
+        </section>
+      )}
 
       <section className="minimal-split-card">
         <button onClick={()=>setHistoryMetric("assets")}><span>Total Assets</span><strong>{money(dashboardTotals.assets)}</strong></button>
@@ -1922,7 +1958,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <p>Choose the home screen that fits how you want to use Grow UP.</p>
         <div className="dashboard-style-toggle">
           <button className={(state.dashboardStyle || "minimal") === "minimal" ? "active" : ""} onClick={()=>update({ dashboardStyle:"minimal" })}>Minimal</button>
-          <button className={(state.dashboardStyle || "minimal") === "detailed" ? "active" : ""} onClick={()=>update({ dashboardStyle:"detailed" })}>Detailed</button>
+          <button className={(state.dashboardStyle || "minimal") === "detailed" ? "active" : ""} onClick={()=>update({ dashboardStyle: "minimal" })}>Detailed</button>
         </div>
       </Card>
 
