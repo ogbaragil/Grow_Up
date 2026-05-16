@@ -1,14 +1,13 @@
-# Grow UP PWA — Transactions v2
+# Grow UP PWA — Goals v2
 
-This update adds a stronger transactions workflow:
+Adds real goal tracking:
 
-- Add income and expense transactions
-- Edit and delete transactions
-- Categories and optional notes
-- Transaction search and income/expense filters
-- Dashboard cash-flow totals
-- Dashboard recent transactions panel
-- Works with existing local storage and Supabase snapshot restore/save
+- goal progress percentages
+- current amount and target amount
+- deadline tracking
+- monthly target needed
+- active/completed/paused status
+- edit/delete goals
+- dashboard goal summary
 
-Upload the contents of this folder to GitHub and replace existing files.
-Cloudflare Pages will auto-deploy after the commit.
+Upload the contents of this folder to GitHub and replace existing files. Cloudflare Pages will auto-deploy after the commit.

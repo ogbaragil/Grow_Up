@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { Plus, Moon, Sun, Wallet, Target, Settings, LayoutDashboard, PiggyBank, TrendingUp, Trash2, Pencil, Archive, RotateCcw, X, Check, ReceiptText } from 'lucide-react';
+import { Plus, Moon, Sun, Wallet, Target, Settings, LayoutDashboard, PiggyBank, TrendingUp, Trash2, Pencil, Archive, RotateCcw, X, Check, ReceiptText, CalendarDays, Flag } from 'lucide-react';
 import { supabase } from './supabaseClient';
 import './styles.css';
 
@@ -22,7 +22,7 @@ const initialState = { onboarded:false, firstName:'', theme:'dark', accounts:[],
 function normalizeState(saved){
   const merged = { ...initialState, ...(saved || {}) };
   merged.accounts = Array.isArray(merged.accounts) ? merged.accounts.map(a => ({ archived:false, ...a, balance:Number(a.balance||0) })) : [];
-  merged.goals = Array.isArray(merged.goals) ? merged.goals : [];
+  merged.goals = Array.isArray(merged.goals) ? merged.goals.map(g => ({ deadline:'', status:'active', ...g, targetAmount:Number(g.targetAmount||0), currentAmount:g.currentAmount==null?'':Number(g.currentAmount||0) })) : [];
   merged.transactions = Array.isArray(merged.transactions) ? merged.transactions.map(t => ({ type:'expense', date:new Date().toISOString().slice(0,10), category:'General', note:'', ...t, amount:Number(t.amount||0) })) : [];
   return merged;
 }
@@ -123,6 +123,7 @@ function Dashboard({totals,accounts,archivedCount,goals,transactions,setTab}){
   return <section>
     <div className="grid"><Metric icon={<PiggyBank/>} label="Assets" value={money(totals.assets)}/><Metric icon={<Wallet/>} label="Debts" value={money(totals.debts)}/><Metric icon={<TrendingUp/>} label="Net Worth" value={money(totals.netWorth)}/><Metric icon={<ReceiptText/>} label="Cash Flow" value={money(totals.cashFlow)}/></div>
     <div className="panel"><div className="section-head"><div><h2>Quick overview</h2><p>You have {accounts.length} active accounts, {goals.length} active goals, and {transactions.length} transactions. {archivedCount ? `${archivedCount} account${archivedCount>1?'s are':' is'} archived and excluded from totals.` : 'No archived accounts yet.'}</p></div><button className="secondary small-btn" onClick={()=>setTab('transactions')}>Add transaction</button></div></div>
+    <div className="panel"><div className="section-head"><div><h2>Goal summary</h2><p>Track the next milestone you are working toward.</p></div><button className="secondary small-btn" onClick={()=>setTab('goals')}>View goals</button></div><div className="list">{goals.length===0 && <div className="empty">No goals yet.</div>}{goals.slice(0,3).map(g=>{const pct=Math.min(100, Math.round(((Number(g.currentAmount)||0)/(Number(g.targetAmount)||1))*100)); return <div className="list-row" key={g.id}><span>{g.name}<small>{pct}% complete · {g.deadline ? `Due ${g.deadline}` : 'No deadline'}</small><span className="progress-track"><span style={{width:`${pct}%`}} /></span></span><strong>{money(g.currentAmount || 0)} / {money(g.targetAmount)}</strong></div>})}</div></div>
     <div className="panel"><div className="section-head"><div><h2>Recent transactions</h2><p>Your latest income and expenses.</p></div><button className="secondary small-btn" onClick={()=>setTab('transactions')}>View all</button></div><div className="list">{recent.length===0 && <div className="empty">No transactions yet.</div>}{recent.map(t=><div className={`list-row transaction-row ${t.type==='income'?'income-row':'expense-row'}`} key={t.id}><span>{t.description}<small>{t.date} · {t.category || 'General'} · {t.type}</small></span><strong className={t.type==='income'?'good':'bad'}>{t.type==='income'?'+':'-'}{money(t.amount)}</strong></div>)}</div></div>
   </section> 
 }
@@ -239,11 +240,76 @@ function Transactions({transactions,setTransactions,accounts}){
   </section>
 }
 
-function Goals({goals,setGoals,accounts}){ 
-  const [name,setName]=useState(''); const [target,setTarget]=useState(''); const [accountId,setAccountId]=useState('NET_WORTH');
-  const add=()=>{ if(!name.trim()) return; setGoals([...goals,{id:makeId(),name,targetAmount:Number(target||0),accountId}]); setName(''); setTarget('');}; 
-  return <section className="panel"><h2>Goals</h2><div className="form-row"><input placeholder="Goal name" value={name} onChange={e=>setName(e.target.value)}/><input placeholder="Target amount" type="number" value={target} onChange={e=>setTarget(e.target.value)}/><select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="NET_WORTH">Net Worth</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select><button onClick={add}><Plus size={16}/>Add</button></div><div className="list">{goals.map(g=><div className="list-row" key={g.id}><span>{g.name}<small>{g.accountId==='NET_WORTH'?'Net Worth':'Account goal'}</small></span><strong>{money(g.targetAmount)}</strong><button className="ghost" onClick={()=>setGoals(goals.filter(x=>x.id!==g.id))}><Trash2 size={16}/></button></div>)}</div></section> 
+
+function GoalForm({onSave,onCancel,initial,accounts,totals}){
+  const [name,setName]=useState(initial?.name || '');
+  const [target,setTarget]=useState(initial?.targetAmount ?? '');
+  const [current,setCurrent]=useState(initial?.currentAmount ?? '');
+  const [deadline,setDeadline]=useState(initial?.deadline || '');
+  const [accountId,setAccountId]=useState(initial?.accountId || 'NET_WORTH');
+  const [status,setStatus]=useState(initial?.status || 'active');
+  const valid = name.trim().length >= 2 && Number(target) > 0;
+  const accountCurrent = accountId === 'NET_WORTH' ? totals.netWorth : Number(accounts.find(a=>a.id===accountId)?.balance || 0);
+  const submit = e => {
+    e.preventDefault();
+    if(!valid) return;
+    onSave({ name:name.trim(), targetAmount:Number(target), currentAmount: current === '' ? accountCurrent : Number(current), deadline, accountId, status });
+  };
+  return <form className="form-row goal-form-v2" onSubmit={submit}>
+    <input placeholder="Goal name" value={name} onChange={e=>setName(e.target.value)}/>
+    <input placeholder="Target amount" type="number" inputMode="decimal" value={target} onChange={e=>setTarget(e.target.value)}/>
+    <input placeholder={`Current (${money(accountCurrent)})`} type="number" inputMode="decimal" value={current} onChange={e=>setCurrent(e.target.value)}/>
+    <input type="date" value={deadline} onChange={e=>setDeadline(e.target.value)}/>
+    <select value={accountId} onChange={e=>setAccountId(e.target.value)}><option value="NET_WORTH">Net Worth</option>{accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select>
+    <select value={status} onChange={e=>setStatus(e.target.value)}><option value="active">Active</option><option value="completed">Completed</option><option value="paused">Paused</option></select>
+    <button disabled={!valid} type="submit"><Check size={16}/>{initial?'Save':'Add'}</button>
+    {onCancel && <button className="ghost" type="button" onClick={onCancel}><X size={16}/>Cancel</button>}
+  </form>
 }
+
+function Goals({goals,setGoals,accounts}){
+  const [editingId,setEditingId]=useState(null);
+  const [filter,setFilter]=useState('active');
+  const totals = useMemo(()=>{
+    const assets = accounts.filter(a=>a.category==='asset').reduce((s,a)=>s+Number(a.balance||0),0);
+    const debts = accounts.filter(a=>a.category==='debt').reduce((s,a)=>s+Number(a.balance||0),0);
+    return { assets, debts, netWorth: assets-debts };
+  },[accounts]);
+  const add = payload => setGoals([{id:makeId(), ...payload}, ...goals]);
+  const patch = (id,payload) => setGoals(goals.map(g=>g.id===id?{...g,...payload}:g));
+  const remove = id => setGoals(goals.filter(g=>g.id!==id));
+  const visible = goals.filter(g=>filter==='all' || (g.status || 'active')===filter);
+  const goalStats = useMemo(()=>{
+    const active = goals.filter(g=>(g.status || 'active')==='active');
+    const completed = goals.filter(g=>(g.status || 'active')==='completed');
+    const avg = goals.length ? Math.round(goals.reduce((s,g)=>s+Math.min(100, ((Number(g.currentAmount)||0)/(Number(g.targetAmount)||1))*100),0)/goals.length) : 0;
+    return { active: active.length, completed: completed.length, avg };
+  },[goals]);
+  const accountLabel = id => id==='NET_WORTH' ? 'Net Worth' : accounts.find(a=>a.id===id)?.name || 'Account goal';
+  const progress = g => Math.min(100, Math.max(0, Math.round(((Number(g.currentAmount)||0)/(Number(g.targetAmount)||1))*100)));
+  const monthlyNeeded = g => {
+    if(!g.deadline) return null;
+    const now = new Date(); const due = new Date(g.deadline + 'T00:00:00');
+    const months = Math.max(1, Math.ceil((due - now) / (1000*60*60*24*30.4375)));
+    const remaining = Math.max(0, Number(g.targetAmount||0) - Number(g.currentAmount||0));
+    return remaining / months;
+  };
+  return <section className="panel"><div className="section-head"><div><h2>Goals</h2><p>Set financial targets, track progress, and estimate what you need monthly to stay on pace.</p></div><select value={filter} onChange={e=>setFilter(e.target.value)}><option value="active">Active goals</option><option value="completed">Completed</option><option value="paused">Paused</option><option value="all">All goals</option></select></div>
+    <div className="mini-grid"><Metric icon={<Target/>} label="Active Goals" value={goalStats.active}/><Metric icon={<Check/>} label="Completed" value={goalStats.completed}/><Metric icon={<Flag/>} label="Average Progress" value={`${goalStats.avg}%`}/></div>
+    <GoalForm onSave={add} accounts={accounts} totals={totals}/>
+    <div className="list">
+      {visible.length===0 && <div className="empty">No {filter==='all'?'':filter} goals yet.</div>}
+      {visible.map(g=> editingId===g.id ?
+        <div className="edit-card" key={g.id}><GoalForm initial={g} accounts={accounts} totals={totals} onSave={payload=>{patch(g.id,payload); setEditingId(null)}} onCancel={()=>setEditingId(null)}/></div>
+        : <div className={`list-row goal-row ${g.status==='completed'?'completed-row':''}`} key={g.id}>
+          <span><strong>{g.name}</strong><small>{accountLabel(g.accountId)} · {(g.status || 'active')} {g.deadline ? `· Due ${g.deadline}` : '· No deadline'}{monthlyNeeded(g) !== null ? ` · ${money(monthlyNeeded(g))}/mo needed` : ''}</small><span className="progress-track"><span style={{width:`${progress(g)}%`}} /></span></span>
+          <strong>{progress(g)}%<small>{money(g.currentAmount || 0)} / {money(g.targetAmount)}</small></strong>
+          <div className="row-actions"><button className="ghost" title="Edit" onClick={()=>setEditingId(g.id)}><Pencil size={16}/></button><button className="ghost" title="Mark complete" onClick={()=>patch(g.id,{status:g.status==='completed'?'active':'completed'})}><Check size={16}/></button><button className="ghost danger-text" title="Delete" onClick={()=>confirm(`Delete ${g.name}?`) && remove(g.id)}><Trash2 size={16}/></button></div>
+        </div>)}
+    </div>
+  </section>
+}
+
 
 function SettingsPanel({state,update,saveSnapshot,restoreLatestSnapshot,syncStatus}){ 
   return <section className="panel"><h2>Settings</h2><p>Theme: {state.theme}</p><button onClick={()=>update({theme:state.theme==='dark'?'light':'dark'})}>Toggle theme</button><button onClick={saveSnapshot}>Save snapshot to Supabase</button><button onClick={restoreLatestSnapshot}>Restore latest from Supabase</button><p className="status">{syncStatus}</p><button className="danger" onClick={()=>{localStorage.removeItem(STORAGE_KEY); localStorage.removeItem('growup_pwa_state_v1'); location.reload();}}>Reset local data</button></section> 
