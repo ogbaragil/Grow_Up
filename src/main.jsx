@@ -1136,14 +1136,25 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
 
   const toggle = (id) => setState(s => ({ ...s, goals:s.goals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
   const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
+  const archive = (id) => setState(s => ({
+    ...s,
+    goals: s.goals.map(g => g.id === id ? { ...g, archived:true, archivedAt:new Date().toISOString(), open:false } : g)
+  }));
+  const activeGoals = state.goals.filter(g => !g.archived);
 
   const moveGoal = (id, direction) => {
     if (isDemo) return readOnlyDemoAlert();
     setState(s => {
+      const activeIds = s.goals.filter(g => !g.archived).map(g => g.id);
+      const activeIndex = activeIds.indexOf(id);
+      const nextActiveId = activeIds[activeIndex + direction];
+      if (!nextActiveId) return s;
+
       const goals = [...s.goals];
       const index = goals.findIndex(g => g.id === id);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= goals.length) return s;
+      const nextIndex = goals.findIndex(g => g.id === nextActiveId);
+      if (index < 0 || nextIndex < 0) return s;
+
       [goals[index], goals[nextIndex]] = [goals[nextIndex], goals[index]];
       return { ...s, goals };
     });
@@ -1170,7 +1181,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
         </div>
       )}
 
-      {state.goals.length ? state.goals.map((g, index) => (
+      {activeGoals.length ? activeGoals.map((g, index) => (
         <GoalCard
           key={g.id}
           g={g}
@@ -1179,11 +1190,12 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
           state={state}
           toggle={toggle}
           del={del}
+          archive={archive}
           setEditor={setEditor}
           reorderMode={reorderMode}
           moveGoal={moveGoal}
           canMoveUp={index > 0}
-          canMoveDown={index < state.goals.length - 1}
+          canMoveDown={index < activeGoals.length - 1}
         />
       )) : (
         <EmptyState title="No goals yet" text="Add your first wealth goal and track progress." action="Add goal" onClick={openAddGoal}/>
@@ -1208,8 +1220,9 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
   );
 }
 
-function GoalCard({ g, totals, accounts, state, toggle, del, setEditor, reorderMode, moveGoal, canMoveUp, canMoveDown }) {
-  const calc = calculateGoalProgress(g, totals, accounts);
+function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor, reorderMode, moveGoal, canMoveUp, canMoveDown }) {
+  let calc = calculateGoalProgress(g, totals, accounts);
+  calc = refineDebtPayoffCalcWithHistory(g, state, calc);
   const pct = Math.round(calc.progress);
   const status = goalStatus(calc, g);
   const forecast = estimateGoalCompletion(g, state, calc);
@@ -1234,7 +1247,14 @@ function GoalCard({ g, totals, accounts, state, toggle, del, setEditor, reorderM
       </div>
       {g.open && !reorderMode && (
         <div className="goal-details">
-          <div className="progress-line"><span>{money(calc.current)} / {money(calc.target)}</span><b>{pct}%</b></div>
+          <div className="progress-line">
+            <span>
+              {(calc.goalType || g.goalType) === "debtPayoff"
+                ? `${money(Math.max(0, Number(calc.start || 0) - Number(calc.current || 0)))} / ${money(calc.start)} paid`
+                : `${money(calc.current)} / ${money(calc.target)}`}
+            </span>
+            <b>{pct}%</b>
+          </div>
           <div className="bar"><i style={{width:`${pct}%`}}></i></div>
           <dl>
             <dt>Goal type</dt><dd>{goalTypeLabel(g.goalType)}</dd>
@@ -1258,7 +1278,7 @@ function GoalCard({ g, totals, accounts, state, toggle, del, setEditor, reorderM
 
           <div className="goal-actions">
             <button onClick={()=>setEditor({ type:"goal", item:g })}><Pencil size={20}/>Edit</button>
-            <button className="archive"><Archive size={20}/>Archive</button>
+            <button className="archive" onClick={()=>archive(g.id)}><Archive size={20}/>Archive</button>
             <button className="delete" onClick={()=>del(g.id)}><Trash2 size={20}/>Delete</button>
           </div>
         </div>
@@ -1649,10 +1669,20 @@ function calculateGoalProgress(goal, totals, accounts) {
     current = linkedAccount ? Number(linkedAccount.balance || 0) : Number(goal.current || 0);
     sourceLabel = linkedAccount?.name || goal.account || "Manual debt";
 
-    const originalDebt = start || Number(goal.originalDebt || current || 0);
+    // Debt payoff target is always zero debt.
+    // If no starting debt was stored, use the largest known debt value from current/start fields.
+    // Historical snapshot forecasting can refine this further in GoalCard.
+    const originalDebt = Math.max(
+      Number(start || 0),
+      Number(goal.originalDebt || 0),
+      Number(goal.target || 0),
+      Number(current || 0)
+    );
+
     const paidOff = Math.max(0, originalDebt - current);
     const progress = originalDebt > 0 ? clamp((paidOff / originalDebt) * 100) : 0;
     const remaining = Math.max(0, current);
+
     return {
       goalType,
       current,
@@ -1866,6 +1896,31 @@ function monthDistance(startKey, endKey) {
   const [sy, sm] = startKey.split("-").map(Number);
   const [ey, em] = endKey.split("-").map(Number);
   return ((ey - sy) * 12) + (em - sm);
+}
+
+
+function refineDebtPayoffCalcWithHistory(goal, state, calc) {
+  if ((calc.goalType || goal.goalType) !== "debtPayoff") return calc;
+
+  const historicalValues = historyRows(state)
+    .map(row => goalValueForSnapshot(goal, state.monthSnapshots?.[row.key]))
+    .filter(value => value !== null && Number.isFinite(value))
+    .map(Number);
+
+  if (!historicalValues.length) return calc;
+
+  const historicalStart = Math.max(...historicalValues, Number(calc.start || 0), Number(calc.current || 0));
+  const current = Number(calc.current || historicalValues.at(-1) || 0);
+  const paidOff = Math.max(0, historicalStart - current);
+  const progress = historicalStart > 0 ? clamp((paidOff / historicalStart) * 100) : 0;
+
+  return {
+    ...calc,
+    start: historicalStart,
+    progress,
+    remaining: Math.max(0, current),
+    monthlyNeeded: monthlyNeeded(Math.max(0, current), goal.deadline)
+  };
 }
 
 function goalStatus(calc, goal) {

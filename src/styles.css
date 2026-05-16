@@ -1140,3 +1140,10 @@ button:disabled {
   background: #fff4d6 !important;
   border-color: #f4d27a !important;
 }
+
+
+.goal-card .progress-line span {
+  max-width: 75%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
