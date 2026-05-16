@@ -987,3 +987,29 @@ dd { margin:0; font-weight:900; }
     max-width: 380px !important;
   }
 }
+
+
+/* Overview trend interaction refinement */
+.networth-trend-card {
+  cursor: default;
+}
+
+.trend-history-btn {
+  margin-left: auto;
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: transparent;
+}
+
+.trend-history-btn:active {
+  transform: scale(.94);
+  background: var(--bg);
+}
+
+.chart-holder {
+  touch-action: pan-x pan-y;
+}

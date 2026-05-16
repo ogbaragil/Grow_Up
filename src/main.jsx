@@ -446,6 +446,14 @@ function AuthScreen() {
   );
 }
 
+
+function latestDashboardState(state) {
+  const snapshotKeys = Object.keys(state.monthSnapshots || {}).filter(key => !isFutureMonth(key));
+  const latestSnapshotKey = snapshotKeys.length ? snapshotKeys.sort().at(-1) : null;
+  const selectedMonth = latestSnapshotKey || currentMonthKey();
+  return { ...state, selectedMonth };
+}
+
 function computeTotals(state) {
   const current = state.monthSnapshots?.[state.selectedMonth];
   const prevKey = addMonths(state.selectedMonth, -1);
@@ -567,22 +575,29 @@ function sixMonthAnimationStart(state, fallbackValue) {
 }
 
 function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName }) {
-  const completedGoals = state.goals.filter(g => calculateGoalProgress(g, totals, getAccountsForSelectedMonth(state)).progress >= 100).length;
-  const upcoming = upcomingTransactions(state.transactions, 7);
-  const chartData = historyRows(state).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
+  const dashboardState = useMemo(() => latestDashboardState(state), [state]);
+  const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
+  const dashboardMonthLabel = monthLabel(dashboardState.selectedMonth);
 
-  const animatedStartNetWorth = sixMonthAnimationStart(state, totals.prevNet || totals.net);
-  const animatedNetWorth = useAnimatedNumber(totals.net, animatedStartNetWorth, 1300);
+  const completedGoals = dashboardState.goals.filter(g =>
+    calculateGoalProgress(g, dashboardTotals, getAccountsForSelectedMonth(dashboardState)).progress >= 100
+  ).length;
+
+  const upcoming = upcomingTransactions(dashboardState.transactions, 7);
+  const chartData = historyRows(dashboardState).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
+
+  const animatedStartNetWorth = sixMonthAnimationStart(dashboardState, dashboardTotals.prevNet || dashboardTotals.net);
+  const animatedNetWorth = useAnimatedNumber(dashboardTotals.net, animatedStartNetWorth, 1300);
 
   return (
     <div className="screen">
-      <ScreenTitle title={`Welcome, ${displayName || "there"}`} sub={`Here's your Snapshot for ${monthLabel(state.selectedMonth)}`} setMenuOpen={setMenuOpen} />
+      <ScreenTitle title={`Welcome, ${displayName || "there"}`} sub={`Here's your Snapshot for ${dashboardMonthLabel}`} setMenuOpen={setMenuOpen} />
       <span className="mode-pill">{state.mode}</span>
 
       <div className="kpi-grid">
-        <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(totals.assets)} sub={`${signedMoney(totals.assets - totals.prevAssets)} vs last month`} icon="💼" dot="green" />
-        <Kpi onClick={()=>setHistoryMetric("debts")} title="Total Debts" value={money(totals.debts)} sub={`${signedMoney(totals.debts - totals.prevDebts)} vs last month`} icon="💳" dot="red" />
-        <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(animatedNetWorth)} sub={`${signedMoney(totals.net - totals.prevNet)} vs last month`} icon="$" dot="blue" animated />
+        <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(dashboardTotals.assets)} sub={`${signedMoney(dashboardTotals.assets - dashboardTotals.prevAssets)} vs last month`} icon="💼" dot="green" />
+        <Kpi onClick={()=>setHistoryMetric("debts")} title="Total Debts" value={money(dashboardTotals.debts)} sub={`${signedMoney(dashboardTotals.debts - dashboardTotals.prevDebts)} vs last month`} icon="💳" dot="red" />
+        <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(animatedNetWorth)} sub={`${signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} vs last month`} icon="$" dot="blue" animated />
         <Kpi onClick={()=>setTab("goals")} title="Goals" value={`${completedGoals} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple" />
       </div>
 
@@ -590,11 +605,11 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
         <EmptyState title="Start building your snapshot" text="Add your first account, goal, or cash flow item. Nothing is hard-coded." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
       )}
 
-      <Card onClick={()=>setHistoryMetric("net")}>
+      <Card className="networth-trend-card">
         <div className="card-head">
           <span className="green-square"><TrendingUp size={22}/></span>
-          <div><h2>Net Worth Trend</h2><p>Tap to view History</p></div>
-          <ChevronDown className="muted-icon"/>
+          <div><h2>Net Worth Trend</h2><p>Use the dropdown for History</p></div>
+          <button className="trend-history-btn" onClick={(e)=>{ e.stopPropagation(); setHistoryMetric("net"); }} aria-label="Open net worth history"><ChevronDown size={22}/></button>
         </div>
         <div className="trend-box">
           <div><span>Current Net Worth</span><strong className="counting-networth">{money(animatedNetWorth)}</strong></div>
@@ -618,8 +633,8 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
           <h2>Cash Flow</h2>
         </div>
         <div className="mini-pair">
-          <div><span>Money In (monthly)</span><strong>{money(totals.income)}</strong></div>
-          <div><span>Money Out (monthly)</span><strong>{money(totals.expenses)}</strong></div>
+          <div><span>Money In (monthly)</span><strong>{money(dashboardTotals.income)}</strong></div>
+          <div><span>Money Out (monthly)</span><strong>{money(dashboardTotals.expenses)}</strong></div>
         </div>
         <div className="upcoming-head"><h3>Upcoming <span>· Next 7 days</span></h3><span>{upcoming.length} upcoming</span></div>
         {upcoming.length ? upcoming.slice(0,4).map(t => <CompactTxn key={t.id} t={t}/>) : <p className="muted">No upcoming transactions yet.</p>}
