@@ -1,0 +1,7 @@
+Implemented:
+- Dashboard Net Worth KPI counts up every time Overview mounts/loads.
+- Animation starts from the earliest available snapshot in the last 6 months.
+- If fewer than 6 months exist, starts from earliest available saved snapshot.
+- If no snapshots exist, starts from previous/current net worth fallback.
+- Trend card Current Net Worth also uses the animated number.
+- Added subtle sheen styling to animated Net Worth KPI.

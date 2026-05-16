@@ -279,10 +279,60 @@ function EmptyState({ title, text, action, onClick }) {
   );
 }
 
+
+function useAnimatedNumber(targetValue, startValue = 0, duration = 1100) {
+  const [value, setValue] = useState(startValue);
+
+  useEffect(() => {
+    let frame;
+    const startTime = performance.now();
+    const from = Number(startValue || 0);
+    const to = Number(targetValue || 0);
+    const diff = to - from;
+
+    const easeOutCubic = (t) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now) => {
+      const progress = Math.min(1, (now - startTime) / duration);
+      const eased = easeOutCubic(progress);
+      setValue(from + diff * eased);
+
+      if (progress < 1) {
+        frame = requestAnimationFrame(tick);
+      }
+    };
+
+    setValue(from);
+    frame = requestAnimationFrame(tick);
+
+    return () => cancelAnimationFrame(frame);
+  }, [targetValue, startValue, duration]);
+
+  return value;
+}
+
+function sixMonthAnimationStart(state, fallbackValue) {
+  const rows = historyRows(state).sort((a, b) => a.key.localeCompare(b.key));
+  const selectedIndex = rows.findIndex(r => r.key === state.selectedMonth);
+
+  if (selectedIndex >= 0) {
+    const startIndex = Math.max(0, selectedIndex - 5);
+    return Number(rows[startIndex]?.net || 0);
+  }
+
+  const latestSix = rows.slice(-6);
+  if (latestSix.length) return Number(latestSix[0].net || 0);
+
+  return Number(fallbackValue || 0);
+}
+
 function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric }) {
   const completedGoals = state.goals.filter(g => calculateGoalProgress(g, totals, getAccountsForSelectedMonth(state)).progress >= 100).length;
   const upcoming = upcomingTransactions(state.transactions, 7);
   const chartData = historyRows(state).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
+
+  const animatedStartNetWorth = sixMonthAnimationStart(state, totals.prevNet || totals.net);
+  const animatedNetWorth = useAnimatedNumber(totals.net, animatedStartNetWorth, 1300);
 
   return (
     <div className="screen">
@@ -292,7 +342,7 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
       <div className="kpi-grid">
         <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(totals.assets)} sub={`${signedMoney(totals.assets - totals.prevAssets)} vs last month`} icon="💼" dot="green" />
         <Kpi onClick={()=>setHistoryMetric("debts")} title="Total Debts" value={money(totals.debts)} sub={`${signedMoney(totals.debts - totals.prevDebts)} vs last month`} icon="💳" dot="red" />
-        <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(totals.net)} sub={`${signedMoney(totals.net - totals.prevNet)} vs last month`} icon="$" dot="blue" />
+        <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(animatedNetWorth)} sub={`${signedMoney(totals.net - totals.prevNet)} vs last month`} icon="$" dot="blue" animated />
         <Kpi onClick={()=>setTab("goals")} title="Goals" value={`${completedGoals} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple" />
       </div>
 
@@ -307,7 +357,7 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
           <ChevronDown className="muted-icon"/>
         </div>
         <div className="trend-box">
-          <div><span>Current Net Worth</span><strong>{money(totals.net)}</strong></div>
+          <div><span>Current Net Worth</span><strong className="counting-networth">{money(animatedNetWorth)}</strong></div>
           <div><span>Snapshots</span><strong className="success">{Object.keys(state.monthSnapshots || {}).length}</strong></div>
         </div>
         <div className="chart-holder">
@@ -338,9 +388,9 @@ function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMet
   );
 }
 
-function Kpi({ title, value, sub, icon, dot, onClick }) {
+function Kpi({ title, value, sub, icon, dot, onClick, animated=false }) {
   return (
-    <button className="kpi" onClick={onClick}>
+    <button className={animated ? "kpi kpi-animated" : "kpi"} onClick={onClick}>
       <div className={`emoji-badge ${dot}`}>{icon}</div>
       <span className={`dot ${dot}`}></span>
       <p>{title}</p>

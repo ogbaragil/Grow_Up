@@ -224,7 +224,41 @@ dd { margin:0; font-weight:900; }
 
 
 /* Goals v3 slimming + action menu */
-.goal-card.slim { border-radius: 18px; margin: 12px 0; } .goal-top.compact { min-height: 96px; padding: 14px 16px; gap: 12px; } .goal-top.compact .goal-icon { width: 52px; height: 52px; border-radius: 16px; font-size: 24px; } .goal-top.compact .row-main { flex: 1; min-width: 0; } .goal-top.compact .row-main h2 { font-size: 19px; line-height: 1.05; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .goal-top.compact .row-main span { font-size: 13px; line-height: 1.15; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .goal-card.slim.open { padding-bottom: 4px; } .goal-top.compact > b { font-size: 22px; min-width: 58px; text-align: right; } .goal-top.compact svg { width: 20px; height: 20px; }
+.goal-card.slim {
+  margin: 14px 0;
+  border-radius: 19px;
+}
+
+.goal-top.compact {
+  min-height: 118px;
+  padding: 18px 18px;
+  gap: 14px;
+}
+
+.goal-top.compact .goal-icon {
+  width: 62px;
+  height: 62px;
+  border-radius: 18px;
+  font-size: 28px;
+}
+
+.goal-top.compact .row-main h2 {
+  font-size: 23px;
+  line-height: 1.05;
+  max-width: 170px;
+}
+
+.goal-top.compact .row-main span {
+  font-size: 16px;
+  white-space: normal;
+  line-height: 1.25;
+}
+
+.goal-top.compact > b {
+  font-size: 32px;
+  min-width: 72px;
+  text-align: right;
+}
 
 .goal-fab-menu {
   position: fixed;
@@ -592,4 +626,104 @@ dd { margin:0; font-weight:900; }
 }
 
 
+/* Missing slim goal card refinements */
+.goal-card.slim.open {
+  padding-bottom: 4px;
+}
 
+.goal-top.compact svg {
+  width: 20px;
+  height: 20px;
+}
+
+
+/* Dashboard net worth count-up animation styling */
+.kpi-animated h2,
+.counting-networth {
+  font-variant-numeric: tabular-nums;
+  transition: color .25s ease, transform .25s ease;
+}
+
+.kpi-animated {
+  position: relative;
+  overflow: hidden;
+}
+
+.kpi-animated::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(59,130,246,.08) 42%, transparent 76%);
+  transform: translateX(-120%);
+  animation: networth-sheen 1.3s ease-out;
+  pointer-events: none;
+}
+
+@keyframes networth-sheen {
+  from { transform: translateX(-120%); }
+  to { transform: translateX(120%); }
+}
+
+
+/* =========================================================
+   PERMANENT GOAL CARD SIZE LOCK
+   Do not override these unless deliberately redesigning goals.
+   These rules are intentionally last and use !important so
+   future feature patches do not accidentally enlarge goal cards.
+   ========================================================= */
+
+.goal-card.slim {
+  border-radius: 18px !important;
+  margin: 12px 0 !important;
+}
+
+.goal-top.compact {
+  min-height: 96px !important;
+  padding: 14px 16px !important;
+  gap: 12px !important;
+}
+
+.goal-top.compact .goal-icon {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 16px !important;
+  font-size: 24px !important;
+}
+
+.goal-top.compact .row-main {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.goal-top.compact .row-main h2 {
+  font-size: 19px !important;
+  line-height: 1.05 !important;
+  margin-bottom: 4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.goal-top.compact .row-main span {
+  font-size: 13px !important;
+  line-height: 1.15 !important;
+  color: var(--muted) !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.goal-card.slim.open {
+  padding-bottom: 4px !important;
+}
+
+.goal-top.compact > b {
+  font-size: 22px !important;
+  min-width: 58px !important;
+  text-align: right !important;
+}
+
+.goal-top.compact svg {
+  width: 20px !important;
+  height: 20px !important;
+}

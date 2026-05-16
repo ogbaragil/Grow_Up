@@ -1,0 +1,4 @@
+Goal card styles locked permanently:
+- appended final override rules at the end of src/styles.css
+- uses !important to prevent future CSS blocks from enlarging goal cards
+- exact user-approved slim sizing preserved
