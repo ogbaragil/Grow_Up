@@ -550,6 +550,7 @@ function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
+  const [dashboardStyle, setDashboardStyle] = useState(() => localStorage.getItem("growup_dashboard_style") || "minimal");
 
   useEffect(() => {
     document.documentElement.dataset.theme = state.theme;
@@ -603,6 +604,14 @@ function App() {
     localStorage.removeItem("growup_demo_mode");
     setDemoMode(false);
     setMenuOpen(false);
+  };
+
+  const updateDashboardStyle = (style) => {
+    localStorage.setItem("growup_dashboard_style", style);
+    setDashboardStyle(style);
+    if (!demoMode) {
+      setState(s => ({ ...s, dashboardStyle: style }));
+    }
   };
 
   const saveSnapshot = async () => {
@@ -730,7 +739,7 @@ function App() {
         ) : (
           <>
             {tab === "overview" && (
-              (activeState.dashboardStyle || "minimal") === "minimal"
+              dashboardStyle === "minimal"
                 ? <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} />
                 : <Overview {...common} setTab={setTab} isDemo={demoMode} />
             )}
@@ -753,6 +762,8 @@ function App() {
                 isDemo={demoMode}
                 enterDemoMode={enterDemoMode}
                 exitDemoMode={exitDemoMode}
+                dashboardStyle={dashboardStyle}
+                setDashboardStyle={updateDashboardStyle}
               />
             )}
             <BottomNav tab={tab} setTab={setTab} />
@@ -1957,7 +1968,7 @@ function compactMoney(value) {
 }
 
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode }) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle='minimal', setDashboardStyle}) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
@@ -1983,9 +1994,9 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
 
       <Card>
         <h2>Dashboard Style</h2>
-        <p>Choose the home screen that fits how you want to use Grow UP.</p>
+        <p>Choose the home screen that fits how you want to use Grow UP. Switches instantly on the Overview tab.</p>
         <div className="dashboard-style-toggle">
-          <button className={(state.dashboardStyle || "minimal") === "minimal" ? "active" : ""} onClick={()=>update({ dashboardStyle:"minimal" })}>Minimal</button>
+          <button className={dashboardStyle === "minimal" ? "active" : ""} onClick={()=>setDashboardStyle("minimal")}>Minimal</button>
           <button className={(state.dashboardStyle || "minimal") === "detailed" ? "active" : ""} onClick={()=>update({ dashboardStyle: "minimal" })}>Detailed</button>
         </div>
       </Card>
