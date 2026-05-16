@@ -31,6 +31,10 @@ const addMonths = (key, delta) => {
   return monthKey(d);
 };
 
+const currentMonthKey = () => monthKey(new Date());
+const isFutureMonth = (key) => key.localeCompare(currentMonthKey()) > 0;
+const canMoveToMonth = (key) => !isFutureMonth(key);
+
 const EMPTY_STATE = {
   firstName: "Gil",
   theme: "light",
@@ -71,6 +75,12 @@ function App() {
     document.documentElement.dataset.theme = state.theme;
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, [state.theme]);
+
+  useEffect(() => {
+    if (isFutureMonth(state.selectedMonth)) {
+      setState(s => ({ ...s, selectedMonth: currentMonthKey() }));
+    }
+  }, [state.selectedMonth, setState]);
 
   const totals = useMemo(() => computeTotals(state), [state]);
 
@@ -205,8 +215,9 @@ function computeTotals(state) {
   const assets = accountSource.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.balance || 0),0);
   const debts = accountSource.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.balance || 0),0);
 
-  const prevAssets = prev ? Number(prev.assets || 0) : state.accounts.filter(a => a.kind === "asset").reduce((s,a)=>s+Number(a.previous || 0),0);
-  const prevDebts = prev ? Number(prev.debts || 0) : state.accounts.filter(a => a.kind === "debt").reduce((s,a)=>s+Number(a.previous || 0),0);
+  // Rule: if a previous month was not entered and saved, previous balances are zero.
+  const prevAssets = prev ? Number(prev.assets || 0) : 0;
+  const prevDebts = prev ? Number(prev.debts || 0) : 0;
 
   const income = state.transactions.filter(t => t.type === "income" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
   const expenses = state.transactions.filter(t => t.type === "expense" && t.recurring).reduce((s,t)=>s+Number(t.amount || 0),0);
@@ -228,12 +239,27 @@ function ScreenTitle({ title, sub, setMenuOpen, back }) {
 }
 
 function MonthBar({ state, setState, thin=false }) {
-  const move = (delta) => setState(s => ({ ...s, selectedMonth:addMonths(s.selectedMonth, delta) }));
+  const nextMonth = addMonths(state.selectedMonth, 1);
+  const nextBlocked = !canMoveToMonth(nextMonth);
+
+  const move = (delta) => {
+    const target = addMonths(state.selectedMonth, delta);
+    if (!canMoveToMonth(target)) return;
+    setState(s => ({ ...s, selectedMonth:target }));
+  };
+
   return (
     <div className={thin ? "month-bar thin" : "month-bar"}>
-      <button onClick={()=>move(-1)}><ChevronLeft size={24}/></button>
+      <button onClick={()=>move(-1)} aria-label="Previous month"><ChevronLeft size={24}/></button>
       <strong>{monthLabel(state.selectedMonth)}</strong>
-      <button onClick={()=>move(1)}><ChevronRight size={24}/></button>
+      <button
+        className={nextBlocked ? "blocked" : ""}
+        disabled={nextBlocked}
+        onClick={()=>move(1)}
+        aria-label={nextBlocked ? "Future months are blocked" : "Next month"}
+      >
+        <ChevronRight size={24}/>
+      </button>
     </div>
   );
 }
@@ -327,7 +353,8 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   const displayedAccounts = selectedSnapshot?.accounts || state.accounts;
   const accountsWithPrev = displayedAccounts.map(account => {
     const prevAccount = prevSnapshot?.accounts?.find(a => a.id === account.id);
-    const previous = prevAccount ? Number(prevAccount.balance || 0) : Number(account.previous || 0);
+    // Rule: if previous month has no saved account balance, assume zero.
+    const previous = prevAccount ? Number(prevAccount.balance || 0) : 0;
     return { ...account, previous };
   });
 
@@ -376,7 +403,8 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
           const priorAccount = priorSnapshot?.accounts?.find(pa => pa.id === a.id);
           return {
             ...a,
-            previous: priorAccount ? Number(priorAccount.balance || 0) : Number(a.previous || 0),
+            // Rule: unsaved previous month means previous value is zero.
+            previous: priorAccount ? Number(priorAccount.balance || 0) : 0,
             balance:numericValue
           };
         })

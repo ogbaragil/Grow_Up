@@ -1,0 +1,6 @@
+Implemented month rules:
+1. Month navigation cannot go beyond the real current month.
+2. If local storage somehow has a future selectedMonth, app resets it to current month.
+3. Previous month totals now assume zero when no prior saved snapshot exists.
+4. Per-account Prev values now assume zero when no prior saved account snapshot exists.
+5. Right month arrow is disabled/greyed out when it would move into the future.
