@@ -246,7 +246,7 @@ function EmptyState({ title, text, action, onClick }) {
 }
 
 function Overview({ state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric }) {
-  const completedGoals = state.goals.filter(g => goalPct(g) >= 100).length;
+  const completedGoals = state.goals.filter(g => calculateGoalProgress(g, totals, getAccountsForSelectedMonth(state)).progress >= 100).length;
   const upcoming = upcomingTransactions(state.transactions, 7);
   const chartData = historyRows(state).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
 
@@ -605,13 +605,26 @@ function CompactTxn({ t }) {
 }
 
 function Goals({ state, setState, setEditor, setMenuOpen }) {
+  const totals = computeTotals(state);
+  const accountsForMonth = getAccountsForSelectedMonth(state);
+
   const toggle = (id) => setState(s => ({ ...s, goals:s.goals.map(g => g.id === id ? { ...g, open:!g.open } : g) }));
   const del = (id) => setState(s => ({ ...s, goals:s.goals.filter(g => g.id !== id) }));
 
   return (
     <div className="screen">
       <ScreenTitle title="Your Goals" sub="Big dreams? Let's make them happen — one goal at a time." setMenuOpen={setMenuOpen} />
-      {state.goals.length ? state.goals.map(g => <GoalCard key={g.id} g={g} toggle={toggle} del={del} setEditor={setEditor}/>) : (
+      {state.goals.length ? state.goals.map(g => (
+        <GoalCard
+          key={g.id}
+          g={g}
+          totals={totals}
+          accounts={accountsForMonth}
+          toggle={toggle}
+          del={del}
+          setEditor={setEditor}
+        />
+      )) : (
         <EmptyState title="No goals yet" text="Add your first wealth goal and track progress." action="Add goal" onClick={()=>setEditor({ type:"goal" })}/>
       )}
       <button className="fab" onClick={()=>setEditor({ type:"goal" })}><Plus size={34}/></button>
@@ -619,30 +632,40 @@ function Goals({ state, setState, setEditor, setMenuOpen }) {
   );
 }
 
-function GoalCard({ g, toggle, del, setEditor }) {
-  const pct = Math.round(goalPct(g));
-  const remaining = g.target === 0 ? g.current : Math.max(0, Number(g.target || 0) - Number(g.current || 0));
+function GoalCard({ g, totals, accounts, toggle, del, setEditor }) {
+  const calc = calculateGoalProgress(g, totals, accounts);
+  const pct = Math.round(calc.progress);
+  const status = goalStatus(calc, g);
+
   return (
-    <div className={`goal-card ${g.color || "green"} ${g.open ? "open":""}`}>
+    <div className={`goal-card ${g.color || goalColorForType(g.goalType)} ${g.open ? "open":""}`}>
       <div className="goal-top" onClick={()=>toggle(g.id)}>
-        <div className="goal-icon">{g.icon || "🎯"}</div>
+        <div className="goal-icon">{g.icon || goalIconForType(g.goalType)}</div>
         <div className="row-main">
           <h2>{g.name}</h2>
-          <span>{g.account}</span>
+          <span>{goalTypeLabel(g.goalType)} · {calc.sourceLabel}</span>
         </div>
         <b>{pct}%</b>
         {g.open ? <ChevronUp size={22}/> : <ChevronDown size={22}/>}
       </div>
       {g.open && (
         <div className="goal-details">
-          <div className="progress-line"><span>{money(g.current)} / {money(g.target)}</span><b>{pct}%</b></div>
+          <div className="progress-line"><span>{money(calc.current)} / {money(calc.target)}</span><b>{pct}%</b></div>
           <div className="bar"><i style={{width:`${pct}%`}}></i></div>
           <dl>
-            <dt>Target</dt><dd>{money(g.target)}</dd>
-            <dt>Current balance</dt><dd>{money(g.current)}</dd>
-            <dt>Remaining</dt><dd>{money(remaining)}</dd>
+            <dt>Goal type</dt><dd>{goalTypeLabel(g.goalType)}</dd>
+            <dt>Target</dt><dd>{money(calc.target)}</dd>
+            <dt>Current</dt><dd>{money(calc.current)}</dd>
+            <dt>Remaining</dt><dd>{money(calc.remaining)}</dd>
             <dt>Deadline</dt><dd>{g.deadline ? new Date(g.deadline).toLocaleDateString("en-US", {month:"short", year:"numeric"}) : "—"}</dd>
           </dl>
+
+          <div className={`pace-card ${status.kind}`}>
+            <h3>{status.icon} {status.label}</h3>
+            <span>{status.detail}</span>
+            <p>{calc.monthlyNeeded > 0 ? `Need ${money(calc.monthlyNeeded)}/mo until deadline` : "No monthly pace needed."}</p>
+          </div>
+
           <div className="goal-actions">
             <button onClick={()=>setEditor({ type:"goal", item:g })}><Pencil size={20}/>Edit</button>
             <button className="archive"><Archive size={20}/>Archive</button>
@@ -729,8 +752,11 @@ function EditorModal({ editor, setEditor, state, setState }) {
     category:item.category || "",
     date:item.date ? item.date.slice(0,10) : new Date().toISOString().slice(0,10),
     recurring:item.recurring || false,
+    goalType:item.goalType || "netWorth",
+    accountId:item.accountId || "",
     account:item.account || "",
     current:item.current || "",
+    start:item.start || item.startAmount || "",
     target:item.target ?? "",
     deadline:item.deadline || "",
     color:item.color || "green"
@@ -766,13 +792,17 @@ function EditorModal({ editor, setEditor, state, setState }) {
     }
 
     if (editor.type === "goal") {
+      const linkedAccount = state.accounts.find(a => a.id === form.accountId);
       const goal = {
         id:item.id || safeId(),
         name:form.name || "Goal",
-        icon:form.icon || "🎯",
-        account:form.account || "Net Worth",
-        color:form.color,
+        icon:form.icon || goalIconForType(form.goalType),
+        goalType:form.goalType,
+        accountId:form.accountId || "",
+        account:linkedAccount?.name || form.account || (form.goalType === "netWorth" ? "Net Worth" : "Manual"),
+        color:form.color || goalColorForType(form.goalType),
         current:Number(form.current || 0),
+        start:Number(form.start || 0),
         target:Number(form.target || 0),
         deadline:form.deadline,
         open:item.open ?? true
@@ -805,9 +835,39 @@ function EditorModal({ editor, setEditor, state, setState }) {
         </>}
 
         {editor.type === "goal" && <>
-          <label>Account / Metric<input value={form.account} onChange={e=>change("account", e.target.value)} /></label>
-          <label>Current<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} /></label>
-          <label>Target<input type="number" value={form.target} onChange={e=>change("target", e.target.value)} /></label>
+          <label>Goal Type
+            <select value={form.goalType} onChange={e=>change("goalType", e.target.value)}>
+              <option value="netWorth">Net Worth Goal</option>
+              <option value="accountGrowth">Account Growth Goal</option>
+              <option value="debtPayoff">Debt Payoff Goal</option>
+            </select>
+          </label>
+
+          {form.goalType === "netWorth" ? (
+            <label>Metric<input value="Net Worth" disabled /></label>
+          ) : (
+            <label>Linked Account
+              <select value={form.accountId} onChange={e=>change("accountId", e.target.value)}>
+                <option value="">Manual / No linked account</option>
+                {state.accounts
+                  .filter(a => form.goalType === "debtPayoff" ? a.kind === "debt" : a.kind === "asset")
+                  .map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </label>
+          )}
+
+          {form.goalType === "debtPayoff" ? (
+            <>
+              <label>Starting Debt<input type="number" value={form.start} onChange={e=>change("start", e.target.value)} placeholder="Original debt amount" /></label>
+              <label>Current Debt Override<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} placeholder="Only used if no account linked" /></label>
+            </>
+          ) : (
+            <>
+              <label>Current Override<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} placeholder="Only used if no account linked" /></label>
+              <label>Target<input type="number" value={form.target} onChange={e=>change("target", e.target.value)} /></label>
+            </>
+          )}
+
           <label>Deadline<input type="date" value={form.deadline} onChange={e=>change("deadline", e.target.value)} /></label>
           <label>Color<select value={form.color} onChange={e=>change("color", e.target.value)}><option value="green">Green</option><option value="purple">Purple</option><option value="red">Red</option></select></label>
         </>}
@@ -823,8 +883,134 @@ function Card({ children, className="", onClick }) {
 }
 
 function goalPct(g) {
+  // Backward-compatible fallback for simple/manual goals.
   if (!g.target) return 0;
   return Math.max(0, Math.min(100, Number(g.current || 0) / Number(g.target || 1) * 100));
+}
+
+function getAccountsForSelectedMonth(state) {
+  const snap = state.monthSnapshots?.[state.selectedMonth];
+  return snap?.accounts || state.accounts || [];
+}
+
+function findAccount(accounts, goal) {
+  if (!goal.accountId && !goal.account) return null;
+  return accounts.find(a => a.id === goal.accountId || a.name === goal.account) || null;
+}
+
+function calculateGoalProgress(goal, totals, accounts) {
+  const goalType = goal.goalType || inferGoalType(goal, accounts);
+  const target = Number(goal.target || 0);
+  const start = Number(goal.start || goal.startAmount || 0);
+  const linkedAccount = findAccount(accounts, goal);
+
+  let current = Number(goal.current || 0);
+  let sourceLabel = goal.account || "Manual";
+
+  if (goalType === "netWorth") {
+    current = Number(totals.net || 0);
+    sourceLabel = "Net Worth";
+  }
+
+  if (goalType === "accountGrowth") {
+    current = linkedAccount ? Number(linkedAccount.balance || 0) : Number(goal.current || 0);
+    sourceLabel = linkedAccount?.name || goal.account || "Manual account";
+  }
+
+  if (goalType === "debtPayoff") {
+    current = linkedAccount ? Number(linkedAccount.balance || 0) : Number(goal.current || 0);
+    sourceLabel = linkedAccount?.name || goal.account || "Manual debt";
+
+    const originalDebt = start || Number(goal.originalDebt || current || 0);
+    const paidOff = Math.max(0, originalDebt - current);
+    const progress = originalDebt > 0 ? clamp((paidOff / originalDebt) * 100) : 0;
+    const remaining = Math.max(0, current);
+    return {
+      goalType,
+      current,
+      target: 0,
+      start: originalDebt,
+      progress,
+      remaining,
+      sourceLabel,
+      monthlyNeeded: monthlyNeeded(remaining, goal.deadline)
+    };
+  }
+
+  const progress = target > 0 ? clamp((current / target) * 100) : 0;
+  const remaining = Math.max(0, target - current);
+
+  return {
+    goalType,
+    current,
+    target,
+    start,
+    progress,
+    remaining,
+    sourceLabel,
+    monthlyNeeded: monthlyNeeded(remaining, goal.deadline)
+  };
+}
+
+function inferGoalType(goal, accounts) {
+  if (goal.account === "Net Worth" || goal.account === "NET_WORTH") return "netWorth";
+  const linked = findAccount(accounts, goal);
+  if (linked?.kind === "debt" || Number(goal.target || 0) === 0) return "debtPayoff";
+  return "accountGrowth";
+}
+
+function clamp(n) {
+  return Math.max(0, Math.min(100, Number(n || 0)));
+}
+
+function monthlyNeeded(remaining, deadline) {
+  if (!deadline || remaining <= 0) return 0;
+  const now = new Date();
+  const end = new Date(deadline);
+  if (end <= now) return remaining;
+  const months = Math.max(1, ((end.getFullYear() - now.getFullYear()) * 12) + (end.getMonth() - now.getMonth()));
+  return Math.ceil(remaining / months);
+}
+
+function goalStatus(calc, goal) {
+  if (calc.progress >= 100) {
+    return { kind:"complete", icon:"🎉", label:"Complete", detail:"Goal reached" };
+  }
+
+  if (!goal.deadline) {
+    return { kind:"active", icon:"🎯", label:"Active", detail:"No deadline set" };
+  }
+
+  const need = calc.monthlyNeeded;
+  if (need <= 0) {
+    return { kind:"active", icon:"🎯", label:"Active", detail:"On track" };
+  }
+
+  return { kind:"active", icon:"📈", label:"In Progress", detail:`${Math.round(calc.progress)}% complete` };
+}
+
+function goalTypeLabel(type) {
+  return {
+    netWorth: "Net Worth Goal",
+    accountGrowth: "Account Growth Goal",
+    debtPayoff: "Debt Payoff Goal"
+  }[type || "accountGrowth"] || "Goal";
+}
+
+function goalIconForType(type) {
+  return {
+    netWorth: "🎯",
+    accountGrowth: "💼",
+    debtPayoff: "⚡"
+  }[type || "accountGrowth"] || "🎯";
+}
+
+function goalColorForType(type) {
+  return {
+    netWorth: "purple",
+    accountGrowth: "green",
+    debtPayoff: "red"
+  }[type || "accountGrowth"] || "green";
 }
 
 function upcomingTransactions(transactions, days) {

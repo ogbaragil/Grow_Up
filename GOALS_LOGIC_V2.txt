@@ -1,0 +1,13 @@
+Implemented Goals v2:
+- Three goal types:
+  1. Net Worth Goal
+  2. Account Growth Goal
+  3. Debt Payoff Goal
+
+Logic:
+- Net Worth Goal automatically uses selected month net worth.
+- Account Growth Goal can link to an asset account and uses that selected month balance.
+- Debt Payoff Goal can link to a debt account and uses starting debt minus current debt.
+- Manual override is available when no account is linked.
+- Monthly amount needed is calculated from remaining amount and deadline.
+- Existing old goals are inferred where possible for backward compatibility.
