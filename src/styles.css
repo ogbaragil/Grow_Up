@@ -2771,3 +2771,528 @@ button:disabled {
 .archived-goals-list {
   gap: 18px !important;
 }
+
+
+/* =========================================================
+   Premium Overview Theme Pass — Phase 1
+   Scope: Minimal + Detailed Overview only
+   ========================================================= */
+:root {
+  --premium-bg: #F6F7F5;
+  --premium-card: #FFFFFF;
+  --premium-card-soft: #F2F3F1;
+  --premium-text: #0E1116;
+  --premium-secondary: #6F7480;
+  --premium-muted: #9CA3AF;
+  --wealth: #2E9B57;
+  --wealth-deep: #1D6B3B;
+  --wealth-soft: #DDEFE3;
+  --insight: #5B6CFF;
+  --insight-soft: #E7EAFF;
+  --gold: #C99A2E;
+  --gold-soft: #F3E7C4;
+  --attention: #D97757;
+  --attention-soft: #F8E5DE;
+  --premium-shadow: 0 16px 46px rgba(15, 23, 42, .065);
+  --premium-border: 1px solid rgba(15,23,42,.055);
+}
+
+.minimal-dashboard-screen,
+.screen:has(.kpi-grid) {
+  background:
+    radial-gradient(circle at 50% -8%, rgba(46,155,87,.115), transparent 34%),
+    linear-gradient(180deg, #F7F8F6 0%, #F2F3F1 100%) !important;
+}
+
+.compact-overview-header,
+.minimal-dashboard-head {
+  margin-bottom: 18px !important;
+}
+
+.compact-title-line h1,
+.minimal-dashboard-head h1,
+.compact-minimal-head h1 {
+  color: var(--premium-text) !important;
+  letter-spacing: -.075em !important;
+}
+
+.compact-title-block p,
+.minimal-greeting-line p,
+.minimal-dashboard-head p {
+  color: var(--premium-secondary) !important;
+}
+
+.mode-pill.real-mode-pill,
+.mode-pill.demo-mode-pill,
+.compact-overview-header .mode-pill,
+.compact-minimal-head .mode-pill {
+  border-radius: 999px !important;
+  padding: 7px 14px !important;
+  min-height: 30px !important;
+  font-size: 13px !important;
+  font-weight: 950 !important;
+  box-shadow: none !important;
+}
+
+.mode-pill.real-mode-pill,
+.compact-overview-header .mode-pill.real-mode-pill,
+.compact-minimal-head .mode-pill.real-mode-pill {
+  color: var(--wealth-deep) !important;
+  background: rgba(221,239,227,.8) !important;
+  border: 1px solid rgba(46,155,87,.20) !important;
+}
+
+.mode-pill.demo-mode-pill {
+  color: #8A650C !important;
+  background: #FBF2D8 !important;
+  border: 1px solid rgba(201,154,46,.28) !important;
+}
+
+/* Minimal Overview */
+.minimal-networth-card {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(255,255,255,.20) 0 26%, transparent 27%),
+    linear-gradient(135deg, var(--wealth) 0%, var(--wealth-deep) 100%) !important;
+  box-shadow: 0 28px 70px rgba(29,107,59,.24) !important;
+  border: 1px solid rgba(255,255,255,.16) !important;
+  border-radius: 30px !important;
+}
+
+.minimal-networth-card::after {
+  background: rgba(255,255,255,.12) !important;
+}
+
+.minimal-networth-card p,
+.minimal-networth-card span {
+  color: rgba(255,255,255,.82) !important;
+}
+
+.minimal-goal-card,
+.minimal-chart-card,
+.minimal-top-asset-card,
+.minimal-split-card {
+  background: rgba(255,255,255,.92) !important;
+  border: var(--premium-border) !important;
+  box-shadow: var(--premium-shadow) !important;
+  backdrop-filter: blur(12px);
+}
+
+.minimal-goal-card {
+  border-radius: 30px !important;
+}
+
+.minimal-goal-card .minimal-row p {
+  color: var(--premium-secondary) !important;
+}
+
+.minimal-goal-card .minimal-row strong {
+  color: var(--insight) !important;
+}
+
+.minimal-goal-card .minimal-progress {
+  background: rgba(15,23,42,.065) !important;
+}
+
+.minimal-goal-card .minimal-progress i {
+  background: linear-gradient(90deg, var(--insight), #7C8BFF) !important;
+}
+
+.minimal-forecast-box {
+  background:
+    linear-gradient(180deg, rgba(231,234,255,.54), rgba(246,247,245,.88)) !important;
+  border: 1px solid rgba(91,108,255,.12) !important;
+}
+
+.minimal-forecast-box p {
+  color: var(--premium-secondary) !important;
+}
+
+.minimal-forecast-box h3 {
+  color: var(--premium-text) !important;
+}
+
+.minimal-forecast-box span {
+  color: var(--premium-secondary) !important;
+}
+
+.minimal-chart-card {
+  border-radius: 30px !important;
+}
+
+.minimal-chart-card .minimal-row p {
+  color: var(--premium-secondary) !important;
+}
+
+.minimal-chart-card .minimal-row strong {
+  color: var(--wealth) !important;
+}
+
+.minimal-trend-svg polyline {
+  stroke: var(--wealth) !important;
+  filter: drop-shadow(0 9px 14px rgba(46,155,87,.14)) !important;
+}
+
+.minimal-top-asset-card {
+  border: 1px solid rgba(201,154,46,.22) !important;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(255,252,244,.94)) !important;
+}
+
+.top-asset-label span {
+  background: var(--gold-soft) !important;
+  color: var(--gold) !important;
+}
+
+.top-asset-ring .ring-fill {
+  stroke: var(--gold) !important;
+}
+
+.minimal-top-asset-copy p,
+.minimal-top-asset-copy small {
+  color: var(--premium-secondary) !important;
+}
+
+.minimal-split-card {
+  border-radius: 26px !important;
+}
+
+.minimal-split-card button {
+  background: var(--premium-card-soft) !important;
+  border: 1px solid rgba(15,23,42,.045) !important;
+}
+
+/* Detailed Overview */
+.kpi-grid {
+  gap: 16px !important;
+}
+
+.kpi {
+  background: rgba(255,255,255,.92) !important;
+  border: var(--premium-border) !important;
+  border-radius: 24px !important;
+  box-shadow: var(--premium-shadow) !important;
+  min-height: 136px !important;
+  backdrop-filter: blur(12px);
+}
+
+.kpi p {
+  color: var(--premium-secondary) !important;
+  font-weight: 850 !important;
+}
+
+.kpi h2 {
+  color: var(--premium-text) !important;
+}
+
+.kpi:nth-child(1) .emoji-badge,
+.emoji-badge.green {
+  background: var(--gold-soft) !important;
+  color: var(--gold) !important;
+}
+
+.kpi:nth-child(2) .emoji-badge,
+.emoji-badge.red {
+  background: var(--attention-soft) !important;
+  color: var(--attention) !important;
+}
+
+.kpi:nth-child(3) .emoji-badge,
+.emoji-badge.blue {
+  background: var(--wealth-soft) !important;
+  color: var(--wealth) !important;
+}
+
+.kpi:nth-child(4) .emoji-badge,
+.emoji-badge.purple {
+  background: var(--insight-soft) !important;
+  color: var(--insight) !important;
+}
+
+.dot.green { background: var(--gold) !important; }
+.dot.red { background: var(--attention) !important; }
+.dot.blue { background: var(--wealth) !important; }
+.dot.purple { background: var(--insight) !important; }
+
+.card {
+  border: var(--premium-border) !important;
+  box-shadow: var(--premium-shadow) !important;
+}
+
+.card:has(.green-square),
+.card:has(.trend-box),
+.card:has(.cash-totals),
+.card:has(.compact-txn) {
+  background: rgba(255,255,255,.94) !important;
+  border-radius: 26px !important;
+}
+
+.green-square {
+  background: linear-gradient(135deg, var(--wealth), var(--wealth-deep)) !important;
+  color: white !important;
+  box-shadow: 0 10px 24px rgba(46,155,87,.18);
+}
+
+.blue-square {
+  background: var(--insight-soft) !important;
+  color: var(--insight) !important;
+  border-color: rgba(91,108,255,.18) !important;
+}
+
+.trend-box {
+  background: linear-gradient(180deg, rgba(246,247,245,.85), rgba(255,255,255,.95)) !important;
+  border: 1px solid rgba(15,23,42,.055) !important;
+}
+
+.trend-box span,
+.card p,
+.compact-txn small,
+.compact-txn strong:first-child {
+  color: var(--premium-secondary) !important;
+}
+
+.cash-totals div,
+.mini-pair div {
+  background: var(--premium-card-soft) !important;
+  border-color: rgba(15,23,42,.045) !important;
+}
+
+.bottom-nav button.active {
+  color: var(--wealth) !important;
+}
+
+@media (max-width: 430px) {
+  .minimal-networth-card { border-radius: 28px !important; }
+  .minimal-goal-card,
+  .minimal-chart-card,
+  .minimal-top-asset-card { border-radius: 26px !important; }
+  .kpi { border-radius: 22px !important; }
+}
+
+
+/* =========================================================
+   Neutral Luxury Overview Theme — Phase 1B
+   Green becomes reward/gain only, not the app identity.
+   Scope: Minimal + Detailed Overview
+   ========================================================= */
+
+:root {
+  --lux-bg: #F5F3EF;
+  --lux-surface: #FFFFFF;
+  --lux-surface-2: #EEECE6;
+  --lux-text: #101214;
+  --lux-subtle: #6D706F;
+  --lux-muted: #9A9D9B;
+  --graphite: #15181D;
+  --graphite-2: #23272F;
+  --graphite-soft: #ECEDEA;
+  --gain: #2F8F5B;
+  --gain-soft: #E3F1E8;
+  --forecast: #5967E8;
+  --forecast-soft: #E7E9FF;
+  --asset-gold: #B88A2B;
+  --asset-gold-soft: #F1E5C7;
+  --risk: #C96D4B;
+  --risk-soft: #F6E2DA;
+  --lux-border: 1px solid rgba(16,18,20,.06);
+  --lux-shadow: 0 18px 52px rgba(16,18,20,.075);
+}
+
+.minimal-dashboard-screen,
+.screen:has(.kpi-grid) {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(184,138,43,.11), transparent 30%),
+    linear-gradient(180deg, #F8F6F1 0%, var(--lux-bg) 100%) !important;
+}
+
+.compact-title-line h1,
+.minimal-dashboard-head h1,
+.compact-minimal-head h1 {
+  color: var(--lux-text) !important;
+}
+
+.compact-title-block p,
+.minimal-greeting-line p,
+.minimal-dashboard-head p {
+  color: var(--lux-subtle) !important;
+}
+
+.mode-pill.real-mode-pill,
+.compact-overview-header .mode-pill.real-mode-pill,
+.compact-minimal-head .mode-pill.real-mode-pill {
+  color: #34373C !important;
+  background: rgba(236,237,234,.86) !important;
+  border: 1px solid rgba(16,18,20,.08) !important;
+}
+
+.mode-pill.demo-mode-pill {
+  color: #7E5C11 !important;
+  background: #F7EBCF !important;
+  border: 1px solid rgba(184,138,43,.24) !important;
+}
+
+.minimal-networth-card {
+  background:
+    radial-gradient(circle at 92% -8%, rgba(255,255,255,.14) 0 28%, transparent 29%),
+    linear-gradient(135deg, var(--graphite) 0%, var(--graphite-2) 100%) !important;
+  color: white !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 30px 80px rgba(16,18,20,.26) !important;
+}
+
+.minimal-networth-card::after {
+  background: rgba(255,255,255,.06) !important;
+}
+
+.minimal-networth-card p {
+  color: rgba(255,255,255,.62) !important;
+}
+
+.minimal-networth-card h2 {
+  color: #FFFFFF !important;
+}
+
+.minimal-networth-card span {
+  color: #9FE3B9 !important;
+}
+
+.minimal-goal-card,
+.minimal-chart-card,
+.minimal-top-asset-card,
+.minimal-split-card {
+  background: rgba(255,255,255,.92) !important;
+  border: var(--lux-border) !important;
+  box-shadow: var(--lux-shadow) !important;
+}
+
+.minimal-goal-card .minimal-row p,
+.minimal-forecast-box p {
+  color: var(--lux-subtle) !important;
+}
+
+.minimal-goal-card .minimal-row strong {
+  color: var(--forecast) !important;
+}
+
+.minimal-goal-card .minimal-progress i {
+  background: linear-gradient(90deg, var(--forecast), #7C87FF) !important;
+}
+
+.minimal-forecast-box {
+  background: linear-gradient(180deg, rgba(231,233,255,.72), rgba(255,255,255,.85)) !important;
+  border: 1px solid rgba(89,103,232,.14) !important;
+}
+
+.minimal-chart-card .minimal-row strong {
+  color: var(--gain) !important;
+}
+
+.minimal-trend-svg polyline {
+  stroke: var(--gain) !important;
+  filter: drop-shadow(0 9px 14px rgba(47,143,91,.16)) !important;
+}
+
+.minimal-top-asset-card {
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.96), rgba(251,247,236,.94)) !important;
+  border: 1px solid rgba(184,138,43,.20) !important;
+}
+
+.top-asset-label span {
+  background: var(--asset-gold-soft) !important;
+  color: var(--asset-gold) !important;
+}
+
+.top-asset-ring .ring-fill {
+  stroke: var(--asset-gold) !important;
+}
+
+.minimal-top-asset-copy p,
+.minimal-top-asset-copy small,
+.minimal-split-card span {
+  color: var(--lux-subtle) !important;
+}
+
+.minimal-split-card button {
+  background: var(--lux-surface-2) !important;
+  border: 1px solid rgba(16,18,20,.045) !important;
+}
+
+.kpi {
+  background: rgba(255,255,255,.92) !important;
+  border: var(--lux-border) !important;
+  box-shadow: var(--lux-shadow) !important;
+}
+
+.kpi p {
+  color: var(--lux-subtle) !important;
+}
+
+.kpi:nth-child(1) .emoji-badge,
+.emoji-badge.green {
+  background: var(--asset-gold-soft) !important;
+  color: var(--asset-gold) !important;
+}
+
+.kpi:nth-child(2) .emoji-badge,
+.emoji-badge.red {
+  background: var(--risk-soft) !important;
+  color: var(--risk) !important;
+}
+
+.kpi:nth-child(3) .emoji-badge,
+.emoji-badge.blue {
+  background: var(--gain-soft) !important;
+  color: var(--gain) !important;
+}
+
+.kpi:nth-child(4) .emoji-badge,
+.emoji-badge.purple {
+  background: var(--forecast-soft) !important;
+  color: var(--forecast) !important;
+}
+
+.dot.green { background: var(--asset-gold) !important; }
+.dot.red { background: var(--risk) !important; }
+.dot.blue { background: var(--gain) !important; }
+.dot.purple { background: var(--forecast) !important; }
+
+.card:has(.green-square),
+.card:has(.trend-box),
+.card:has(.cash-totals),
+.card:has(.compact-txn) {
+  background: rgba(255,255,255,.93) !important;
+  border: var(--lux-border) !important;
+  box-shadow: var(--lux-shadow) !important;
+}
+
+.green-square {
+  background: linear-gradient(135deg, var(--graphite), var(--graphite-2)) !important;
+  color: white !important;
+  box-shadow: 0 12px 28px rgba(16,18,20,.16) !important;
+}
+
+.blue-square {
+  background: var(--forecast-soft) !important;
+  color: var(--forecast) !important;
+  border-color: rgba(89,103,232,.14) !important;
+}
+
+.trend-box,
+.cash-totals div,
+.mini-pair div {
+  background: var(--lux-surface-2) !important;
+  border-color: rgba(16,18,20,.05) !important;
+}
+
+.success { color: var(--gain) !important; }
+.danger { color: var(--risk) !important; }
+
+.bottom-nav button.active {
+  color: var(--graphite) !important;
+}
+
+@media (max-width: 430px) {
+  .minimal-networth-card {
+    box-shadow: 0 24px 64px rgba(16,18,20,.24) !important;
+  }
+}
