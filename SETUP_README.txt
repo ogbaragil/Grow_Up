@@ -45,3 +45,28 @@ SUPABASE STEPS
 
 IMPORTANT
 If you exposed your service_role key anywhere, rotate it in Supabase Settings → API.
+
+
+INSTANT WELCOME EMAIL SETUP
+
+To make welcome emails send immediately after signup:
+
+1. Deploy the send-welcome-email Edge Function.
+
+2. Open:
+   instant_welcome_email_trigger.sql
+
+3. Replace:
+   YOUR_PROJECT_REF
+   YOUR_SERVICE_ROLE_KEY
+
+4. Run it in Supabase SQL Editor.
+
+What happens after this:
+- New signup creates email preference row
+- Supabase trigger immediately calls send-welcome-email
+- User gets founder welcome email right away
+- Daily send-reminders cron still acts as backup for any welcome_email_sent = false users
+
+Security reminder:
+If you pasted your service_role key anywhere public, rotate it in Supabase Settings → API.
