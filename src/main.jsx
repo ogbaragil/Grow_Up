@@ -39,6 +39,8 @@ const EMPTY_STATE = {
   firstName: "",
   theme: "light",
   dashboardStyle: "minimal",
+  notificationsEnabled: false,
+  onboardingDismissed: false,
   mode: "Real Mode",
   selectedMonth: monthKey(),
   accounts: [],
@@ -970,6 +972,172 @@ function WealthTimelinePage({ state, setMenuOpen, setTimelineOpen }) {
 }
 
 
+
+function daysUntil(date) {
+  if (!date) return null;
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.ceil((target - start) / (1000 * 60 * 60 * 24));
+}
+
+function nextTransactionDueDate(txn, from = new Date()) {
+  if (!txn?.date) return null;
+
+  const base = new Date(txn.date);
+  if (Number.isNaN(base.getTime())) return null;
+
+  let next = new Date(base);
+
+  const advance = () => {
+    const frequency = txn.frequency || (txn.recurring ? "monthly" : "once");
+
+    if (frequency === "weekly") next.setDate(next.getDate() + 7);
+    else if (frequency === "fortnightly") next.setDate(next.getDate() + 14);
+    else if (frequency === "quarterly") next.setMonth(next.getMonth() + 3);
+    else if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
+    else if (frequency === "once") return null;
+    else next.setMonth(next.getMonth() + 1);
+
+    return next;
+  };
+
+  while (next < new Date(from.getFullYear(), from.getMonth(), from.getDate())) {
+    if (!advance()) return null;
+  }
+
+  return next;
+}
+
+function notificationPermissionStatus() {
+  if (!("Notification" in window)) return "unsupported";
+  return Notification.permission;
+}
+
+async function requestGrowUpNotifications(setState) {
+  if (!("Notification" in window)) {
+    alert("Notifications are not supported by this browser.");
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    setState(s => ({ ...s, notificationsEnabled: true }));
+    new Notification("Grow UP notifications enabled", {
+      body: "You’ll get reminders for recurring transactions and monthly balance updates."
+    });
+    return true;
+  }
+
+  setState(s => ({ ...s, notificationsEnabled: false }));
+  alert("Notifications were not enabled. You can turn them on later in your browser settings.");
+  return false;
+}
+
+function showGrowUpNotification(title, body) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  try {
+    new Notification(title, { body });
+  } catch {
+    // Browser blocked it; fail silently.
+  }
+}
+
+function runGrowUpNotificationChecks(state) {
+  if (!state?.notificationsEnabled) return;
+  if (notificationPermissionStatus() !== "granted") return;
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const sentKey = `growup_notifications_sent_${todayKey}`;
+
+  if (localStorage.getItem(sentKey)) return;
+
+  const recurring = (state.transactions || [])
+    .filter(t => t.recurring || (t.frequency && t.frequency !== "once"))
+    .map(t => ({ txn:t, due:nextTransactionDueDate(t) }))
+    .filter(item => item.due)
+    .map(item => ({ ...item, days:daysUntil(item.due) }))
+    .filter(item => item.days !== null && item.days >= 0 && item.days <= 2)
+    .slice(0, 3);
+
+  if (recurring.length) {
+    const first = recurring[0];
+    showGrowUpNotification(
+      `${first.txn.name} is due ${first.days === 0 ? "today" : first.days === 1 ? "tomorrow" : "soon"}`,
+      `${first.txn.type === "income" ? "Expected income" : "Expected expense"}: ${money(first.txn.amount)}`
+    );
+  }
+
+  const now = new Date();
+  const isMonthEndWindow = now.getDate() >= 25 || now.getDate() <= 3;
+  const balanceReminderKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+
+  if (isMonthEndWindow && localStorage.getItem("growup_last_balance_reminder") !== balanceReminderKey) {
+    showGrowUpNotification(
+      "Update your monthly balances",
+      "Refresh asset and debt balances so your net worth timeline stays accurate."
+    );
+    localStorage.setItem("growup_last_balance_reminder", balanceReminderKey);
+  }
+
+  localStorage.setItem(sentKey, "true");
+}
+
+function OnboardingTips({ state, setState, setTab }) {
+  if (state.onboardingDismissed) return null;
+
+  const accountsDone = (state.accounts || []).length >= 2;
+  const snapshotsDone = Object.keys(state.monthSnapshots || {}).length >= 2;
+  const cashDone = (state.transactions || []).length >= 2;
+  const goalsDone = (state.goals || []).filter(g => !g.archived).length >= 1;
+
+  const steps = [
+    { done: accountsDone, title:"Add your accounts", detail:"Start with the assets and debts that drive your net worth.", tab:"assets" },
+    { done: snapshotsDone, title:"Update two months", detail:"Two saved months unlock more useful trends and forecasting.", tab:"assets" },
+    { done: cashDone, title:"Add cash flow", detail:"Salary, rent, subscriptions, and recurring bills make insights smarter.", tab:"cash" },
+    { done: goalsDone, title:"Create one goal", detail:"A single target gives the timeline something meaningful to project.", tab:"goals" }
+  ];
+
+  const completeCount = steps.filter(s => s.done).length;
+
+  return (
+    <section className="onboarding-tips-card">
+      <div className="onboarding-head">
+        <div>
+          <p>Quick setup</p>
+          <h2>Get the best from Grow UP</h2>
+        </div>
+        <button type="button" onClick={()=>setState(s=>({...s,onboardingDismissed:true}))}>×</button>
+      </div>
+
+      <div className="onboarding-progress">
+        <i style={{ width:`${(completeCount / steps.length) * 100}%` }}></i>
+      </div>
+
+      <div className="onboarding-steps">
+        {steps.map(step => (
+          <button
+            type="button"
+            key={step.title}
+            className={step.done ? "done" : ""}
+            onClick={()=>setTab(step.tab)}
+          >
+            <span>{step.done ? "✓" : "○"}</span>
+            <div>
+              <strong>{step.title}</strong>
+              <small>{step.detail}</small>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
 function App() {
   const path = window.location.pathname;
   if (path === "/landingpage") return <LandingPage />;
@@ -1023,6 +1191,10 @@ function App() {
   const activeSetState = demoMode ? (() => readOnlyDemoAlert()) : setState;
   const totals = useMemo(() => computeTotals(activeState), [activeState]);
   const displayName = demoMode ? "Demo" : getUserDisplayName(session, state);
+
+  useEffect(() => {
+    if (!demoMode) runGrowUpNotificationChecks(activeState);
+  }, [demoMode, activeState]);
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const signOut = async () => {
@@ -1185,6 +1357,10 @@ function App() {
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
           <>
+            {tab === "overview" && !demoMode && (
+              <OnboardingTips state={state} setState={setState} setTab={setTab} />
+            )}
+
             {tab === "overview" && (
               dashboardStyle === "detailed"
                 ? <Overview {...common} setTab={setTab} isDemo={demoMode} />
@@ -2729,6 +2905,25 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         </button>
       </Card>
 
+
+
+      <Card>
+        <h2>Notifications</h2>
+        <p>Get reminders when recurring transactions are due and when it is time to update monthly asset/debt balances.</p>
+        <div className="notification-settings-row">
+          <div>
+            <strong>{state.notificationsEnabled ? "Enabled" : "Off"}</strong>
+            <span>{notificationPermissionStatus() === "granted" ? "Browser permission granted" : notificationPermissionStatus() === "denied" ? "Browser permission blocked" : "Browser permission not requested"}</span>
+          </div>
+          <button
+            type="button"
+            className={state.notificationsEnabled ? "secondary" : "primary"}
+            onClick={()=> state.notificationsEnabled ? update({ notificationsEnabled:false }) : requestGrowUpNotifications((next)=>update(typeof next === "function" ? next(state) : next))}
+          >
+            {state.notificationsEnabled ? "Turn off" : "Enable"}
+          </button>
+        </div>
+      </Card>
 
       <Card>
         <h2>Dashboard Style</h2>
