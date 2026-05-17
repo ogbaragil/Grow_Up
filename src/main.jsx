@@ -1195,6 +1195,73 @@ function upcomingTransactionsForDashboard(state, limit = 4) {
 }
 
 
+
+function useAutoCarousel(itemCount = 3, intervalMs = 5200, resumeDelayMs = 5200) {
+  const ref = React.useRef(null);
+  const timerRef = React.useRef(null);
+  const resumeRef = React.useRef(null);
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  const scrollToIndex = React.useCallback((nextIndex) => {
+    const el = ref.current;
+    if (!el || itemCount <= 0) return;
+
+    const clamped = ((nextIndex % itemCount) + itemCount) % itemCount;
+    const child = el.children?.[clamped];
+
+    if (child) {
+      el.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
+    }
+
+    setIndex(clamped);
+  }, [itemCount]);
+
+  const pauseThenResume = React.useCallback(() => {
+    setPaused(true);
+    window.clearTimeout(resumeRef.current);
+    resumeRef.current = window.setTimeout(() => setPaused(false), resumeDelayMs);
+  }, [resumeDelayMs]);
+
+  useEffect(() => {
+    if (paused || itemCount <= 1) return;
+
+    timerRef.current = window.setInterval(() => {
+      scrollToIndex(index + 1);
+    }, intervalMs);
+
+    return () => window.clearInterval(timerRef.current);
+  }, [paused, index, itemCount, intervalMs, scrollToIndex]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const children = Array.from(el.children || []);
+      if (!children.length) return;
+
+      const nearest = children.reduce((best, child, i) => {
+        const distance = Math.abs(child.offsetLeft - el.scrollLeft);
+        return distance < best.distance ? { index: i, distance } : best;
+      }, { index: 0, distance: Infinity });
+
+      setIndex(nearest.index);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => () => {
+    window.clearInterval(timerRef.current);
+    window.clearTimeout(resumeRef.current);
+  }, []);
+
+  return { ref, index, scrollToIndex, pauseThenResume };
+}
+
+
 function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
@@ -1216,6 +1283,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
   const animatedMomentum = useAnimatedNumber(momentumScore, 0, 1100);
 
   const upcomingMiniTxns = upcomingTransactionsForDashboard(dashboardState, 4);
+  const dashboardCarousel = useAutoCarousel(3, 5600, 5200);
   const chartRows = historyRows(dashboardState).slice().reverse().slice(-6);
   const chartValues = chartRows.map(r => Number(r.net || 0));
   const min = Math.min(...chartValues, dashboardTotals.net);
@@ -1288,7 +1356,14 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
       )}
 
       <section className="minimal-feature-carousel" aria-label="Dashboard highlights">
-        <div className="feature-track">
+        <div
+          className="feature-track"
+          ref={dashboardCarousel.ref}
+          onTouchStart={dashboardCarousel.pauseThenResume}
+          onMouseDown={dashboardCarousel.pauseThenResume}
+          onWheel={dashboardCarousel.pauseThenResume}
+          onScroll={dashboardCarousel.pauseThenResume}
+        >
           <article className="minimal-chart-card feature-slide dark-momentum-card">
             <div className="minimal-row">
               <div>
@@ -1355,7 +1430,18 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         </div>
 
         <div className="feature-dots">
-          <span></span><span></span><span></span>
+          {[0,1,2].map(i => (
+            <button
+              key={i}
+              type="button"
+              className={dashboardCarousel.index === i ? "active" : ""}
+              onClick={() => {
+                dashboardCarousel.pauseThenResume();
+                dashboardCarousel.scrollToIndex(i);
+              }}
+              aria-label={`Show dashboard card ${i + 1}`}
+            />
+          ))}
         </div>
       </section>
 
@@ -2267,7 +2353,7 @@ function BottomNav({ tab, setTab }) {
 function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode }) {
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
-      <div className="menu-sheet" onClick={(e)=>e.stopPropagation()}>
+      <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
         <div className="sheet-head"><div className="app-icon">GV</div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
         <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
         <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>

@@ -4064,3 +4064,174 @@ button:focus-visible {
     font-size: 42px;
   }
 }
+
+
+/* =========================================================
+   Interactive dashboard carousel
+   Manual swipe + auto scroll + snap behavior
+   ========================================================= */
+
+.minimal-feature-carousel {
+  overflow: visible !important;
+}
+
+.feature-track {
+  width: 100% !important;
+  display: flex !important;
+  gap: 18px !important;
+  overflow-x: auto !important;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  animation: none !important;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  padding: 0 2px 4px;
+}
+
+.feature-track::-webkit-scrollbar {
+  display: none;
+}
+
+.feature-slide {
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+  width: min(calc(100vw - 70px), 390px) !important;
+  min-width: min(calc(100vw - 70px), 390px) !important;
+}
+
+.feature-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 12px;
+}
+
+.feature-dots button {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(16,18,20,.18);
+  transition: width .22s ease, background .22s ease, transform .22s ease;
+}
+
+.feature-dots button.active {
+  width: 26px;
+  background: #15181D;
+}
+
+.feature-dots button:active {
+  transform: scale(.92);
+}
+
+/* keep the feature cards visually aligned with net worth card scale */
+.dark-momentum-card,
+.minimal-upcoming-card,
+.minimal-cash-snapshot-card {
+  min-height: 300px !important;
+}
+
+/* =========================================================
+   Premium grouped app drawer
+   Applies to the top-right menu sheet
+   ========================================================= */
+
+.menu-sheet.app-drawer,
+.menu-sheet {
+  padding: 18px !important;
+  border-radius: 30px 30px 0 0 !important;
+  background:
+    radial-gradient(circle at 20% -10%, rgba(184,138,43,.12), transparent 34%),
+    rgba(255,255,255,.96) !important;
+}
+
+.menu-sheet .sheet-head {
+  padding: 6px 4px 16px;
+  margin-bottom: 10px !important;
+  border-bottom: 1px solid rgba(16,18,20,.07);
+}
+
+.menu-sheet .sheet-head .app-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(16,18,20,.16);
+}
+
+.menu-sheet .sheet-head h2 {
+  font-size: 25px !important;
+  letter-spacing: -.055em;
+}
+
+.menu-sheet .sheet-head p {
+  color: #6D706F !important;
+  font-weight: 760;
+}
+
+.menu-sheet > button {
+  min-height: 56px;
+  margin: 8px 0 !important;
+  padding: 14px 14px !important;
+  border: 1px solid rgba(16,18,20,.06) !important;
+  border-bottom: 1px solid rgba(16,18,20,.06) !important;
+  border-radius: 18px !important;
+  background: rgba(255,255,255,.76);
+  box-shadow: 0 10px 28px rgba(16,18,20,.045);
+  transition: transform .16s ease, background .16s ease, box-shadow .16s ease;
+}
+
+.menu-sheet > button:hover,
+.menu-sheet > button:active {
+  background: #FFFFFF;
+  transform: translateY(-1px);
+  box-shadow: 0 14px 36px rgba(16,18,20,.075);
+}
+
+.menu-sheet > button svg {
+  width: 22px;
+  height: 22px;
+  color: #5967E8;
+  stroke-width: 2.4;
+}
+
+.menu-sheet > button:nth-of-type(1) svg,
+.menu-sheet > button:nth-of-type(2) svg {
+  color: #15181D;
+}
+
+.menu-sheet > button b,
+.menu-sheet > button {
+  font-weight: 920 !important;
+  color: #15181D;
+}
+
+.menu-sheet hr {
+  border: 0 !important;
+  height: 1px;
+  margin: 14px 4px !important;
+  background: linear-gradient(90deg, transparent, rgba(16,18,20,.12), transparent);
+}
+
+/* visually separate auth/backups/danger actions */
+.menu-sheet > button:has(svg[data-lucide="download-cloud"]),
+.menu-sheet > button:has(svg[data-lucide="rotate-ccw"]) {
+  background: rgba(231,233,255,.42);
+  border-color: rgba(89,103,232,.10) !important;
+}
+
+.menu-sheet > button:has(svg[data-lucide="x"]),
+.menu-sheet > button.danger,
+.menu-sheet > button:last-child {
+  color: #C96D4B !important;
+}
+
+@media (max-width: 430px) {
+  .feature-slide {
+    width: calc(100vw - 70px) !important;
+    min-width: calc(100vw - 70px) !important;
+  }
+
+  .menu-sheet {
+    padding-bottom: calc(18px + env(safe-area-inset-bottom)) !important;
+  }
+}
