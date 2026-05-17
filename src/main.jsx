@@ -619,65 +619,136 @@ function buildGrowUpInsights(state, totals) {
   return insights.slice(0, 5);
 }
 
-function buildWealthTimelineItems(state) {
+
+function buildWealthTimelineItems(state, scenario = "balanced") {
   const latest = latestDashboardState(state);
   const totals = computeTotals(latest);
   const accounts = getAccountsForSelectedMonth(latest);
-  const rows = [];
+  const activeGoals = (latest.goals || []).filter(g => !g.archived);
+  const now = new Date();
+  const netWorth = Number(totals.net || 0);
+  const prevNetWorth = Number(totals.prevNet || 0);
 
-  rows.push({
-    icon: "●",
-    title: money(totals.net),
-    label: "Current net worth",
-    detail: monthLabel(latest.selectedMonth),
-    tone: "now",
-    sort: new Date().getTime()
-  });
+  const scenarioConfig = {
+    conservative: { label:"Conservative", multiplier:.65, annualReturn:.035 },
+    balanced: { label:"Balanced", multiplier:1, annualReturn:.055 },
+    aggressive: { label:"Aggressive", multiplier:1.35, annualReturn:.075 }
+  }[scenario] || { label:"Balanced", multiplier:1, annualReturn:.055 };
 
-  (latest.goals || []).filter(g => !g.archived).forEach(goal => {
+  const history = historyRows(latest).slice().sort((a,b)=>a.key.localeCompare(b.key)).filter(r=>Number.isFinite(Number(r.net)));
+  const growths = history.slice(-6).map((r,i,arr)=> i ? Number(r.net||0) - Number(arr[i-1].net||0) : null).filter(v=>Number.isFinite(v));
+  const avgGrowth = growths.length ? growths.reduce((s,v)=>s+v,0)/growths.length : Math.max(0, netWorth - prevNetWorth);
+
+  const income = (latest.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0);
+  const out = (latest.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
+  const cashSurplus = income - out;
+  const monthlyAdd = Math.max(1, avgGrowth, cashSurplus * .55) * scenarioConfig.multiplier;
+  const monthlyReturn = Math.pow(1 + scenarioConfig.annualReturn, 1/12) - 1;
+
+  const monthsTo = (target) => {
+    if (netWorth >= target) return 0;
+    let projected = netWorth;
+    for (let m=1; m<=720; m++) {
+      projected = (projected * (1 + monthlyReturn)) + monthlyAdd;
+      if (projected >= target) return m;
+    }
+    return null;
+  };
+  const futureDate = (months) => months === null || months === undefined ? null : new Date(now.getFullYear(), now.getMonth() + months, 1);
+  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "Needs more trend data";
+
+  const rows = [{
+    icon:"●",
+    title:money(netWorth),
+    label:"Current net worth",
+    detail:monthLabel(latest.selectedMonth),
+    tone:"now",
+    category:"Today",
+    sort:now.getTime()
+  }];
+
+  activeGoals.forEach(goal => {
     let calc = calculateGoalProgress(goal, totals, accounts);
     calc = refineDebtPayoffCalcWithHistory(goal, latest, calc);
     const forecast = estimateGoalCompletion(goal, latest, calc);
-    const label = forecast?.label || (goal.deadline ? new Date(goal.deadline).toLocaleDateString("en-US", { month:"short", year:"numeric" }) : "No ETA");
-    const sortDate = goal.deadline ? new Date(goal.deadline).getTime() : Number.MAX_SAFE_INTEGER;
-
+    let d = forecast?.etaDate ? new Date(forecast.etaDate) : goal.deadline ? new Date(goal.deadline) : null;
     rows.push({
       icon: goal.icon || goalIconForType(goal.goalType),
       title: goal.name,
-      label,
+      label: forecast?.label || dateLabel(d),
       detail: `${Math.round(calc.progress || 0)}% complete`,
       tone: calc.progress >= 80 ? "gain" : goal.goalType === "debtPayoff" ? "risk" : "forecast",
-      sort: Number.isFinite(sortDate) ? sortDate : Number.MAX_SAFE_INTEGER
+      category:"Goal",
+      sort: d ? d.getTime() : Number.MAX_SAFE_INTEGER - 10
     });
   });
 
-  const milestones = [
-    { amount: 100000, title: "First 100k", icon: "💎" },
-    { amount: 250000, title: "Quarter Million", icon: "🏛️" },
-    { amount: 500000, title: "Half Million", icon: "🚀" },
-    { amount: 1000000, title: "Millionaire", icon: "👑" }
-  ];
+  [
+    { amount:100000, title:"First 100k", icon:"💎" },
+    { amount:250000, title:"Quarter Million", icon:"🏛️" },
+    { amount:500000, title:"Half Million", icon:"🚀" },
+    { amount:1000000, title:"Millionaire", icon:"👑" }
+  ].filter(m=>netWorth < m.amount).slice(0,3).forEach(m => {
+    const d = futureDate(monthsTo(m.amount));
+    rows.push({
+      icon:m.icon,
+      title:m.title,
+      label:dateLabel(d),
+      detail:`${money(m.amount)} target · ${scenarioConfig.label} case`,
+      tone:"gold",
+      category:"Wealth Milestone",
+      sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 8
+    });
+  });
 
-  const monthlyGrowth = Math.max(0, totals.net - totals.prevNet);
-  milestones
-    .filter(m => totals.net < m.amount)
-    .slice(0, 2)
-    .forEach(m => {
-      const months = monthlyGrowth > 0 ? Math.ceil((m.amount - totals.net) / monthlyGrowth) : null;
-      const d = months ? new Date(new Date().getFullYear(), new Date().getMonth() + months, 1) : null;
+  const debts = accounts.filter(a=>a.kind==="debt" && Number(a.balance||0)>0);
+  const totalDebt = debts.reduce((s,a)=>s+Number(a.balance||0),0);
+  if (totalDebt > 0) {
+    const currentReduction = debts.reduce((s,a)=>s+Math.max(0, Number(a.previous||0)-Number(a.balance||0)),0);
+    const monthlyDebtPaydown = Math.max(1, currentReduction, cashSurplus > 0 ? cashSurplus * .25 : 0) * scenarioConfig.multiplier;
+    const d = futureDate(Math.ceil(totalDebt / monthlyDebtPaydown));
+    rows.push({
+      icon:"⚡",
+      title:"Debt Free",
+      label:dateLabel(d),
+      detail:`${money(totalDebt)} remaining · projected payoff`,
+      tone:"risk",
+      category:"Freedom",
+      sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 6
+    });
+  }
 
+  if (out > 0) {
+    [
+      { title:"Coast FIRE", icon:"🌤️", target:out*12*12, detail:"Approx. 12× annual spend", tone:"forecast" },
+      { title:"FIRE", icon:"🔥", target:out*12*25, detail:"Approx. 25× annual spend", tone:"gain" }
+    ].filter(m=>netWorth < m.target).forEach((m,i) => {
+      const d = futureDate(monthsTo(m.target));
       rows.push({
-        icon: m.icon,
-        title: m.title,
-        label: d ? d.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "Needs more trend data",
-        detail: `${money(m.amount)} milestone`,
-        tone: "gold",
-        sort: d ? d.getTime() : Number.MAX_SAFE_INTEGER - 1
+        icon:m.icon,
+        title:m.title,
+        label:dateLabel(d),
+        detail:`${money(m.target)} target · ${m.detail}`,
+        tone:m.tone,
+        category:"Independence",
+        sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 4 + i
       });
     });
+  }
 
-  return rows.sort((a,b)=>a.sort-b.sort).slice(0, 8);
+  return rows.sort((a,b)=>a.sort-b.sort).slice(0,10);
 }
+
+function timelineScenarioSummary(state, scenario = "balanced") {
+  const latest = latestDashboardState(state);
+  const totals = computeTotals(latest);
+  const rows = buildWealthTimelineItems(state, scenario);
+  const history = historyRows(latest).slice().sort((a,b)=>a.key.localeCompare(b.key)).filter(r=>Number.isFinite(Number(r.net)));
+  const growths = history.slice(-6).map((r,i,arr)=> i ? Number(r.net||0) - Number(arr[i-1].net||0) : null).filter(v=>Number.isFinite(v));
+  const avgGrowth = growths.length ? growths.reduce((s,v)=>s+v,0)/growths.length : Math.max(0, Number(totals.net||0)-Number(totals.prevNet||0));
+  return { next: rows.find(r=>r.category !== "Today") || rows[0], avgGrowth, count: rows.length };
+}
+
 
 function InsightsStrip({ state, totals, openInsights }) {
   const insights = useMemo(() => buildGrowUpInsights(state, totals), [state, totals]);
@@ -710,9 +781,11 @@ function InsightsStrip({ state, totals, openInsights }) {
 
 
 
+
 function WealthTimelineBriefCard({ state, openTimeline }) {
-  const items = useMemo(() => buildWealthTimelineItems(state), [state]);
-  const next = items[1];
+  const items = useMemo(() => buildWealthTimelineItems(state, "balanced"), [state]);
+  const summary = useMemo(() => timelineScenarioSummary(state, "balanced"), [state]);
+  const next = summary.next;
 
   return (
     <section className="wealth-timeline-brief-card" onClick={openTimeline}>
@@ -776,8 +849,12 @@ function InsightsPage({ state, totals, setMenuOpen, setInsightsOpen }) {
   );
 }
 
+
 function WealthTimelinePage({ state, setMenuOpen, setTimelineOpen }) {
-  const items = useMemo(() => buildWealthTimelineItems(state), [state]);
+  const [scenario, setScenario] = useState("balanced");
+  const items = useMemo(() => buildWealthTimelineItems(state, scenario), [state, scenario]);
+  const summary = useMemo(() => timelineScenarioSummary(state, scenario), [state, scenario]);
+  const scenarioLabel = scenario === "conservative" ? "Conservative" : scenario === "aggressive" ? "Aggressive" : "Balanced";
 
   return (
     <div className="screen wealth-timeline-page">
@@ -787,29 +864,40 @@ function WealthTimelinePage({ state, setMenuOpen, setTimelineOpen }) {
         </button>
         <div>
           <h1>Wealth Timeline</h1>
-          <p>Your milestones, goals, and future wealth path.</p>
+          <p>Your goals, milestones, and future wealth path.</p>
         </div>
         <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
           <Menu size={24}/>
         </button>
       </div>
 
-      <section className="timeline-hero">
-        <span>Financial path</span>
-        <h2>{items[1]?.label || "Build your timeline"}</h2>
-        <p>{items[1] ? `Next up: ${items[1].title}` : "Add goals to project your next milestones."}</p>
+      <section className="timeline-hero timeline-v2-hero">
+        <span>{scenarioLabel} projection</span>
+        <h2>{summary.next?.label || "Build your timeline"}</h2>
+        <p>{summary.next ? `Next up: ${summary.next.title}` : "Add goals to project your next milestones."}</p>
+
+        <div className="timeline-projection-stats">
+          <div><small>Recent pace</small><strong>{money(summary.avgGrowth)}/mo</strong></div>
+          <div><small>Timeline points</small><strong>{summary.count}</strong></div>
+        </div>
       </section>
+
+      <div className="timeline-scenario-tabs">
+        {[["conservative","Conservative"],["balanced","Balanced"],["aggressive","Aggressive"]].map(([key,label]) => (
+          <button key={key} type="button" className={scenario === key ? "active" : ""} onClick={()=>setScenario(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       <section className="wealth-timeline-list">
         {items.map((item, index) => (
           <article className={`timeline-item ${item.tone}`} key={`${item.title}-${index}`}>
-            <div className="timeline-node">
-              <span>{item.icon}</span>
-            </div>
+            <div className="timeline-node"><span>{item.icon}</span></div>
             <div className="timeline-content">
-              <small>{item.label}</small>
+              <small>{item.category || item.label}</small>
               <h3>{item.title}</h3>
-              <p>{item.detail}</p>
+              <p>{item.label} · {item.detail}</p>
             </div>
           </article>
         ))}
