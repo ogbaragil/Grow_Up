@@ -685,18 +685,56 @@ function InsightsStrip({ state, totals, openInsights }) {
   if (!insights.length) return null;
 
   return (
-    <section className="growup-insights-strip" onClick={openInsights}>
-      <div className="insights-strip-head">
-        <div>
-          <p>Grow UP Insights</p>
-          <h2>{insights[0].title}</h2>
-        </div>
-        <span>{insights.length}</span>
+    <section className="growup-insights-strip scrollable-insights-strip" aria-label="Grow UP Insights">
+      <div className="insights-strip-scroll">
+        {insights.map((item, index) => (
+          <article
+            className={`insight-dashboard-card ${item.tone}`}
+            key={`${item.title}-${index}`}
+            onClick={openInsights}
+          >
+            <div className="insights-strip-head">
+              <div>
+                <p>{index === 0 ? "Grow UP Insights" : item.label}</p>
+                <h2>{item.title}</h2>
+              </div>
+              <span>{item.icon}</span>
+            </div>
+            <p>{item.body}</p>
+          </article>
+        ))}
       </div>
-      <p>{insights[0].body}</p>
     </section>
   );
 }
+
+
+
+function WealthTimelineBriefCard({ state, openTimeline }) {
+  const items = useMemo(() => buildWealthTimelineItems(state), [state]);
+  const next = items[1];
+
+  return (
+    <section className="wealth-timeline-brief-card" onClick={openTimeline}>
+      <div className="timeline-brief-copy">
+        <p>Wealth Timeline</p>
+        <h2>{next ? next.title : "Build your path"}</h2>
+        <span>{next ? `${next.label} · ${next.detail}` : "Add goals to project future milestones."}</span>
+      </div>
+
+      <div className="timeline-brief-rail">
+        {items.slice(0,4).map((item, index) => (
+          <i key={`${item.title}-${index}`} className={item.tone}>
+            {index === 0 ? "●" : index + 1}
+          </i>
+        ))}
+      </div>
+
+      <button type="button" aria-label="Open Wealth Timeline">→</button>
+    </section>
+  );
+}
+
 
 function InsightsPage({ state, totals, setMenuOpen, setInsightsOpen }) {
   const insights = useMemo(() => buildGrowUpInsights(state, totals), [state, totals]);
@@ -963,7 +1001,7 @@ function App() {
     setState(s => ({ ...s, dashboardStyle: style }));
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, saveSnapshot, displayName, isDemo: demoMode};
+  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, displayName, isDemo: demoMode};
 
   if (authLoading) {
     return (
@@ -1516,7 +1554,7 @@ function useAutoCarousel(itemCount = 3, intervalMs = 5200, resumeDelayMs = 5200)
 }
 
 
-function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, isDemo=false }) {
+function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
@@ -1584,6 +1622,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
       </section>
 
       <InsightsStrip state={dashboardState} totals={dashboardTotals} openInsights={()=>setInsightsOpen?.(true)} />
+
+      <WealthTimelineBriefCard state={dashboardState} openTimeline={()=>setTimelineOpen?.(true)} />
 
       {primaryGoal && goalCalc && (
         <section className={`minimal-goal-card ${primaryGoal.color || "green"}`} onClick={()=>setTab("goals")}>
@@ -1761,6 +1801,10 @@ function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMe
         isDemo={isDemo}
         setMenuOpen={setMenuOpen}
       />
+
+      <InsightsStrip state={state} totals={totals} openInsights={()=>setInsightsOpen?.(true)} />
+
+      <WealthTimelineBriefCard state={state} openTimeline={()=>setTimelineOpen?.(true)} />
 
       <div className="kpi-grid">
         <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(dashboardTotals.assets)} sub={`${signedMoney(dashboardTotals.assets - dashboardTotals.prevAssets)} vs last month`} icon="💼" dot="green" />
