@@ -1721,7 +1721,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
                 {smartGoal?.goal === primaryGoal && smartGoal?.deadlineScore < 1000 * 60 * 60 * 24 * 120
                   ? "Closest deadline"
                   : smartGoal?.goal === primaryGoal && smartGoal?.offTrackScore > 40
-                  ? "Needs attention"
+                  ? "Long-term wealth path"
                   : "Top progress"}
               </p>
               <h2>{primaryGoal.name}</h2>
@@ -1762,7 +1762,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
             </svg>
 
             <span className="feature-caption">
-              {animatedMomentum >= 10 ? "Strong positive trend" : animatedMomentum >= 0 ? "Positive trend" : "Needs attention"}
+              {animatedMomentum >= 10 ? "Strong positive trend" : animatedMomentum >= 0 ? "Positive trend" : "Long-term wealth path"}
             </span>
           </article>
 
