@@ -2062,7 +2062,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
                     <strong>{g.archivedAt ? new Date(g.archivedAt).toLocaleDateString() : "Saved"}</strong>
                   </div>
                   <div className="archived-goal-actions">
-                    <button type="button" className="ghost" onClick={()=>restore(g.id)}>Restore</button>
+                    <button type="button" className="ghost" onClick={()=>restore(g.id)}>Restore from Cloud</button>
                     <button type="button" className="danger-mini" onClick={()=>del(g.id)}>Delete</button>
                   </div>
                 </article>
@@ -2311,7 +2311,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <p>Keep a secure cloud backup of your Grow UP data and restore your latest saved version when needed.</p>
         <div className="button-row">
           <button className="primary" disabled={isDemo} onClick={saveSnapshot}><Save size={18}/> Back up data</button>
-          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest saved data</button>
+          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore from Cloud</button>
         </div>
       </Card>
 
@@ -2363,7 +2363,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <hr/>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
         <button disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
-        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore latest saved data from Supabase</button>
+        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud from Supabase</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
         <button onClick={()=>{ window.location.href = "/privacy"; }}><SlidersHorizontal/> Privacy Policy</button>
         <button onClick={()=>{ window.location.href = "/terms"; }}><SlidersHorizontal/> Terms</button>
