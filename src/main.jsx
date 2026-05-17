@@ -390,7 +390,7 @@ function LandingPage() {
           <span className="landing-logo app-icon">GV</span>
           <span>
             <b>Grow UP</b>
-            <small>Wealth Operating System</small>
+            <small>Personal Wealth OS</small>
           </span>
         </a>
 
@@ -409,24 +409,24 @@ function LandingPage() {
           <div className="hero-copy">
             <div className="hero-badge">
               <span></span>
-              Built for long-term financial growth
+              Built for intentional wealth builders
             </div>
 
             <h1>
-              Your Money.
+              Your Wealth.
               <br />
-              Finally Moving
+              Finally Feeling
               <br />
-              Forward.
+              Intentional.
             </h1>
 
             <p>
-              Track wealth, crush debt, forecast your future, and build momentum month by month.
+              A calm, intelligent way to track net worth, forecast goals, and turn financial progress into a visible timeline.
             </p>
 
             <div className="hero-actions">
-              <button onClick={startApp} className="primary-landing">Start Growing Free</button>
-              <button onClick={tryDemo} className="secondary-landing">Try Demo Mode</button>
+              <button onClick={startApp} className="primary-landing">Start Building Wealth</button>
+              <button onClick={tryDemo} className="secondary-landing">Explore Demo</button>
             </div>
 
             <div className="trust-grid">
@@ -498,8 +498,8 @@ function LandingPage() {
         <section id="features" className="landing-section">
           <div className="section-heading">
             <span>Why Grow UP</span>
-            <h2>Money clarity changes everything.</h2>
-            <p>Grow UP helps you stay focused on progress instead of financial stress.</p>
+            <h2>Build wealth with calm precision.</h2>
+            <p>See your assets, debt, cash flow, goals, insights, and future milestones in one premium wealth dashboard.</p>
           </div>
 
           <div className="feature-grid">
@@ -527,9 +527,9 @@ function LandingPage() {
         <section className="product-showcase">
           <div className="showcase-copy">
             <span>Built around momentum</span>
-            <h2>Not another budget spreadsheet.</h2>
+            <h2>Not another budget tracker.</h2>
             <p>
-              Grow UP is designed around financial progress: snapshots, trends, goals, forecasts, cash flow, and long-term wealth projections.
+              Grow UP is designed around wealth identity: snapshots, goals, insights, timeline projections, and long-term momentum.
             </p>
           </div>
 
@@ -554,7 +554,7 @@ function LandingPage() {
 
         <section id="privacy" className="privacy-band">
           <div>
-            <h2>Your financial data stays yours.</h2>
+            <h2>Private by design. Premium by feel.</h2>
             <p>
               Grow UP does not require bank connections. You control what you enter, what you back up, and when you restore saved data.
             </p>
@@ -569,11 +569,11 @@ function LandingPage() {
         </section>
 
         <section className="final-cta">
-          <h2>Start building your future today.</h2>
-          <p>Turn financial progress into something you can see, track, and actually feel.</p>
+          <h2>See the future you are building.</h2>
+          <p>Grow UP turns financial progress into a timeline you can see, track, and feel.</p>
           <div>
             <button onClick={startApp} className="primary-landing">Create Free Account</button>
-            <button onClick={tryDemo} className="secondary-landing">Try Demo Mode</button>
+            <button onClick={tryDemo} className="secondary-landing">Explore Demo</button>
           </div>
         </section>
       </main>
@@ -1381,7 +1381,7 @@ function AuthScreen({ enterDemoMode }) {
           )}
 
           <button className="demo-auth-btn" type="button" onClick={enterDemoMode}>
-            Try Demo Mode
+            Explore Demo
           </button>
 
           <div className="auth-legal-links">
