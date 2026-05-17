@@ -3773,3 +3773,294 @@ button:focus {
 button:focus-visible {
   box-shadow: 0 0 0 4px rgba(89,103,232,.14) !important;
 }
+
+
+/* =========================================================
+   Dashboard carousel + historical snapshot pill removal
+   ========================================================= */
+
+/* Remove old historical snapshot status pills/banners */
+.snapshot-banner,
+.historical-snapshot,
+.history-lock-pill,
+.locked-pill,
+.month-status-pill {
+  display: none !important;
+}
+
+/* Feature carousel: same scale as net worth card */
+.minimal-feature-carousel {
+  margin: 22px 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.feature-track {
+  display: flex;
+  gap: 18px;
+  width: max-content;
+  animation: dashboardFeatureScroll 24s ease-in-out infinite;
+  will-change: transform;
+}
+
+.minimal-feature-carousel:hover .feature-track {
+  animation-play-state: paused;
+}
+
+.feature-slide {
+  width: min(calc(100vw - 70px), 390px);
+  min-height: 300px;
+  flex: 0 0 auto;
+  margin: 0 !important;
+}
+
+@keyframes dashboardFeatureScroll {
+  0%, 22% {
+    transform: translateX(0);
+  }
+  34%, 56% {
+    transform: translateX(calc(-1 * (min(calc(100vw - 70px), 390px) + 18px)));
+  }
+  68%, 90% {
+    transform: translateX(calc(-2 * (min(calc(100vw - 70px), 390px) + 18px)));
+  }
+  100% {
+    transform: translateX(0);
+  }
+}
+
+.feature-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.feature-dots span {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(16,18,20,.18);
+}
+
+.feature-dots span:first-child {
+  width: 22px;
+  background: #15181D;
+}
+
+/* Momentum as same-sized dark premium card */
+.dark-momentum-card {
+  min-height: 300px !important;
+  padding: 26px !important;
+  border-radius: 30px !important;
+  background:
+    radial-gradient(circle at 92% 4%, rgba(255,255,255,.12), transparent 30%),
+    linear-gradient(135deg, #15181D 0%, #23272F 100%) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.10) !important;
+  box-shadow: 0 30px 80px rgba(16,18,20,.24) !important;
+}
+
+.dark-momentum-card .minimal-row p {
+  color: rgba(255,255,255,.62) !important;
+}
+
+.dark-momentum-card .minimal-row h2 {
+  color: white !important;
+}
+
+.dark-momentum-card .minimal-row strong {
+  color: #9FE3B9 !important;
+}
+
+.dark-momentum-card .minimal-trend-svg {
+  height: 145px !important;
+  margin-top: 18px !important;
+}
+
+.dark-momentum-card .minimal-trend-svg polyline {
+  stroke: #7F7CFF !important;
+  filter: drop-shadow(0 10px 16px rgba(127,124,255,.24)) !important;
+}
+
+.feature-caption {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  min-height: 30px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  color: #9FE3B9;
+  background: rgba(159,227,185,.12);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+/* Upcoming transaction slide */
+.minimal-upcoming-card,
+.minimal-cash-snapshot-card {
+  min-height: 300px;
+  border-radius: 30px;
+  padding: 26px;
+  background: rgba(255,255,255,.94);
+  border: 1px solid rgba(16,18,20,.06);
+  box-shadow: 0 18px 52px rgba(16,18,20,.075);
+}
+
+.upcoming-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.upcoming-card-head p {
+  margin: 0 0 6px;
+  color: #6D706F;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.upcoming-card-head h2 {
+  margin: 0;
+  font-size: 30px;
+  line-height: 1;
+  letter-spacing: -.06em;
+  font-weight: 1000;
+}
+
+.upcoming-card-head button {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #EEECE6;
+  color: #15181D;
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.upcoming-mini-list {
+  display: grid;
+  gap: 14px;
+}
+
+.upcoming-mini-item {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.upcoming-mini-item > span {
+  width: 48px;
+  height: 48px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #F5F3EF;
+  font-size: 24px;
+}
+
+.upcoming-mini-item strong {
+  display: block;
+  font-size: 17px;
+  letter-spacing: -.03em;
+}
+
+.upcoming-mini-item small {
+  display: block;
+  color: #6D706F;
+  font-size: 13px;
+  margin-top: 2px;
+}
+
+.upcoming-mini-item b {
+  font-size: 17px;
+  font-weight: 1000;
+}
+
+.upcoming-mini-item b.gain {
+  color: #2F8F5B;
+}
+
+.upcoming-mini-item b.risk {
+  color: #C96D4B;
+}
+
+.upcoming-empty {
+  border-radius: 20px;
+  background: #F5F3EF;
+  color: #6D706F;
+  padding: 18px;
+  font-weight: 800;
+}
+
+/* Cash flow slide */
+.cash-snapshot-big {
+  margin-top: 18px;
+}
+
+.cash-snapshot-big strong {
+  display: block;
+  font-size: 48px;
+  line-height: .9;
+  letter-spacing: -.07em;
+}
+
+.cash-snapshot-big span {
+  display: block;
+  margin-top: 10px;
+  color: #6D706F;
+  font-weight: 850;
+}
+
+.cash-bars {
+  height: 96px;
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.cash-bars i {
+  width: 22px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #2F8F5B, rgba(47,143,91,.35));
+}
+
+.cash-bars i:nth-child(1) { height: 34px; opacity: .22; }
+.cash-bars i:nth-child(2) { height: 48px; opacity: .30; }
+.cash-bars i:nth-child(3) { height: 64px; opacity: .42; }
+.cash-bars i:nth-child(4) { height: 46px; opacity: .58; }
+.cash-bars i:nth-child(5) { height: 88px; opacity: 1; }
+
+@media (max-width: 430px) {
+  .feature-slide {
+    width: calc(100vw - 70px);
+    min-height: 288px;
+  }
+
+  .dark-momentum-card,
+  .minimal-upcoming-card,
+  .minimal-cash-snapshot-card {
+    min-height: 288px !important;
+    border-radius: 28px;
+    padding: 22px !important;
+  }
+
+  .dark-momentum-card .minimal-trend-svg {
+    height: 125px !important;
+  }
+
+  .upcoming-card-head h2 {
+    font-size: 28px;
+  }
+
+  .cash-snapshot-big strong {
+    font-size: 42px;
+  }
+}

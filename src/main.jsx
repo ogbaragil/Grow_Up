@@ -1178,6 +1178,23 @@ function weightedThreeMonthMomentum(state, currentNet) {
 }
 
 
+
+function upcomingTransactionsForDashboard(state, limit = 4) {
+  const now = new Date();
+  const items = (state.transactions || [])
+    .map(txn => ({
+      ...txn,
+      dateObj: txn.date ? new Date(txn.date) : null
+    }))
+    .filter(txn => txn.dateObj && !Number.isNaN(txn.dateObj.getTime()))
+    .filter(txn => txn.dateObj >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
+    .sort((a,b)=>a.dateObj-b.dateObj)
+    .slice(0, limit);
+
+  return items;
+}
+
+
 function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
@@ -1198,6 +1215,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
   const momentumScore = weightedThreeMonthMomentum(dashboardState, dashboardTotals.net);
   const animatedMomentum = useAnimatedNumber(momentumScore, 0, 1100);
 
+  const upcomingMiniTxns = upcomingTransactionsForDashboard(dashboardState, 4);
   const chartRows = historyRows(dashboardState).slice().reverse().slice(-6);
   const chartValues = chartRows.map(r => Number(r.net || 0));
   const min = Math.min(...chartValues, dashboardTotals.net);
@@ -1269,17 +1287,76 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         </section>
       )}
 
-      <section className="minimal-chart-card">
-        <div className="minimal-row">
-          <div>
-            <p>3-month weighted trend</p>
-            <h2>Momentum</h2>
-          </div>
-          <strong>{animatedMomentum >= 0 ? "+" : ""}{Math.round(animatedMomentum)}%</strong>
+      <section className="minimal-feature-carousel" aria-label="Dashboard highlights">
+        <div className="feature-track">
+          <article className="minimal-chart-card feature-slide dark-momentum-card">
+            <div className="minimal-row">
+              <div>
+                <p>3-month weighted trend</p>
+                <h2>Momentum</h2>
+              </div>
+              <strong>{animatedMomentum >= 0 ? "+" : ""}{Math.round(animatedMomentum)}%</strong>
+            </div>
+
+            <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
+              <polyline points={points} />
+            </svg>
+
+            <span className="feature-caption">
+              {animatedMomentum >= 10 ? "Strong positive trend" : animatedMomentum >= 0 ? "Positive trend" : "Needs attention"}
+            </span>
+          </article>
+
+          <article className="minimal-upcoming-card feature-slide">
+            <div className="upcoming-card-head">
+              <div>
+                <p>Upcoming</p>
+                <h2>Transactions</h2>
+              </div>
+              <button type="button" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
+            </div>
+
+            <div className="upcoming-mini-list">
+              {upcomingMiniTxns.length ? upcomingMiniTxns.map(txn => (
+                <div className="upcoming-mini-item" key={txn.id}>
+                  <span>{txn.icon || (txn.type === "income" ? "💵" : "💳")}</span>
+                  <div>
+                    <strong>{txn.name}</strong>
+                    <small>{txn.dateObj.toLocaleDateString("en-US", { month:"short", day:"numeric" })}</small>
+                  </div>
+                  <b className={txn.type === "income" ? "gain" : "risk"}>
+                    {txn.type === "income" ? "+" : "-"}{money(txn.amount)}
+                  </b>
+                </div>
+              )) : (
+                <div className="upcoming-empty">No upcoming transactions.</div>
+              )}
+            </div>
+          </article>
+
+          <article className="minimal-cash-snapshot-card feature-slide">
+            <div className="upcoming-card-head">
+              <div>
+                <p>This month</p>
+                <h2>Cash Flow</h2>
+              </div>
+              <button type="button" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
+            </div>
+
+            <div className="cash-snapshot-big">
+              <strong>{signedMoney((dashboardState.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0) - (dashboardState.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0))}</strong>
+              <span>projected balance</span>
+            </div>
+
+            <div className="cash-bars">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </article>
         </div>
-        <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
-          <polyline points={points} />
-        </svg>
+
+        <div className="feature-dots">
+          <span></span><span></span><span></span>
+        </div>
       </section>
 
       {topAsset && (
