@@ -40,6 +40,11 @@ const EMPTY_STATE = {
   theme: "light",
   dashboardStyle: "minimal",
   notificationsEnabled: false,
+  emailRemindersEnabled: false,
+  emailReminderDays: 1,
+  monthlyBalanceReminderDay: 28,
+  emailGoalReminders: true,
+  emailMilestoneEmails: true,
   onboardingDismissed: false,
   mode: "Real Mode",
   selectedMonth: monthKey(),
@@ -1085,6 +1090,78 @@ function runGrowUpNotificationChecks(state) {
 
   localStorage.setItem(sentKey, "true");
 }
+
+
+async function saveEmailReminderPreferences({ session, state, update, overrides = {} }) {
+  const client = window.supabaseClient || window.supabase || (typeof supabase !== "undefined" ? supabase : null);
+
+  if (!client) {
+    alert("Supabase is not connected yet.");
+    return false;
+  }
+
+  const user = session?.user;
+
+  if (!user?.id || !user?.email) {
+    alert("Please sign in to enable email reminders.");
+    return false;
+  }
+
+  const nextPrefs = {
+    emailRemindersEnabled: overrides.emailRemindersEnabled ?? state.emailRemindersEnabled ?? true,
+    emailReminderDays: Number(overrides.emailReminderDays ?? state.emailReminderDays ?? 1),
+    monthlyBalanceReminderDay: Number(overrides.monthlyBalanceReminderDay ?? state.monthlyBalanceReminderDay ?? 28),
+    emailGoalReminders: overrides.emailGoalReminders ?? state.emailGoalReminders ?? true,
+    emailMilestoneEmails: overrides.emailMilestoneEmails ?? state.emailMilestoneEmails ?? true
+  };
+
+  const payload = {
+    user_id: user.id,
+    email: user.email,
+    enabled: Boolean(nextPrefs.emailRemindersEnabled),
+    transaction_reminder_days: nextPrefs.emailReminderDays,
+    monthly_balance_day: nextPrefs.monthlyBalanceReminderDay,
+    goal_reminders: Boolean(nextPrefs.emailGoalReminders),
+    milestone_emails: Boolean(nextPrefs.emailMilestoneEmails),
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await client
+    .from("growup_email_preferences")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (error) {
+    console.error(error);
+    alert("Could not save email reminder preferences. Please check Supabase setup.");
+    return false;
+  }
+
+  update(nextPrefs);
+  return true;
+}
+
+async function loadEmailReminderPreferences({ session, update }) {
+  const client = window.supabaseClient || window.supabase || (typeof supabase !== "undefined" ? supabase : null);
+
+  if (!client || !session?.user?.id) return;
+
+  const { data, error } = await client
+    .from("growup_email_preferences")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (error || !data) return;
+
+  update({
+    emailRemindersEnabled: Boolean(data.enabled),
+    emailReminderDays: Number(data.transaction_reminder_days ?? 1),
+    monthlyBalanceReminderDay: Number(data.monthly_balance_day ?? 28),
+    emailGoalReminders: Boolean(data.goal_reminders),
+    emailMilestoneEmails: Boolean(data.milestone_emails)
+  });
+}
+
 
 function OnboardingTips({ state, setState, setTab }) {
   if (state.onboardingDismissed) return null;
@@ -2904,26 +2981,113 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
           {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}
         </button>
       </Card>
-
-
-
       <Card>
-        <h2>Notifications</h2>
-        <p>Get reminders when recurring transactions are due and when it is time to update monthly asset/debt balances.</p>
-        <div className="notification-settings-row">
-          <div>
-            <strong>{state.notificationsEnabled ? "Enabled" : "Off"}</strong>
-            <span>{notificationPermissionStatus() === "granted" ? "Browser permission granted" : notificationPermissionStatus() === "denied" ? "Browser permission blocked" : "Browser permission not requested"}</span>
+        <h2>Email Reminders</h2>
+        <p>Send reliable email reminders for recurring transactions, monthly balance updates, goal deadlines, and milestone moments.</p>
+
+        <div className="email-reminder-card">
+          <div className="email-reminder-main">
+            <div>
+              <strong>{state.emailRemindersEnabled ? "Email reminders enabled" : "Email reminders off"}</strong>
+              <span>{session?.user?.email || "Sign in to enable email reminders"}</span>
+            </div>
+
+            <button
+              type="button"
+              className={state.emailRemindersEnabled ? "secondary" : "primary"}
+              onClick={async()=>{
+                const nextEnabled = !state.emailRemindersEnabled;
+                const saved = await saveEmailReminderPreferences({
+                  session,
+                  state,
+                  update,
+                  overrides: { emailRemindersEnabled: nextEnabled }
+                });
+                if (saved && nextEnabled) alert("Email reminders are now enabled.");
+              }}
+            >
+              {state.emailRemindersEnabled ? "Turn off" : "Enable"}
+            </button>
           </div>
-          <button
-            type="button"
-            className={state.notificationsEnabled ? "secondary" : "primary"}
-            onClick={()=> state.notificationsEnabled ? update({ notificationsEnabled:false }) : requestGrowUpNotifications((next)=>update(typeof next === "function" ? next(state) : next))}
-          >
-            {state.notificationsEnabled ? "Turn off" : "Enable"}
-          </button>
+
+          <div className="email-reminder-grid">
+            <label>
+              <span>Transaction reminder</span>
+              <select
+                value={state.emailReminderDays ?? 1}
+                onChange={async e=>{
+                  await saveEmailReminderPreferences({
+                    session,
+                    state,
+                    update,
+                    overrides: { emailRemindersEnabled: true, emailReminderDays: Number(e.target.value) }
+                  });
+                }}
+              >
+                <option value={0}>Due day</option>
+                <option value={1}>1 day before</option>
+                <option value={2}>2 days before</option>
+                <option value={7}>1 week before</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Monthly balance day</span>
+              <select
+                value={state.monthlyBalanceReminderDay ?? 28}
+                onChange={async e=>{
+                  await saveEmailReminderPreferences({
+                    session,
+                    state,
+                    update,
+                    overrides: { emailRemindersEnabled: true, monthlyBalanceReminderDay: Number(e.target.value) }
+                  });
+                }}
+              >
+                <option value={25}>25th</option>
+                <option value={28}>28th</option>
+                <option value={30}>30th</option>
+                <option value={31}>Last day</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="email-reminder-toggles">
+            <button
+              type="button"
+              className={state.emailGoalReminders ? "active" : ""}
+              onClick={async()=> {
+                await saveEmailReminderPreferences({
+                  session,
+                  state,
+                  update,
+                  overrides: { emailRemindersEnabled: true, emailGoalReminders: !state.emailGoalReminders }
+                });
+              }}
+            >
+              <span>{state.emailGoalReminders ? "✓" : "○"}</span>
+              Goal reminders
+            </button>
+
+            <button
+              type="button"
+              className={state.emailMilestoneEmails ? "active" : ""}
+              onClick={async()=> {
+                await saveEmailReminderPreferences({
+                  session,
+                  state,
+                  update,
+                  overrides: { emailRemindersEnabled: true, emailMilestoneEmails: !state.emailMilestoneEmails }
+                });
+              }}
+            >
+              <span>{state.emailMilestoneEmails ? "✓" : "○"}</span>
+              Milestone emails
+            </button>
+          </div>
         </div>
       </Card>
+
 
       <Card>
         <h2>Dashboard Style</h2>

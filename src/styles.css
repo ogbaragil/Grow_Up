@@ -5283,3 +5283,126 @@ button:focus-visible {
     justify-content: center;
   }
 }
+
+
+/* Email Reminder Settings */
+.email-reminder-card {
+  margin-top: 16px;
+  display: grid;
+  gap: 14px;
+}
+
+.email-reminder-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 22px;
+  background: radial-gradient(circle at 90% 0%, rgba(89,103,232,.12), transparent 32%), #EEECE6;
+  border: 1px solid rgba(16,18,20,.05);
+}
+
+.email-reminder-main strong {
+  display: block;
+  font-size: 17px;
+  letter-spacing: -.03em;
+}
+
+.email-reminder-main span {
+  display: block;
+  margin-top: 4px;
+  color: #6D706F;
+  font-size: 13px;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.email-reminder-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.email-reminder-grid label {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255,255,255,.74);
+  border: 1px solid rgba(16,18,20,.055);
+}
+
+.email-reminder-grid label span {
+  color: #6D706F;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.email-reminder-grid select {
+  min-height: 44px;
+  border-radius: 14px;
+  padding: 0 12px;
+  font-weight: 900;
+  background: #F8F6F1 !important;
+}
+
+.email-reminder-toggles {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.email-reminder-toggles button {
+  min-height: 48px;
+  border-radius: 18px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  background: rgba(255,255,255,.74);
+  border: 1px solid rgba(16,18,20,.055);
+  color: #6D706F;
+  font-weight: 950;
+}
+
+.email-reminder-toggles button span {
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #EEECE6;
+  color: #6D706F;
+  font-size: 13px;
+  font-weight: 1000;
+}
+
+.email-reminder-toggles button.active {
+  color: #15181D;
+  background: rgba(231,233,255,.52);
+  border-color: rgba(89,103,232,.12);
+}
+
+.email-reminder-toggles button.active span {
+  background: #E7E9FF;
+  color: #5967E8;
+}
+
+@media (max-width: 430px) {
+  .email-reminder-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .email-reminder-main button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .email-reminder-grid,
+  .email-reminder-toggles {
+    grid-template-columns: 1fr;
+  }
+}
