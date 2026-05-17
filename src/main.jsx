@@ -2354,7 +2354,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
       <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
-        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
+        <div className="sheet-head"><div className="app-icon drawer-logo"><img src="/icons/growup-logo.png" alt="Grow UP" /></div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
         <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
         <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
         <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
@@ -2363,7 +2363,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <hr/>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
         <button disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
-        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud from Supabase</button>
+        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
         <button onClick={()=>{ window.location.href = "/privacy"; }}><SlidersHorizontal/> Privacy Policy</button>
         <button onClick={()=>{ window.location.href = "/terms"; }}><SlidersHorizontal/> Terms</button>

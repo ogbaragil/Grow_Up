@@ -4284,3 +4284,59 @@ button:focus-visible {
   margin: 4px 0 0 !important;
 }
 
+
+
+/* =========================================================
+   Drawer actual logo + Restore label fix
+   ========================================================= */
+
+.menu-sheet .drawer-logo,
+.app-drawer .drawer-logo {
+  width: 58px !important;
+  height: 58px !important;
+  min-width: 58px !important;
+  border-radius: 20px !important;
+  background: transparent !important;
+  box-shadow: 0 16px 34px rgba(16,18,20,.14) !important;
+  border: 0 !important;
+  overflow: hidden !important;
+  padding: 0 !important;
+}
+
+.menu-sheet .drawer-logo img,
+.app-drawer .drawer-logo img {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: inherit !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.menu-sheet > button {
+  justify-content: flex-start !important;
+  text-align: left !important;
+}
+
+.menu-sheet > button b,
+.menu-sheet > button span,
+.menu-sheet > button {
+  white-space: nowrap !important;
+  text-align: left !important;
+}
+
+.menu-sheet > button {
+  font-size: 18px !important;
+}
+
+.menu-sheet > button svg {
+  flex: 0 0 auto !important;
+}
+
+@media (max-width: 430px) {
+  .menu-sheet > button {
+    font-size: 17px !important;
+    gap: 14px !important;
+  }
+}
