@@ -4340,3 +4340,223 @@ button:focus-visible {
     gap: 14px !important;
   }
 }
+
+
+/* =========================================================
+   Wealth Timeline + Grow UP Insights
+   ========================================================= */
+
+.growup-insights-strip {
+  margin: -4px 0 22px;
+  padding: 18px;
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 92% 0%, rgba(89,103,232,.16), transparent 30%),
+    rgba(255,255,255,.90);
+  border: 1px solid rgba(89,103,232,.12);
+  box-shadow: 0 16px 44px rgba(16,18,20,.06);
+  cursor: pointer;
+}
+
+.insights-strip-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.insights-strip-head p,
+.growup-insights-strip > p {
+  margin: 0;
+  color: #6D706F;
+  font-weight: 820;
+}
+
+.insights-strip-head h2 {
+  margin: 5px 0 0;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -.055em;
+}
+
+.insights-strip-head span {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  background: #E7E9FF;
+  color: #5967E8;
+  font-weight: 1000;
+}
+
+.growup-insights-strip > p {
+  margin-top: 10px;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.insight-hero-card,
+.timeline-hero {
+  border-radius: 30px;
+  padding: 26px;
+  margin: 20px 0;
+  color: white;
+  background:
+    radial-gradient(circle at 90% 0%, rgba(255,255,255,.12), transparent 32%),
+    linear-gradient(135deg, #15181D, #23272F);
+  box-shadow: 0 30px 80px rgba(16,18,20,.24);
+}
+
+.insight-hero-card span,
+.timeline-hero span {
+  color: rgba(255,255,255,.62);
+  font-weight: 950;
+}
+
+.insight-hero-card h2,
+.timeline-hero h2 {
+  margin: 10px 0 0;
+  font-size: 44px;
+  line-height: .92;
+  letter-spacing: -.075em;
+}
+
+.insight-hero-card p,
+.timeline-hero p {
+  color: rgba(255,255,255,.72);
+  font-weight: 760;
+  line-height: 1.35;
+}
+
+.insight-grid {
+  display: grid;
+  gap: 14px;
+  padding-bottom: 110px;
+}
+
+.insight-card {
+  display: grid;
+  grid-template-columns: 54px 1fr;
+  gap: 14px;
+  align-items: center;
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(16,18,20,.06);
+  box-shadow: 0 14px 38px rgba(16,18,20,.06);
+}
+
+.insight-icon {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  font-weight: 1000;
+  font-size: 24px;
+  background: #EEECE6;
+}
+
+.insight-card span {
+  color: #6D706F;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.insight-card h3 {
+  margin: 3px 0 0;
+  font-size: 22px;
+  line-height: 1.05;
+  letter-spacing: -.05em;
+}
+
+.insight-card p {
+  margin: 6px 0 0;
+  color: #6D706F;
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.insight-card.gain .insight-icon { background:#E3F1E8; color:#2F8F5B; }
+.insight-card.risk .insight-icon { background:#F6E2DA; color:#C96D4B; }
+.insight-card.forecast .insight-icon { background:#E7E9FF; color:#5967E8; }
+.insight-card.gold .insight-icon { background:#F1E5C7; color:#B88A2B; }
+
+.wealth-timeline-list {
+  position: relative;
+  display: grid;
+  gap: 0;
+  padding: 10px 0 120px;
+}
+
+.wealth-timeline-list::before {
+  content: "";
+  position: absolute;
+  left: 27px;
+  top: 20px;
+  bottom: 130px;
+  width: 2px;
+  background: linear-gradient(180deg, #15181D, rgba(16,18,20,.08));
+}
+
+.timeline-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 14px;
+  padding: 10px 0 18px;
+}
+
+.timeline-node {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+}
+
+.timeline-node span {
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  display: grid;
+  place-items: center;
+  background: #EEECE6;
+  color: #15181D;
+  border: 1px solid rgba(16,18,20,.06);
+  box-shadow: 0 10px 26px rgba(16,18,20,.06);
+  font-weight: 1000;
+}
+
+.timeline-content {
+  padding: 18px;
+  border-radius: 24px;
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(16,18,20,.06);
+  box-shadow: 0 14px 38px rgba(16,18,20,.06);
+}
+
+.timeline-content small {
+  color: #6D706F;
+  font-weight: 950;
+}
+
+.timeline-content h3 {
+  margin: 5px 0 0;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: -.055em;
+}
+
+.timeline-content p {
+  margin: 8px 0 0;
+  color: #6D706F;
+  font-weight: 780;
+}
+
+.timeline-item.gain .timeline-node span { background:#E3F1E8; color:#2F8F5B; }
+.timeline-item.risk .timeline-node span { background:#F6E2DA; color:#C96D4B; }
+.timeline-item.forecast .timeline-node span { background:#E7E9FF; color:#5967E8; }
+.timeline-item.gold .timeline-node span { background:#F1E5C7; color:#B88A2B; }
+.timeline-item.now .timeline-node span { background:#15181D; color:#fff; }
+

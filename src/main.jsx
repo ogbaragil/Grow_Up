@@ -535,6 +535,252 @@ function LandingPage() {
 }
 
 
+
+
+function buildGrowUpInsights(state, totals) {
+  const latest = latestDashboardState(state);
+  const latestTotals = computeTotals(latest);
+  const accounts = getAccountsForSelectedMonth(latest);
+  const assetAccounts = accounts.filter(a => a.kind === "asset" && Number(a.balance || 0) > 0);
+  const debtAccounts = accounts.filter(a => a.kind === "debt" && Number(a.balance || 0) > 0);
+  const topAsset = assetAccounts.slice().sort((a,b)=>Number(b.balance||0)-Number(a.balance||0))[0];
+
+  const insights = [];
+
+  const netChange = latestTotals.net - latestTotals.prevNet;
+  if (latestTotals.prevNet) {
+    insights.push({
+      icon: netChange >= 0 ? "↗" : "↘",
+      label: "Net Worth",
+      title: `${netChange >= 0 ? "Up" : "Down"} ${money(Math.abs(netChange))}`,
+      body: `${netChange >= 0 ? "Growth" : "Drop"} versus the previous month.`,
+      tone: netChange >= 0 ? "gain" : "risk"
+    });
+  }
+
+  if (topAsset && latestTotals.assets) {
+    const pct = Math.round((Number(topAsset.balance || 0) / Math.max(1, latestTotals.assets)) * 100);
+    insights.push({
+      icon: "◔",
+      label: "Concentration",
+      title: `${topAsset.name} is ${pct}%`,
+      body: "Your largest asset currently drives the biggest share of your wealth.",
+      tone: "gold"
+    });
+  }
+
+  if (debtAccounts.length) {
+    const totalDebt = debtAccounts.reduce((s,a)=>s+Number(a.balance||0),0);
+    const debtRatio = latestTotals.assets ? Math.round((totalDebt / Math.max(1, latestTotals.assets)) * 100) : 0;
+    insights.push({
+      icon: "!",
+      label: "Debt Pressure",
+      title: `${debtRatio}% debt ratio`,
+      body: debtRatio <= 35 ? "Debt looks controlled relative to assets." : "Debt is taking a meaningful share of your balance sheet.",
+      tone: debtRatio <= 35 ? "gain" : "risk"
+    });
+  }
+
+  const activeGoals = (latest.goals || []).filter(g => !g.archived);
+  if (activeGoals.length) {
+    const accountsForMonth = getAccountsForSelectedMonth(latest);
+    const goalScores = activeGoals.map(g => {
+      let calc = calculateGoalProgress(g, latestTotals, accountsForMonth);
+      calc = refineDebtPayoffCalcWithHistory(g, latest, calc);
+      const forecast = estimateGoalCompletion(g, latest, calc);
+      return { goal:g, calc, forecast };
+    }).sort((a,b)=>Number(b.calc.progress||0)-Number(a.calc.progress||0));
+
+    const best = goalScores[0];
+    if (best) {
+      insights.push({
+        icon: "◎",
+        label: "Goal Pace",
+        title: `${best.goal.name} leads`,
+        body: `${Math.round(best.calc.progress || 0)}% complete${best.forecast?.label ? ` · ${best.forecast.label}` : ""}.`,
+        tone: "forecast"
+      });
+    }
+  }
+
+  const cashIn = (latest.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0);
+  const cashOut = (latest.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
+  if (cashIn || cashOut) {
+    const surplus = cashIn - cashOut;
+    insights.push({
+      icon: surplus >= 0 ? "+" : "−",
+      label: "Cash Flow",
+      title: `${surplus >= 0 ? "Surplus" : "Shortfall"} ${money(Math.abs(surplus))}`,
+      body: "Based on recurring and upcoming transactions currently entered.",
+      tone: surplus >= 0 ? "gain" : "risk"
+    });
+  }
+
+  return insights.slice(0, 5);
+}
+
+function buildWealthTimelineItems(state) {
+  const latest = latestDashboardState(state);
+  const totals = computeTotals(latest);
+  const accounts = getAccountsForSelectedMonth(latest);
+  const rows = [];
+
+  rows.push({
+    icon: "●",
+    title: money(totals.net),
+    label: "Current net worth",
+    detail: monthLabel(latest.selectedMonth),
+    tone: "now",
+    sort: new Date().getTime()
+  });
+
+  (latest.goals || []).filter(g => !g.archived).forEach(goal => {
+    let calc = calculateGoalProgress(goal, totals, accounts);
+    calc = refineDebtPayoffCalcWithHistory(goal, latest, calc);
+    const forecast = estimateGoalCompletion(goal, latest, calc);
+    const label = forecast?.label || (goal.deadline ? new Date(goal.deadline).toLocaleDateString("en-US", { month:"short", year:"numeric" }) : "No ETA");
+    const sortDate = goal.deadline ? new Date(goal.deadline).getTime() : Number.MAX_SAFE_INTEGER;
+
+    rows.push({
+      icon: goal.icon || goalIconForType(goal.goalType),
+      title: goal.name,
+      label,
+      detail: `${Math.round(calc.progress || 0)}% complete`,
+      tone: calc.progress >= 80 ? "gain" : goal.goalType === "debtPayoff" ? "risk" : "forecast",
+      sort: Number.isFinite(sortDate) ? sortDate : Number.MAX_SAFE_INTEGER
+    });
+  });
+
+  const milestones = [
+    { amount: 100000, title: "First 100k", icon: "💎" },
+    { amount: 250000, title: "Quarter Million", icon: "🏛️" },
+    { amount: 500000, title: "Half Million", icon: "🚀" },
+    { amount: 1000000, title: "Millionaire", icon: "👑" }
+  ];
+
+  const monthlyGrowth = Math.max(0, totals.net - totals.prevNet);
+  milestones
+    .filter(m => totals.net < m.amount)
+    .slice(0, 2)
+    .forEach(m => {
+      const months = monthlyGrowth > 0 ? Math.ceil((m.amount - totals.net) / monthlyGrowth) : null;
+      const d = months ? new Date(new Date().getFullYear(), new Date().getMonth() + months, 1) : null;
+
+      rows.push({
+        icon: m.icon,
+        title: m.title,
+        label: d ? d.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "Needs more trend data",
+        detail: `${money(m.amount)} milestone`,
+        tone: "gold",
+        sort: d ? d.getTime() : Number.MAX_SAFE_INTEGER - 1
+      });
+    });
+
+  return rows.sort((a,b)=>a.sort-b.sort).slice(0, 8);
+}
+
+function InsightsStrip({ state, totals, openInsights }) {
+  const insights = useMemo(() => buildGrowUpInsights(state, totals), [state, totals]);
+
+  if (!insights.length) return null;
+
+  return (
+    <section className="growup-insights-strip" onClick={openInsights}>
+      <div className="insights-strip-head">
+        <div>
+          <p>Grow UP Insights</p>
+          <h2>{insights[0].title}</h2>
+        </div>
+        <span>{insights.length}</span>
+      </div>
+      <p>{insights[0].body}</p>
+    </section>
+  );
+}
+
+function InsightsPage({ state, totals, setMenuOpen, setInsightsOpen }) {
+  const insights = useMemo(() => buildGrowUpInsights(state, totals), [state, totals]);
+
+  return (
+    <div className="screen insights-page">
+      <div className="compound-header">
+        <button className="round-nav-btn" onClick={()=>setInsightsOpen(false)} aria-label="Back">
+          <ArrowLeft size={24}/>
+        </button>
+        <div>
+          <h1>Grow UP Insights</h1>
+          <p>Smart signals from your wealth data.</p>
+        </div>
+        <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={24}/>
+        </button>
+      </div>
+
+      <section className="insight-hero-card">
+        <span>Today’s read</span>
+        <h2>{insights[0]?.title || "Add more data"}</h2>
+        <p>{insights[0]?.body || "Save snapshots and goals to unlock richer insights."}</p>
+      </section>
+
+      <div className="insight-grid">
+        {insights.map((item, index) => (
+          <article className={`insight-card ${item.tone}`} key={`${item.title}-${index}`}>
+            <div className="insight-icon">{item.icon}</div>
+            <div>
+              <span>{item.label}</span>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WealthTimelinePage({ state, setMenuOpen, setTimelineOpen }) {
+  const items = useMemo(() => buildWealthTimelineItems(state), [state]);
+
+  return (
+    <div className="screen wealth-timeline-page">
+      <div className="compound-header">
+        <button className="round-nav-btn" onClick={()=>setTimelineOpen(false)} aria-label="Back">
+          <ArrowLeft size={24}/>
+        </button>
+        <div>
+          <h1>Wealth Timeline</h1>
+          <p>Your milestones, goals, and future wealth path.</p>
+        </div>
+        <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={24}/>
+        </button>
+      </div>
+
+      <section className="timeline-hero">
+        <span>Financial path</span>
+        <h2>{items[1]?.label || "Build your timeline"}</h2>
+        <p>{items[1] ? `Next up: ${items[1].title}` : "Add goals to project your next milestones."}</p>
+      </section>
+
+      <section className="wealth-timeline-list">
+        {items.map((item, index) => (
+          <article className={`timeline-item ${item.tone}`} key={`${item.title}-${index}`}>
+            <div className="timeline-node">
+              <span>{item.icon}</span>
+            </div>
+            <div className="timeline-content">
+              <small>{item.label}</small>
+              <h3>{item.title}</h3>
+              <p>{item.detail}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+
 function App() {
   const path = window.location.pathname;
   if (path === "/landingpage") return <LandingPage />;
@@ -547,6 +793,8 @@ function App() {
   const [editor, setEditor] = useState(null);
   const [historyMetric, setHistoryMetric] = useState(null);
   const [compoundOpen, setCompoundOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
@@ -715,7 +963,7 @@ function App() {
     setState(s => ({ ...s, dashboardStyle: style }));
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName, isDemo: demoMode};
+  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, saveSnapshot, displayName, isDemo: demoMode};
 
   if (authLoading) {
     return (
@@ -738,7 +986,11 @@ function App() {
   return (
     <div className="app-shell">
       <main className="phone">
-        {compoundOpen ? (
+        {timelineOpen ? (
+          <WealthTimelinePage state={activeState} setMenuOpen={setMenuOpen} setTimelineOpen={setTimelineOpen} />
+        ) : insightsOpen ? (
+          <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
+        ) : compoundOpen ? (
           <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} />
         ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
@@ -782,6 +1034,8 @@ function App() {
           state={activeState}
           setMenuOpen={setMenuOpen}
           setTab={setTab}
+          setTimelineOpen={setTimelineOpen}
+          setInsightsOpen={setInsightsOpen}
           update={update}
           saveSnapshot={saveSnapshot}
           restoreSnapshot={restoreSnapshot}
@@ -1262,7 +1516,7 @@ function useAutoCarousel(itemCount = 3, intervalMs = 5200, resumeDelayMs = 5200)
 }
 
 
-function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
+function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
@@ -1328,6 +1582,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         <h2>{money(animatedNetWorth)}</h2>
         <span>{signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} over last month</span>
       </section>
+
+      <InsightsStrip state={dashboardState} totals={dashboardTotals} openInsights={()=>setInsightsOpen?.(true)} />
 
       {primaryGoal && goalCalc && (
         <section className={`minimal-goal-card ${primaryGoal.color || "green"}`} onClick={()=>setTab("goals")}>
@@ -2350,7 +2606,7 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode }) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen}) {
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
       <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
