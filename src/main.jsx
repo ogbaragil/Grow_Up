@@ -87,10 +87,73 @@ const DEMO_STATE = {
     { id:"demo-gym", type:"expense", name:"Gym", icon:"🏋️", amount:23, category:"Health", date:new Date(new Date().getFullYear(), new Date().getMonth(), 22).toISOString(), frequency:"weekly", recurring:true }
   ],
   goals: [
-    { id:"demo-goal-net", name:"Hit 100K Net", icon:"💰", goalType:"netWorth", account:"Net Worth", color:"purple", target:100000, current:0, deadline:"2026-10-01", open:false },
-    { id:"demo-goal-super", name:"Reach 100K in Super", icon:"🏦", goalType:"accountGrowth", accountId:"demo-super", account:"Retirement Fund", color:"green", target:100000, current:0, deadline:"2026-12-01", open:false },
-    { id:"demo-goal-fire", name:"Investment Milestone 2026", icon:"🔥", goalType:"accountGrowth", accountId:"demo-fire", account:"Investment Portfolio", color:"green", target:50000, current:0, deadline:"2026-12-01", open:false },
-    { id:"demo-goal-loan", name:"Pay off Loan", icon:"⚡", goalType:"debtPayoff", accountId:"demo-loan", account:"Personal Loan", color:"red", start:60000, target:0, current:0, deadline:"2027-06-01", open:false }
+    {
+      id:"demo-goal-first100",
+      name:"First $100K",
+      icon:"💎",
+      goalType:"netWorth",
+      account:"Net Worth",
+      color:"purple",
+      target:100000,
+      current:84200,
+      deadline:"2027-02-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-portfolio",
+      name:"250K Portfolio",
+      icon:"📈",
+      goalType:"accountGrowth",
+      accountId:"demo-investments",
+      account:"Investment Portfolio",
+      color:"green",
+      target:250000,
+      current:146000,
+      deadline:"2029-08-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-freedom",
+      name:"Work Optional",
+      icon:"🔥",
+      goalType:"fire",
+      account:"Financial Independence",
+      color:"gold",
+      target:750000,
+      current:182000,
+      deadline:"2036-01-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-debtfree",
+      name:"Debt Free Life",
+      icon:"⚡",
+      goalType:"debtPayoff",
+      accountId:"demo-loan",
+      account:"Personal Loan",
+      color:"red",
+      start:48000,
+      target:0,
+      current:19200,
+      deadline:"2028-03-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-property",
+      name:"First Investment Property",
+      icon:"🏡",
+      goalType:"savings",
+      account:"Property Deposit",
+      color:"blue",
+      target:120000,
+      current:42000,
+      deadline:"2029-11-01",
+      open:false
+    }
   ],
   monthSnapshots: {}
 };
