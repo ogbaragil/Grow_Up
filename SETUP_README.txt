@@ -70,3 +70,8 @@ What happens after this:
 
 Security reminder:
 If you pasted your service_role key anywhere public, rotate it in Supabase Settings → API.
+
+
+GOAL EMAIL PROGRESS FIX
+- send-reminders now uses selected-month snapshots and linked accounts, matching the app UI goal percentages.
+- This fixes emails incorrectly reporting goals as 0% when the app shows real progress.
