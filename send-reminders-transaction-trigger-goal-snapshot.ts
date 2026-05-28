@@ -135,7 +135,6 @@ function clamp(value: number) {
 function calculateGoalProgressLikeApp(goal: any, totals: any, accounts: any[]) {
   const explicitProgress =
     goal.progress ??
-    goal.progressPercent ??
     goal.percent ??
     goal.percentage ??
     goal.progressPct ??
