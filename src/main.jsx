@@ -673,8 +673,8 @@ function buildGrowUpInsights(state, totals) {
     }
   }
 
-  const cashIn = (latest.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0);
-  const cashOut = (latest.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
+  const cashIn = latestTotals.income;
+  const cashOut = latestTotals.expenses;
   if (cashIn || cashOut) {
     const surplus = cashIn - cashOut;
     insights.push({
@@ -709,8 +709,8 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   const growths = history.slice(-6).map((r,i,arr)=> i ? Number(r.net||0) - Number(arr[i-1].net||0) : null).filter(v=>Number.isFinite(v));
   const avgGrowth = growths.length ? growths.reduce((s,v)=>s+v,0)/growths.length : Math.max(0, netWorth - prevNetWorth);
 
-  const income = (latest.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0);
-  const out = (latest.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
+  const income = totals.income;
+  const out = totals.expenses;
   const cashSurplus = income - out;
   const monthlyAdd = Math.max(1, avgGrowth, cashSurplus * .55) * scenarioConfig.multiplier;
   const monthlyReturn = Math.pow(1 + scenarioConfig.annualReturn, 1/12) - 1;
@@ -987,31 +987,7 @@ function daysUntil(date) {
 }
 
 function nextTransactionDueDate(txn, from = new Date()) {
-  if (!txn?.date) return null;
-
-  const base = new Date(txn.date);
-  if (Number.isNaN(base.getTime())) return null;
-
-  let next = new Date(base);
-
-  const advance = () => {
-    const frequency = txn.frequency || (txn.recurring ? "monthly" : "once");
-
-    if (frequency === "weekly") next.setDate(next.getDate() + 7);
-    else if (frequency === "fortnightly") next.setDate(next.getDate() + 14);
-    else if (frequency === "quarterly") next.setMonth(next.getMonth() + 3);
-    else if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
-    else if (frequency === "once") return null;
-    else next.setMonth(next.getMonth() + 1);
-
-    return next;
-  };
-
-  while (next < new Date(from.getFullYear(), from.getMonth(), from.getDate())) {
-    if (!advance()) return null;
-  }
-
-  return next;
+  return getNextOccurrence(txn, from);
 }
 
 function notificationPermissionStatus() {
@@ -1061,7 +1037,7 @@ function runGrowUpNotificationChecks(state) {
   if (localStorage.getItem(sentKey)) return;
 
   const recurring = (state.transactions || [])
-    .filter(t => t.recurring || (t.frequency && t.frequency !== "once"))
+    .filter(t => t.recurring && normalizeFrequency(t.frequency) !== "oneOff")
     .map(t => ({ txn:t, due:nextTransactionDueDate(t) }))
     .filter(item => item.due)
     .map(item => ({ ...item, days:daysUntil(item.due) }))
@@ -1215,6 +1191,84 @@ function OnboardingTips({ state, setState, setTab }) {
 }
 
 
+
+function enrichStateWithGoalSnapshotProgress(rawState) {
+  try {
+    const selectedMonth = rawState.selectedMonth || monthKey();
+    const snapshot = rawState.monthSnapshots?.[selectedMonth];
+
+    const accountsForMonth = snapshot?.accounts || rawState.accounts || [];
+    const assets = accountsForMonth
+      .filter(a => a.kind === "asset")
+      .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+    const debts = accountsForMonth
+      .filter(a => a.kind === "debt")
+      .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+    const totalsForMonth = {
+      assets,
+      debts,
+      net: assets - debts,
+      prevNet: 0
+    };
+
+    const goalsWithProgress = (rawState.goals || []).map(goal => {
+      let calc = calculateGoalProgress(goal, totalsForMonth, accountsForMonth);
+      calc = refineDebtPayoffCalcWithHistory(goal, rawState, calc);
+
+      const progress = Math.max(0, Math.min(100, Number(calc.progress || 0)));
+
+      return {
+        ...goal,
+        progress,
+        progressPercent: progress,
+        calculatedCurrent: Number(calc.current || 0),
+        calculatedTarget: Number(calc.target || goal.target || 0),
+        calculatedRemaining: Number(calc.remaining || 0),
+        progressSource: calc.sourceLabel || goal.account || "",
+        progressGoalType: calc.goalType || goal.goalType || "",
+        progressUpdatedAt: new Date().toISOString()
+      };
+    });
+
+    const nextState = {
+      ...rawState,
+      goals: goalsWithProgress
+    };
+
+    if (snapshot) {
+      nextState.monthSnapshots = {
+        ...(rawState.monthSnapshots || {}),
+        [selectedMonth]: {
+          ...snapshot,
+          goalProgress: goalsWithProgress.reduce((acc, goal) => {
+            acc[goal.id] = {
+              id: goal.id,
+              name: goal.name,
+              progress: goal.progress,
+              progressPercent: goal.progressPercent,
+              calculatedCurrent: goal.calculatedCurrent,
+              calculatedTarget: goal.calculatedTarget,
+              calculatedRemaining: goal.calculatedRemaining,
+              progressSource: goal.progressSource,
+              progressGoalType: goal.progressGoalType,
+              updatedAt: goal.progressUpdatedAt
+            };
+            return acc;
+          }, {})
+        }
+      };
+    }
+
+    return nextState;
+  } catch (error) {
+    console.error("Goal progress snapshot enrichment failed:", error);
+    return rawState;
+  }
+}
+
+
 function App() {
   const path = window.location.pathname;
   if (path === "/landingpage") return <LandingPage />;
@@ -1345,9 +1399,11 @@ function App() {
         }
       };
 
-      nextStateForSupabase = next;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-      return next;
+      const enrichedNext = enrichStateWithGoalSnapshotProgress(next);
+
+      nextStateForSupabase = enrichedNext;
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(enrichedNext));
+      return enrichedNext;
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
@@ -1456,9 +1512,6 @@ function App() {
                 session={session}
                 displayName={displayName}
                 signOut={signOut}
-          isDemo={demoMode}
-          enterDemoMode={enterDemoMode}
-          exitDemoMode={exitDemoMode}
                 isDemo={demoMode}
                 enterDemoMode={enterDemoMode}
                 exitDemoMode={exitDemoMode}
@@ -1876,18 +1929,13 @@ function weightedThreeMonthMomentum(state, currentNet) {
 
 
 function upcomingTransactionsForDashboard(state, limit = 4) {
-  const now = new Date();
-  const items = (state.transactions || [])
+  return upcomingTransactions(state.transactions || [], 365)
     .map(txn => ({
       ...txn,
-      dateObj: txn.date ? new Date(txn.date) : null
+      dateObj: new Date(txn.occurrenceDate || txn.date)
     }))
     .filter(txn => txn.dateObj && !Number.isNaN(txn.dateObj.getTime()))
-    .filter(txn => txn.dateObj >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
-    .sort((a,b)=>a.dateObj-b.dateObj)
     .slice(0, limit);
-
-  return items;
 }
 
 
@@ -2119,7 +2167,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
             </div>
 
             <div className="cash-snapshot-big">
-              <strong>{signedMoney((dashboardState.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0) - (dashboardState.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0))}</strong>
+              <strong>{signedMoney(dashboardTotals.income - dashboardTotals.expenses)}</strong>
               <span>projected balance</span>
             </div>
 
@@ -2576,8 +2624,8 @@ function DonutCard({ title, kind, accounts }) {
 
 function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   const next7 = upcomingTransactions(state.transactions, 7);
-  const recurringIncome = state.transactions.filter(t => t.recurring && t.type === "income");
-  const recurringExpenses = state.transactions.filter(t => t.recurring && t.type === "expense");
+  const recurringIncome = recurringCashflowTransactions(state.transactions, "income");
+  const recurringExpenses = recurringCashflowTransactions(state.transactions, "expense");
 
   return (
     <div className="screen">
@@ -2628,7 +2676,7 @@ function TransactionRow({ t, setEditor, controls=false }) {
 }
 
 function CompactTxn({ t }) {
-  const d = new Date(t.date);
+  const d = new Date(t.occurrenceDate || t.displayDate || t.date);
   return (
     <div className="compact-txn">
       <strong>{d.toLocaleString("en-US", { weekday:"short", day:"numeric", month:"short" })}</strong>
@@ -3675,9 +3723,14 @@ function goalColorForType(type) {
   }[type || "accountGrowth"] || "green";
 }
 
+function normalizeFrequency(frequency) {
+  if (!frequency || frequency === "once") return "oneOff";
+  return frequency;
+}
+
 function monthlyEquivalent(transaction) {
   const amount = Number(transaction.amount || 0);
-  const frequency = transaction.frequency || (transaction.recurring ? "monthly" : "oneOff");
+  const frequency = normalizeFrequency(transaction.frequency || (transaction.recurring ? "monthly" : "oneOff"));
 
   switch (frequency) {
     case "weekly":
@@ -3696,10 +3749,25 @@ function monthlyEquivalent(transaction) {
   }
 }
 
+function daysInMonth(year, monthIndex) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addMonthsClamped(date, months) {
+  const original = new Date(date);
+  const targetMonth = original.getMonth() + months;
+  const target = new Date(original);
+  target.setDate(1);
+  target.setMonth(targetMonth);
+  target.setDate(Math.min(original.getDate(), daysInMonth(target.getFullYear(), target.getMonth())));
+  return target;
+}
+
 function addFrequency(date, frequency) {
   const d = new Date(date);
+  const normalizedFrequency = normalizeFrequency(frequency);
 
-  switch (frequency) {
+  switch (normalizedFrequency) {
     case "weekly":
       d.setDate(d.getDate() + 7);
       break;
@@ -3707,11 +3775,9 @@ function addFrequency(date, frequency) {
       d.setDate(d.getDate() + 14);
       break;
     case "monthly":
-      d.setMonth(d.getMonth() + 1);
-      break;
+      return addMonthsClamped(d, 1);
     case "quarterly":
-      d.setMonth(d.getMonth() + 3);
-      break;
+      return addMonthsClamped(d, 3);
     case "yearly":
       d.setFullYear(d.getFullYear() + 1);
       break;
@@ -3720,6 +3786,40 @@ function addFrequency(date, frequency) {
   }
 
   return d;
+}
+
+function getNextOccurrence(transaction, from = new Date()) {
+  if (!transaction?.date) return null;
+
+  const frequency = normalizeFrequency(transaction.frequency || (transaction.recurring ? "monthly" : "oneOff"));
+  let occurrenceDate = new Date(transaction.date);
+  if (Number.isNaN(occurrenceDate.getTime())) return null;
+
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate());
+
+  if (frequency === "oneOff" || !transaction.recurring) {
+    return occurrenceDate >= start ? occurrenceDate : null;
+  }
+
+  let safety = 0;
+  while (occurrenceDate < start && safety < 500) {
+    occurrenceDate = addFrequency(occurrenceDate, frequency);
+    safety += 1;
+  }
+
+  return occurrenceDate;
+}
+
+function withNextOccurrence(transaction) {
+  const occurrenceDate = getNextOccurrence(transaction);
+  return occurrenceDate ? { ...transaction, occurrenceDate: occurrenceDate.toISOString(), displayDate: occurrenceDate.toISOString() } : transaction;
+}
+
+function recurringCashflowTransactions(transactions, type) {
+  return (transactions || [])
+    .filter(t => t.recurring && t.type === type && normalizeFrequency(t.frequency) !== "oneOff")
+    .map(withNextOccurrence)
+    .sort((a, b) => new Date(a.occurrenceDate || a.date) - new Date(b.occurrenceDate || b.date));
 }
 
 function upcomingTransactions(transactions, days) {
@@ -3731,7 +3831,7 @@ function upcomingTransactions(transactions, days) {
   const out = [];
 
   for (const transaction of transactions) {
-    const frequency = transaction.frequency || (transaction.recurring ? "monthly" : "oneOff");
+    const frequency = normalizeFrequency(transaction.frequency || (transaction.recurring ? "monthly" : "oneOff"));
     let occurrenceDate = new Date(transaction.date);
 
     if (frequency === "oneOff" || !transaction.recurring) {

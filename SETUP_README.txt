@@ -85,3 +85,16 @@ This version changes the email product behavior:
 - The transaction email includes a compact goal snapshot.
 - Goal percentages now use latest valid saved snapshot data, matching app UI logic more closely.
 - Generic daily insight emails were removed.
+
+
+SNAPSHOT GOAL PROGRESS FIX
+
+This update fixes the root cause of goal emails showing 0%:
+- The app now enriches Supabase backups with the same calculated goal progress used by the UI.
+- Each goal saved to app_state now includes progress, progressPercent, calculatedCurrent, calculatedTarget, calculatedRemaining, progressSource, and progressUpdatedAt.
+- The selected month snapshot also stores a goalProgress map for backend/email use.
+- No SQL changes are required.
+
+Important:
+After deploying, open the app and run Back up data / Save Month Snapshot once.
+That creates a fresh Supabase snapshot containing the corrected goal progress fields.

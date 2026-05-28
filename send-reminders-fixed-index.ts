@@ -160,6 +160,34 @@ function expectedGoalProgress(goal: any) {
   return clampPct((elapsed / totalTime) * 100);
 }
 
+function normalizeFrequency(frequency: string | null | undefined) {
+  if (!frequency || frequency === "once") return "oneOff";
+  return frequency;
+}
+
+function daysInMonth(year: number, monthIndex: number) {
+  return new Date(year, monthIndex + 1, 0).getDate();
+}
+
+function addMonthsClamped(date: Date, months: number) {
+  const original = new Date(date);
+  const target = new Date(original);
+  target.setDate(1);
+  target.setMonth(original.getMonth() + months);
+  target.setDate(Math.min(original.getDate(), daysInMonth(target.getFullYear(), target.getMonth())));
+  return target;
+}
+
+function advanceDueDate(date: Date, frequency: string) {
+  const next = new Date(date);
+  if (frequency === "weekly") next.setDate(next.getDate() + 7);
+  else if (frequency === "fortnightly") next.setDate(next.getDate() + 14);
+  else if (frequency === "quarterly") return addMonthsClamped(next, 3);
+  else if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
+  else if (frequency === "monthly") return addMonthsClamped(next, 1);
+  return next;
+}
+
 function nextDueDate(txn: any) {
   if (!txn?.date) return null;
 
@@ -167,15 +195,17 @@ function nextDueDate(txn: any) {
   if (Number.isNaN(next.getTime())) return null;
 
   const now = new Date();
-  const frequency = txn.frequency || (txn.recurring ? "monthly" : "once");
+  const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const frequency = normalizeFrequency(txn.frequency || (txn.recurring ? "monthly" : "oneOff"));
 
-  while (next < now) {
-    if (frequency === "weekly") next.setDate(next.getDate() + 7);
-    else if (frequency === "fortnightly") next.setDate(next.getDate() + 14);
-    else if (frequency === "quarterly") next.setMonth(next.getMonth() + 3);
-    else if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
-    else if (frequency === "once") return null;
-    else next.setMonth(next.getMonth() + 1);
+  if (frequency === "oneOff" || !txn.recurring) {
+    return next >= start ? next.toISOString().slice(0, 10) : null;
+  }
+
+  let safety = 0;
+  while (next < start && safety < 500) {
+    next = advanceDueDate(next, frequency);
+    safety += 1;
   }
 
   return next.toISOString().slice(0, 10);
@@ -272,7 +302,7 @@ function buildSignals(pref: any, state: any) {
   const totals = computeTotalsFromState(state);
 
   for (const txn of transactions) {
-    if (!txn.recurring && !txn.frequency) continue;
+    if (!txn.recurring || normalizeFrequency(txn.frequency) === "oneOff") continue;
     const due = nextDueDate(txn);
     if (!due) continue;
     const days = daysUntil(due);
@@ -326,7 +356,7 @@ function buildSignals(pref: any, state: any) {
     .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
 
   const recurringExpenses = transactions
-    .filter((t: any) => t.type === "expense" && (t.recurring || t.frequency))
+    .filter((t: any) => t.type === "expense" && t.recurring && normalizeFrequency(t.frequency) !== "oneOff")
     .reduce((sum: number, t: any) => sum + Number(t.amount || 0), 0);
 
   if (income > 0 && recurringExpenses / income >= 0.45) {
