@@ -39,6 +39,13 @@ const EMPTY_STATE = {
   firstName: "",
   theme: "light",
   dashboardStyle: "minimal",
+  notificationsEnabled: false,
+  emailRemindersEnabled: false,
+  emailReminderDays: 1,
+  monthlyBalanceReminderDay: 28,
+  emailGoalReminders: true,
+  emailMilestoneEmails: true,
+  onboardingDismissed: false,
   mode: "Real Mode",
   selectedMonth: monthKey(),
   accounts: [],
@@ -87,10 +94,73 @@ const DEMO_STATE = {
     { id:"demo-gym", type:"expense", name:"Gym", icon:"🏋️", amount:23, category:"Health", date:new Date(new Date().getFullYear(), new Date().getMonth(), 22).toISOString(), frequency:"weekly", recurring:true }
   ],
   goals: [
-    { id:"demo-goal-net", name:"Hit 100K Net", icon:"💰", goalType:"netWorth", account:"Net Worth", color:"purple", target:100000, current:0, deadline:"2026-10-01", open:false },
-    { id:"demo-goal-super", name:"Reach 100K in Super", icon:"🏦", goalType:"accountGrowth", accountId:"demo-super", account:"Retirement Fund", color:"green", target:100000, current:0, deadline:"2026-12-01", open:false },
-    { id:"demo-goal-fire", name:"Investment Milestone 2026", icon:"🔥", goalType:"accountGrowth", accountId:"demo-fire", account:"Investment Portfolio", color:"green", target:50000, current:0, deadline:"2026-12-01", open:false },
-    { id:"demo-goal-loan", name:"Pay off Loan", icon:"⚡", goalType:"debtPayoff", accountId:"demo-loan", account:"Personal Loan", color:"red", start:60000, target:0, current:0, deadline:"2027-06-01", open:false }
+    {
+      id:"demo-goal-first100",
+      name:"First $100K",
+      icon:"💎",
+      goalType:"netWorth",
+      account:"Net Worth",
+      color:"purple",
+      target:100000,
+      current:84200,
+      deadline:"2027-02-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-portfolio",
+      name:"250K Portfolio",
+      icon:"📈",
+      goalType:"accountGrowth",
+      accountId:"demo-investments",
+      account:"Investment Portfolio",
+      color:"green",
+      target:250000,
+      current:146000,
+      deadline:"2029-08-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-freedom",
+      name:"Work Optional",
+      icon:"🔥",
+      goalType:"fire",
+      account:"Financial Independence",
+      color:"gold",
+      target:750000,
+      current:182000,
+      deadline:"2036-01-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-debtfree",
+      name:"Debt Free Life",
+      icon:"⚡",
+      goalType:"debtPayoff",
+      accountId:"demo-loan",
+      account:"Personal Loan",
+      color:"red",
+      start:48000,
+      target:0,
+      current:19200,
+      deadline:"2028-03-01",
+      open:false
+    },
+
+    {
+      id:"demo-goal-property",
+      name:"First Investment Property",
+      icon:"🏡",
+      goalType:"savings",
+      account:"Property Deposit",
+      color:"blue",
+      target:120000,
+      current:42000,
+      deadline:"2029-11-01",
+      open:false
+    }
   ],
   monthSnapshots: {}
 };
@@ -327,7 +397,7 @@ function LandingPage() {
           <span className="landing-logo app-icon">GV</span>
           <span>
             <b>Grow UP</b>
-            <small>Wealth Operating System</small>
+            <small>Personal Wealth OS</small>
           </span>
         </a>
 
@@ -346,24 +416,24 @@ function LandingPage() {
           <div className="hero-copy">
             <div className="hero-badge">
               <span></span>
-              Built for long-term financial growth
+              Built for intentional wealth builders
             </div>
 
             <h1>
-              Your Money.
+              Your Wealth.
               <br />
-              Finally Moving
+              Finally Feeling
               <br />
-              Forward.
+              Intentional.
             </h1>
 
             <p>
-              Track wealth, crush debt, forecast your future, and build momentum month by month.
+              A calm, intelligent way to track net worth, forecast goals, and turn financial progress into a visible timeline.
             </p>
 
             <div className="hero-actions">
-              <button onClick={startApp} className="primary-landing">Start Growing Free</button>
-              <button onClick={tryDemo} className="secondary-landing">Try Demo Mode</button>
+              <button onClick={startApp} className="primary-landing">Start Building Wealth</button>
+              <button onClick={tryDemo} className="secondary-landing">Explore Demo</button>
             </div>
 
             <div className="trust-grid">
@@ -435,8 +505,8 @@ function LandingPage() {
         <section id="features" className="landing-section">
           <div className="section-heading">
             <span>Why Grow UP</span>
-            <h2>Money clarity changes everything.</h2>
-            <p>Grow UP helps you stay focused on progress instead of financial stress.</p>
+            <h2>Build wealth with calm precision.</h2>
+            <p>See your assets, debt, cash flow, goals, insights, and future milestones in one premium wealth dashboard.</p>
           </div>
 
           <div className="feature-grid">
@@ -464,9 +534,9 @@ function LandingPage() {
         <section className="product-showcase">
           <div className="showcase-copy">
             <span>Built around momentum</span>
-            <h2>Not another budget spreadsheet.</h2>
+            <h2>Not another budget tracker.</h2>
             <p>
-              Grow UP is designed around financial progress: snapshots, trends, goals, forecasts, cash flow, and long-term wealth projections.
+              Grow UP is designed around wealth identity: snapshots, goals, insights, timeline projections, and long-term momentum.
             </p>
           </div>
 
@@ -491,7 +561,7 @@ function LandingPage() {
 
         <section id="privacy" className="privacy-band">
           <div>
-            <h2>Your financial data stays yours.</h2>
+            <h2>Private by design. Premium by feel.</h2>
             <p>
               Grow UP does not require bank connections. You control what you enter, what you back up, and when you restore saved data.
             </p>
@@ -506,11 +576,11 @@ function LandingPage() {
         </section>
 
         <section className="final-cta">
-          <h2>Start building your future today.</h2>
-          <p>Turn financial progress into something you can see, track, and actually feel.</p>
+          <h2>See the future you are building.</h2>
+          <p>Grow UP turns financial progress into a timeline you can see, track, and feel.</p>
           <div>
             <button onClick={startApp} className="primary-landing">Create Free Account</button>
-            <button onClick={tryDemo} className="secondary-landing">Try Demo Mode</button>
+            <button onClick={tryDemo} className="secondary-landing">Explore Demo</button>
           </div>
         </section>
       </main>
@@ -535,6 +605,616 @@ function LandingPage() {
 }
 
 
+
+
+function buildGrowUpInsights(state, totals) {
+  const latest = latestDashboardState(state);
+  const latestTotals = computeTotals(latest);
+  const accounts = getAccountsForSelectedMonth(latest);
+  const assetAccounts = accounts.filter(a => a.kind === "asset" && Number(a.balance || 0) > 0);
+  const debtAccounts = accounts.filter(a => a.kind === "debt" && Number(a.balance || 0) > 0);
+  const topAsset = assetAccounts.slice().sort((a,b)=>Number(b.balance||0)-Number(a.balance||0))[0];
+
+  const insights = [];
+
+  const netChange = latestTotals.net - latestTotals.prevNet;
+  if (latestTotals.prevNet) {
+    insights.push({
+      icon: netChange >= 0 ? "↗" : "↘",
+      label: "Net Worth",
+      title: `${netChange >= 0 ? "Up" : "Down"} ${money(Math.abs(netChange))}`,
+      body: `${netChange >= 0 ? "Growth" : "Drop"} versus the previous month.`,
+      tone: netChange >= 0 ? "gain" : "risk"
+    });
+  }
+
+  if (topAsset && latestTotals.assets) {
+    const pct = Math.round((Number(topAsset.balance || 0) / Math.max(1, latestTotals.assets)) * 100);
+    insights.push({
+      icon: "◔",
+      label: "Concentration",
+      title: `${topAsset.name} is ${pct}%`,
+      body: "Your largest asset currently drives the biggest share of your wealth.",
+      tone: "gold"
+    });
+  }
+
+  if (debtAccounts.length) {
+    const totalDebt = debtAccounts.reduce((s,a)=>s+Number(a.balance||0),0);
+    const debtRatio = latestTotals.assets ? Math.round((totalDebt / Math.max(1, latestTotals.assets)) * 100) : 0;
+    insights.push({
+      icon: "!",
+      label: "Debt Pressure",
+      title: `${debtRatio}% debt ratio`,
+      body: debtRatio <= 35 ? "Debt looks controlled relative to assets." : "Debt is taking a meaningful share of your balance sheet.",
+      tone: debtRatio <= 35 ? "gain" : "risk"
+    });
+  }
+
+  const activeGoals = (latest.goals || []).filter(g => !g.archived);
+  if (activeGoals.length) {
+    const accountsForMonth = getAccountsForSelectedMonth(latest);
+    const goalScores = activeGoals.map(g => {
+      let calc = calculateGoalProgress(g, latestTotals, accountsForMonth);
+      calc = refineDebtPayoffCalcWithHistory(g, latest, calc);
+      const forecast = estimateGoalCompletion(g, latest, calc);
+      return { goal:g, calc, forecast };
+    }).sort((a,b)=>Number(b.calc.progress||0)-Number(a.calc.progress||0));
+
+    const best = goalScores[0];
+    if (best) {
+      insights.push({
+        icon: "◎",
+        label: "Goal Pace",
+        title: `${best.goal.name} leads`,
+        body: `${Math.round(best.calc.progress || 0)}% complete${best.forecast?.label ? ` · ${best.forecast.label}` : ""}.`,
+        tone: "forecast"
+      });
+    }
+  }
+
+  const cashIn = (latest.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0);
+  const cashOut = (latest.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
+  if (cashIn || cashOut) {
+    const surplus = cashIn - cashOut;
+    insights.push({
+      icon: surplus >= 0 ? "+" : "−",
+      label: "Cash Flow",
+      title: `${surplus >= 0 ? "Surplus" : "Shortfall"} ${money(Math.abs(surplus))}`,
+      body: "Based on recurring and upcoming transactions currently entered.",
+      tone: surplus >= 0 ? "gain" : "risk"
+    });
+  }
+
+  return insights.slice(0, 5);
+}
+
+
+function buildWealthTimelineItems(state, scenario = "balanced") {
+  const latest = latestDashboardState(state);
+  const totals = computeTotals(latest);
+  const accounts = getAccountsForSelectedMonth(latest);
+  const activeGoals = (latest.goals || []).filter(g => !g.archived);
+  const now = new Date();
+  const netWorth = Number(totals.net || 0);
+  const prevNetWorth = Number(totals.prevNet || 0);
+
+  const scenarioConfig = {
+    conservative: { label:"Conservative", multiplier:.65, annualReturn:.035 },
+    balanced: { label:"Balanced", multiplier:1, annualReturn:.055 },
+    aggressive: { label:"Aggressive", multiplier:1.35, annualReturn:.075 }
+  }[scenario] || { label:"Balanced", multiplier:1, annualReturn:.055 };
+
+  const history = historyRows(latest).slice().sort((a,b)=>a.key.localeCompare(b.key)).filter(r=>Number.isFinite(Number(r.net)));
+  const growths = history.slice(-6).map((r,i,arr)=> i ? Number(r.net||0) - Number(arr[i-1].net||0) : null).filter(v=>Number.isFinite(v));
+  const avgGrowth = growths.length ? growths.reduce((s,v)=>s+v,0)/growths.length : Math.max(0, netWorth - prevNetWorth);
+
+  const income = (latest.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0);
+  const out = (latest.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0);
+  const cashSurplus = income - out;
+  const monthlyAdd = Math.max(1, avgGrowth, cashSurplus * .55) * scenarioConfig.multiplier;
+  const monthlyReturn = Math.pow(1 + scenarioConfig.annualReturn, 1/12) - 1;
+
+  const monthsTo = (target) => {
+    if (netWorth >= target) return 0;
+    let projected = netWorth;
+    for (let m=1; m<=720; m++) {
+      projected = (projected * (1 + monthlyReturn)) + monthlyAdd;
+      if (projected >= target) return m;
+    }
+    return null;
+  };
+  const futureDate = (months) => months === null || months === undefined ? null : new Date(now.getFullYear(), now.getMonth() + months, 1);
+  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "Needs more trend data";
+
+  const rows = [{
+    icon:"●",
+    title:money(netWorth),
+    label:"Current net worth",
+    detail:monthLabel(latest.selectedMonth),
+    tone:"now",
+    category:"Today",
+    sort:now.getTime()
+  }];
+
+  activeGoals.forEach(goal => {
+    let calc = calculateGoalProgress(goal, totals, accounts);
+    calc = refineDebtPayoffCalcWithHistory(goal, latest, calc);
+    const forecast = estimateGoalCompletion(goal, latest, calc);
+    let d = forecast?.etaDate ? new Date(forecast.etaDate) : goal.deadline ? new Date(goal.deadline) : null;
+    rows.push({
+      icon: goal.icon || goalIconForType(goal.goalType),
+      title: goal.name,
+      label: forecast?.label || dateLabel(d),
+      detail: `${Math.round(calc.progress || 0)}% complete`,
+      tone: calc.progress >= 80 ? "gain" : goal.goalType === "debtPayoff" ? "risk" : "forecast",
+      category:"Goal",
+      sort: d ? d.getTime() : Number.MAX_SAFE_INTEGER - 10
+    });
+  });
+
+  [
+    { amount:100000, title:"First 100k", icon:"💎" },
+    { amount:250000, title:"Quarter Million", icon:"🏛️" },
+    { amount:500000, title:"Half Million", icon:"🚀" },
+    { amount:1000000, title:"Millionaire", icon:"👑" }
+  ].filter(m=>netWorth < m.amount).slice(0,3).forEach(m => {
+    const d = futureDate(monthsTo(m.amount));
+    rows.push({
+      icon:m.icon,
+      title:m.title,
+      label:dateLabel(d),
+      detail:`${money(m.amount)} target · ${scenarioConfig.label} case`,
+      tone:"gold",
+      category:"Wealth Milestone",
+      sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 8
+    });
+  });
+
+  const debts = accounts.filter(a=>a.kind==="debt" && Number(a.balance||0)>0);
+  const totalDebt = debts.reduce((s,a)=>s+Number(a.balance||0),0);
+  if (totalDebt > 0) {
+    const currentReduction = debts.reduce((s,a)=>s+Math.max(0, Number(a.previous||0)-Number(a.balance||0)),0);
+    const monthlyDebtPaydown = Math.max(1, currentReduction, cashSurplus > 0 ? cashSurplus * .25 : 0) * scenarioConfig.multiplier;
+    const d = futureDate(Math.ceil(totalDebt / monthlyDebtPaydown));
+    rows.push({
+      icon:"⚡",
+      title:"Debt Free",
+      label:dateLabel(d),
+      detail:`${money(totalDebt)} remaining · projected payoff`,
+      tone:"risk",
+      category:"Freedom",
+      sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 6
+    });
+  }
+
+  if (out > 0) {
+    [
+      { title:"Coast FIRE", icon:"🌤️", target:out*12*12, detail:"Approx. 12× annual spend", tone:"forecast" },
+      { title:"FIRE", icon:"🔥", target:out*12*25, detail:"Approx. 25× annual spend", tone:"gain" }
+    ].filter(m=>netWorth < m.target).forEach((m,i) => {
+      const d = futureDate(monthsTo(m.target));
+      rows.push({
+        icon:m.icon,
+        title:m.title,
+        label:dateLabel(d),
+        detail:`${money(m.target)} target · ${m.detail}`,
+        tone:m.tone,
+        category:"Independence",
+        sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 4 + i
+      });
+    });
+  }
+
+  return rows.sort((a,b)=>a.sort-b.sort).slice(0,10);
+}
+
+function timelineScenarioSummary(state, scenario = "balanced") {
+  const latest = latestDashboardState(state);
+  const totals = computeTotals(latest);
+  const rows = buildWealthTimelineItems(state, scenario);
+  const history = historyRows(latest).slice().sort((a,b)=>a.key.localeCompare(b.key)).filter(r=>Number.isFinite(Number(r.net)));
+  const growths = history.slice(-6).map((r,i,arr)=> i ? Number(r.net||0) - Number(arr[i-1].net||0) : null).filter(v=>Number.isFinite(v));
+  const avgGrowth = growths.length ? growths.reduce((s,v)=>s+v,0)/growths.length : Math.max(0, Number(totals.net||0)-Number(totals.prevNet||0));
+  return { next: rows.find(r=>r.category !== "Today") || rows[0], avgGrowth, count: rows.length };
+}
+
+
+function InsightsStrip({ state, totals, openInsights }) {
+  const insights = useMemo(() => buildGrowUpInsights(state, totals), [state, totals]);
+
+  if (!insights.length) return null;
+
+  return (
+    <section className="growup-insights-strip scrollable-insights-strip" aria-label="Grow UP Insights">
+      <div className="insights-strip-scroll">
+        {insights.map((item, index) => (
+          <article
+            className={`insight-dashboard-card ${item.tone}`}
+            key={`${item.title}-${index}`}
+            onClick={openInsights}
+          >
+            <div className="insights-strip-head">
+              <div>
+                <p>{index === 0 ? "Grow UP Insights" : item.label}</p>
+                <h2>{item.title}</h2>
+              </div>
+              <span>{item.icon}</span>
+            </div>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
+
+
+function WealthTimelineBriefCard({ state, openTimeline }) {
+  const items = useMemo(() => buildWealthTimelineItems(state, "balanced"), [state]);
+  const summary = useMemo(() => timelineScenarioSummary(state, "balanced"), [state]);
+  const next = summary.next;
+
+  return (
+    <section className="wealth-timeline-brief-card" onClick={openTimeline}>
+      <div className="timeline-brief-copy">
+        <p>Wealth Timeline</p>
+        <h2>{next ? next.title : "Build your path"}</h2>
+        <span>{next ? `${next.label} · ${next.detail}` : "Add goals to project future milestones."}</span>
+      </div>
+
+      <div className="timeline-brief-rail">
+        {items.slice(0,4).map((item, index) => (
+          <i key={`${item.title}-${index}`} className={item.tone}>
+            {index === 0 ? "●" : index + 1}
+          </i>
+        ))}
+      </div>
+
+      <button type="button" aria-label="Open Wealth Timeline">→</button>
+    </section>
+  );
+}
+
+
+function InsightsPage({ state, totals, setMenuOpen, setInsightsOpen }) {
+  const insights = useMemo(() => buildGrowUpInsights(state, totals), [state, totals]);
+
+  return (
+    <div className="screen insights-page">
+      <div className="compound-header">
+        <button className="round-nav-btn" onClick={()=>setInsightsOpen(false)} aria-label="Back">
+          <ArrowLeft size={24}/>
+        </button>
+        <div>
+          <h1>Grow UP Insights</h1>
+          <p>Smart signals from your wealth data.</p>
+        </div>
+        <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={24}/>
+        </button>
+      </div>
+
+      <section className="insight-hero-card">
+        <span>Today’s read</span>
+        <h2>{insights[0]?.title || "Add more data"}</h2>
+        <p>{insights[0]?.body || "Save snapshots and goals to unlock richer insights."}</p>
+      </section>
+
+      <div className="insight-grid">
+        {insights.map((item, index) => (
+          <article className={`insight-card ${item.tone}`} key={`${item.title}-${index}`}>
+            <div className="insight-icon">{item.icon}</div>
+            <div>
+              <span>{item.label}</span>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </div>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+function WealthTimelinePage({ state, setMenuOpen, setTimelineOpen }) {
+  const [scenario, setScenario] = useState("balanced");
+  const items = useMemo(() => buildWealthTimelineItems(state, scenario), [state, scenario]);
+  const summary = useMemo(() => timelineScenarioSummary(state, scenario), [state, scenario]);
+  const scenarioLabel = scenario === "conservative" ? "Conservative" : scenario === "aggressive" ? "Aggressive" : "Balanced";
+
+  return (
+    <div className="screen wealth-timeline-page">
+      <div className="compound-header">
+        <button className="round-nav-btn" onClick={()=>setTimelineOpen(false)} aria-label="Back">
+          <ArrowLeft size={24}/>
+        </button>
+        <div>
+          <h1>Wealth Timeline</h1>
+          <p>Your goals, milestones, and future wealth path.</p>
+        </div>
+        <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={24}/>
+        </button>
+      </div>
+
+      <section className="timeline-hero timeline-v2-hero">
+        <span>{scenarioLabel} projection</span>
+        <h2>{summary.next?.label || "Build your timeline"}</h2>
+        <p>{summary.next ? `Next up: ${summary.next.title}` : "Add goals to project your next milestones."}</p>
+
+        <div className="timeline-projection-stats">
+          <div><small>Recent pace</small><strong>{money(summary.avgGrowth)}/mo</strong></div>
+          <div><small>Timeline points</small><strong>{summary.count}</strong></div>
+        </div>
+      </section>
+
+      <div className="timeline-scenario-tabs">
+        {[["conservative","Conservative"],["balanced","Balanced"],["aggressive","Aggressive"]].map(([key,label]) => (
+          <button key={key} type="button" className={scenario === key ? "active" : ""} onClick={()=>setScenario(key)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
+      <section className="wealth-timeline-list">
+        {items.map((item, index) => (
+          <article className={`timeline-item ${item.tone}`} key={`${item.title}-${index}`}>
+            <div className="timeline-node"><span>{item.icon}</span></div>
+            <div className="timeline-content">
+              <small>{item.category || item.label}</small>
+              <h3>{item.title}</h3>
+              <p>{item.label} · {item.detail}</p>
+            </div>
+          </article>
+        ))}
+      </section>
+    </div>
+  );
+}
+
+
+
+function daysUntil(date) {
+  if (!date) return null;
+  const today = new Date();
+  const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const target = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  return Math.ceil((target - start) / (1000 * 60 * 60 * 24));
+}
+
+function nextTransactionDueDate(txn, from = new Date()) {
+  if (!txn?.date) return null;
+
+  const base = new Date(txn.date);
+  if (Number.isNaN(base.getTime())) return null;
+
+  let next = new Date(base);
+
+  const advance = () => {
+    const frequency = txn.frequency || (txn.recurring ? "monthly" : "once");
+
+    if (frequency === "weekly") next.setDate(next.getDate() + 7);
+    else if (frequency === "fortnightly") next.setDate(next.getDate() + 14);
+    else if (frequency === "quarterly") next.setMonth(next.getMonth() + 3);
+    else if (frequency === "yearly") next.setFullYear(next.getFullYear() + 1);
+    else if (frequency === "once") return null;
+    else next.setMonth(next.getMonth() + 1);
+
+    return next;
+  };
+
+  while (next < new Date(from.getFullYear(), from.getMonth(), from.getDate())) {
+    if (!advance()) return null;
+  }
+
+  return next;
+}
+
+function notificationPermissionStatus() {
+  if (!("Notification" in window)) return "unsupported";
+  return Notification.permission;
+}
+
+async function requestGrowUpNotifications(setState) {
+  if (!("Notification" in window)) {
+    alert("Notifications are not supported by this browser.");
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+
+  if (permission === "granted") {
+    setState(s => ({ ...s, notificationsEnabled: true }));
+    new Notification("Grow UP notifications enabled", {
+      body: "You’ll get reminders for recurring transactions and monthly balance updates."
+    });
+    return true;
+  }
+
+  setState(s => ({ ...s, notificationsEnabled: false }));
+  alert("Notifications were not enabled. You can turn them on later in your browser settings.");
+  return false;
+}
+
+function showGrowUpNotification(title, body) {
+  if (!("Notification" in window)) return;
+  if (Notification.permission !== "granted") return;
+
+  try {
+    new Notification(title, { body });
+  } catch {
+    // Browser blocked it; fail silently.
+  }
+}
+
+function runGrowUpNotificationChecks(state) {
+  if (!state?.notificationsEnabled) return;
+  if (notificationPermissionStatus() !== "granted") return;
+
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const sentKey = `growup_notifications_sent_${todayKey}`;
+
+  if (localStorage.getItem(sentKey)) return;
+
+  const recurring = (state.transactions || [])
+    .filter(t => t.recurring || (t.frequency && t.frequency !== "once"))
+    .map(t => ({ txn:t, due:nextTransactionDueDate(t) }))
+    .filter(item => item.due)
+    .map(item => ({ ...item, days:daysUntil(item.due) }))
+    .filter(item => item.days !== null && item.days >= 0 && item.days <= 2)
+    .slice(0, 3);
+
+  if (recurring.length) {
+    const first = recurring[0];
+    showGrowUpNotification(
+      `${first.txn.name} is due ${first.days === 0 ? "today" : first.days === 1 ? "tomorrow" : "soon"}`,
+      `${first.txn.type === "income" ? "Expected income" : "Expected expense"}: ${money(first.txn.amount)}`
+    );
+  }
+
+  const now = new Date();
+  const isMonthEndWindow = now.getDate() >= 25 || now.getDate() <= 3;
+  const balanceReminderKey = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
+
+  if (isMonthEndWindow && localStorage.getItem("growup_last_balance_reminder") !== balanceReminderKey) {
+    showGrowUpNotification(
+      "Update your monthly balances",
+      "Refresh asset and debt balances so your net worth timeline stays accurate."
+    );
+    localStorage.setItem("growup_last_balance_reminder", balanceReminderKey);
+  }
+
+  localStorage.setItem(sentKey, "true");
+}
+
+
+async function saveEmailReminderPreferences({ session, state, update, overrides = {} }) {
+  const client = window.supabaseClient || window.supabase || (typeof supabase !== "undefined" ? supabase : null);
+
+  if (!client) {
+    alert("Supabase is not connected yet.");
+    return false;
+  }
+
+  const user = session?.user;
+
+  if (!user?.id || !user?.email) {
+    alert("Please sign in to enable email reminders.");
+    return false;
+  }
+
+  const nextPrefs = {
+    emailRemindersEnabled: overrides.emailRemindersEnabled ?? state.emailRemindersEnabled ?? true,
+    emailReminderDays: Number(overrides.emailReminderDays ?? state.emailReminderDays ?? 1),
+    monthlyBalanceReminderDay: Number(overrides.monthlyBalanceReminderDay ?? state.monthlyBalanceReminderDay ?? 28),
+    emailGoalReminders: overrides.emailGoalReminders ?? state.emailGoalReminders ?? true,
+    emailMilestoneEmails: overrides.emailMilestoneEmails ?? state.emailMilestoneEmails ?? true
+  };
+
+  const payload = {
+    user_id: user.id,
+    email: user.email,
+    enabled: Boolean(nextPrefs.emailRemindersEnabled),
+    transaction_reminder_days: nextPrefs.emailReminderDays,
+    monthly_balance_day: nextPrefs.monthlyBalanceReminderDay,
+    goal_reminders: Boolean(nextPrefs.emailGoalReminders),
+    milestone_emails: Boolean(nextPrefs.emailMilestoneEmails),
+    updated_at: new Date().toISOString()
+  };
+
+  const { error } = await client
+    .from("growup_email_preferences")
+    .upsert(payload, { onConflict: "user_id" });
+
+  if (error) {
+    console.error(error);
+    alert("Could not save email reminder preferences. Please check Supabase setup.");
+    return false;
+  }
+
+  update(nextPrefs);
+  return true;
+}
+
+async function loadEmailReminderPreferences({ session, update }) {
+  const client = window.supabaseClient || window.supabase || (typeof supabase !== "undefined" ? supabase : null);
+
+  if (!client || !session?.user?.id) return;
+
+  const { data, error } = await client
+    .from("growup_email_preferences")
+    .select("*")
+    .eq("user_id", session.user.id)
+    .maybeSingle();
+
+  if (error || !data) return;
+
+  update({
+    emailRemindersEnabled: Boolean(data.enabled),
+    emailReminderDays: Number(data.transaction_reminder_days ?? 1),
+    monthlyBalanceReminderDay: Number(data.monthly_balance_day ?? 28),
+    emailGoalReminders: Boolean(data.goal_reminders),
+    emailMilestoneEmails: Boolean(data.milestone_emails)
+  });
+}
+
+
+function OnboardingTips({ state, setState, setTab }) {
+  if (state.onboardingDismissed) return null;
+
+  const accountsDone = (state.accounts || []).length >= 2;
+  const snapshotsDone = Object.keys(state.monthSnapshots || {}).length >= 2;
+  const cashDone = (state.transactions || []).length >= 2;
+  const goalsDone = (state.goals || []).filter(g => !g.archived).length >= 1;
+
+  const steps = [
+    { done: accountsDone, title:"Add your accounts", detail:"Start with the assets and debts that drive your net worth.", tab:"assets" },
+    { done: snapshotsDone, title:"Update two months", detail:"Two saved months unlock more useful trends and forecasting.", tab:"assets" },
+    { done: cashDone, title:"Add cash flow", detail:"Salary, rent, subscriptions, and recurring bills make insights smarter.", tab:"cash" },
+    { done: goalsDone, title:"Create one goal", detail:"A single target gives the timeline something meaningful to project.", tab:"goals" }
+  ];
+
+  const completeCount = steps.filter(s => s.done).length;
+
+  return (
+    <section className="onboarding-tips-card">
+      <div className="onboarding-head">
+        <div>
+          <p>Quick setup</p>
+          <h2>Get the best from Grow UP</h2>
+        </div>
+        <button type="button" onClick={()=>setState(s=>({...s,onboardingDismissed:true}))}>×</button>
+      </div>
+
+      <div className="onboarding-progress">
+        <i style={{ width:`${(completeCount / steps.length) * 100}%` }}></i>
+      </div>
+
+      <div className="onboarding-steps">
+        {steps.map(step => (
+          <button
+            type="button"
+            key={step.title}
+            className={step.done ? "done" : ""}
+            onClick={()=>setTab(step.tab)}
+          >
+            <span>{step.done ? "✓" : "○"}</span>
+            <div>
+              <strong>{step.title}</strong>
+              <small>{step.detail}</small>
+            </div>
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+
 function App() {
   const path = window.location.pathname;
   if (path === "/landingpage") return <LandingPage />;
@@ -547,6 +1227,8 @@ function App() {
   const [editor, setEditor] = useState(null);
   const [historyMetric, setHistoryMetric] = useState(null);
   const [compoundOpen, setCompoundOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
@@ -586,6 +1268,10 @@ function App() {
   const activeSetState = demoMode ? (() => readOnlyDemoAlert()) : setState;
   const totals = useMemo(() => computeTotals(activeState), [activeState]);
   const displayName = demoMode ? "Demo" : getUserDisplayName(session, state);
+
+  useEffect(() => {
+    if (!demoMode) runGrowUpNotificationChecks(activeState);
+  }, [demoMode, activeState]);
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const signOut = async () => {
@@ -715,7 +1401,7 @@ function App() {
     setState(s => ({ ...s, dashboardStyle: style }));
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, displayName, isDemo: demoMode};
+  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, displayName, isDemo: demoMode};
 
   if (authLoading) {
     return (
@@ -738,12 +1424,20 @@ function App() {
   return (
     <div className="app-shell">
       <main className="phone">
-        {compoundOpen ? (
+        {timelineOpen ? (
+          <WealthTimelinePage state={activeState} setMenuOpen={setMenuOpen} setTimelineOpen={setTimelineOpen} />
+        ) : insightsOpen ? (
+          <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
+        ) : compoundOpen ? (
           <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} />
         ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
           <>
+            {tab === "overview" && !demoMode && (
+              <OnboardingTips state={state} setState={setState} setTab={setTab} />
+            )}
+
             {tab === "overview" && (
               dashboardStyle === "detailed"
                 ? <Overview {...common} setTab={setTab} isDemo={demoMode} />
@@ -782,6 +1476,8 @@ function App() {
           state={activeState}
           setMenuOpen={setMenuOpen}
           setTab={setTab}
+          setTimelineOpen={setTimelineOpen}
+          setInsightsOpen={setInsightsOpen}
           update={update}
           saveSnapshot={saveSnapshot}
           restoreSnapshot={restoreSnapshot}
@@ -938,7 +1634,7 @@ function AuthScreen({ enterDemoMode }) {
           )}
 
           <button className="demo-auth-btn" type="button" onClick={enterDemoMode}>
-            Try Demo Mode
+            Explore Demo
           </button>
 
           <div className="auth-legal-links">
@@ -1178,7 +1874,91 @@ function weightedThreeMonthMomentum(state, currentNet) {
 }
 
 
-function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, isDemo=false }) {
+
+function upcomingTransactionsForDashboard(state, limit = 4) {
+  const now = new Date();
+  const items = (state.transactions || [])
+    .map(txn => ({
+      ...txn,
+      dateObj: txn.date ? new Date(txn.date) : null
+    }))
+    .filter(txn => txn.dateObj && !Number.isNaN(txn.dateObj.getTime()))
+    .filter(txn => txn.dateObj >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1))
+    .sort((a,b)=>a.dateObj-b.dateObj)
+    .slice(0, limit);
+
+  return items;
+}
+
+
+
+function useAutoCarousel(itemCount = 3, intervalMs = 5200, resumeDelayMs = 5200) {
+  const ref = React.useRef(null);
+  const timerRef = React.useRef(null);
+  const resumeRef = React.useRef(null);
+  const [index, setIndex] = useState(0);
+  const [paused, setPaused] = useState(false);
+
+  const scrollToIndex = React.useCallback((nextIndex) => {
+    const el = ref.current;
+    if (!el || itemCount <= 0) return;
+
+    const clamped = ((nextIndex % itemCount) + itemCount) % itemCount;
+    const child = el.children?.[clamped];
+
+    if (child) {
+      el.scrollTo({ left: child.offsetLeft, behavior: "smooth" });
+    }
+
+    setIndex(clamped);
+  }, [itemCount]);
+
+  const pauseThenResume = React.useCallback(() => {
+    setPaused(true);
+    window.clearTimeout(resumeRef.current);
+    resumeRef.current = window.setTimeout(() => setPaused(false), resumeDelayMs);
+  }, [resumeDelayMs]);
+
+  useEffect(() => {
+    if (paused || itemCount <= 1) return;
+
+    timerRef.current = window.setInterval(() => {
+      scrollToIndex(index + 1);
+    }, intervalMs);
+
+    return () => window.clearInterval(timerRef.current);
+  }, [paused, index, itemCount, intervalMs, scrollToIndex]);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+
+    const onScroll = () => {
+      const children = Array.from(el.children || []);
+      if (!children.length) return;
+
+      const nearest = children.reduce((best, child, i) => {
+        const distance = Math.abs(child.offsetLeft - el.scrollLeft);
+        return distance < best.distance ? { index: i, distance } : best;
+      }, { index: 0, distance: Infinity });
+
+      setIndex(nearest.index);
+    };
+
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => () => {
+    window.clearInterval(timerRef.current);
+    window.clearTimeout(resumeRef.current);
+  }, []);
+
+  return { ref, index, scrollToIndex, pauseThenResume };
+}
+
+
+function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
@@ -1198,6 +1978,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
   const momentumScore = weightedThreeMonthMomentum(dashboardState, dashboardTotals.net);
   const animatedMomentum = useAnimatedNumber(momentumScore, 0, 1100);
 
+  const upcomingMiniTxns = upcomingTransactionsForDashboard(dashboardState, 4);
+  const dashboardCarousel = useAutoCarousel(3, 5600, 5200);
   const chartRows = historyRows(dashboardState).slice().reverse().slice(-6);
   const chartValues = chartRows.map(r => Number(r.net || 0));
   const min = Math.min(...chartValues, dashboardTotals.net);
@@ -1243,6 +2025,10 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         <span>{signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} over last month</span>
       </section>
 
+      <InsightsStrip state={dashboardState} totals={dashboardTotals} openInsights={()=>setInsightsOpen?.(true)} />
+
+      <WealthTimelineBriefCard state={dashboardState} openTimeline={()=>setTimelineOpen?.(true)} />
+
       {primaryGoal && goalCalc && (
         <section className={`minimal-goal-card ${primaryGoal.color || "green"}`} onClick={()=>setTab("goals")}>
           <div className="minimal-row">
@@ -1251,7 +2037,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
                 {smartGoal?.goal === primaryGoal && smartGoal?.deadlineScore < 1000 * 60 * 60 * 24 * 120
                   ? "Closest deadline"
                   : smartGoal?.goal === primaryGoal && smartGoal?.offTrackScore > 40
-                  ? "Needs attention"
+                  ? "Long-term wealth path"
                   : "Top progress"}
               </p>
               <h2>{primaryGoal.name}</h2>
@@ -1269,17 +2055,94 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         </section>
       )}
 
-      <section className="minimal-chart-card">
-        <div className="minimal-row">
-          <div>
-            <p>3-month weighted trend</p>
-            <h2>Momentum</h2>
-          </div>
-          <strong>{animatedMomentum >= 0 ? "+" : ""}{Math.round(animatedMomentum)}%</strong>
+      <section className="minimal-feature-carousel" aria-label="Dashboard highlights">
+        <div
+          className="feature-track"
+          ref={dashboardCarousel.ref}
+          onTouchStart={dashboardCarousel.pauseThenResume}
+          onMouseDown={dashboardCarousel.pauseThenResume}
+          onWheel={dashboardCarousel.pauseThenResume}
+          onScroll={dashboardCarousel.pauseThenResume}
+        >
+          <article className="minimal-chart-card feature-slide dark-momentum-card">
+            <div className="minimal-row">
+              <div>
+                <p>3-month weighted trend</p>
+                <h2>Momentum</h2>
+              </div>
+              <strong>{animatedMomentum >= 0 ? "+" : ""}{Math.round(animatedMomentum)}%</strong>
+            </div>
+
+            <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
+              <polyline points={points} />
+            </svg>
+
+            <span className="feature-caption">
+              {animatedMomentum >= 10 ? "Strong positive trend" : animatedMomentum >= 0 ? "Positive trend" : "Long-term wealth path"}
+            </span>
+          </article>
+
+          <article className="minimal-upcoming-card feature-slide">
+            <div className="upcoming-card-head">
+              <div>
+                <p>Upcoming</p>
+                <h2>Transactions</h2>
+              </div>
+              <button type="button" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
+            </div>
+
+            <div className="upcoming-mini-list">
+              {upcomingMiniTxns.length ? upcomingMiniTxns.map(txn => (
+                <div className="upcoming-mini-item" key={txn.id}>
+                  <span>{txn.icon || (txn.type === "income" ? "💵" : "💳")}</span>
+                  <div>
+                    <strong>{txn.name}</strong>
+                    <small>{txn.dateObj.toLocaleDateString("en-US", { month:"short", day:"numeric" })}</small>
+                  </div>
+                  <b className={txn.type === "income" ? "gain" : "risk"}>
+                    {txn.type === "income" ? "+" : "-"}{money(txn.amount)}
+                  </b>
+                </div>
+              )) : (
+                <div className="upcoming-empty">No upcoming transactions.</div>
+              )}
+            </div>
+          </article>
+
+          <article className="minimal-cash-snapshot-card feature-slide">
+            <div className="upcoming-card-head">
+              <div>
+                <p>This month</p>
+                <h2>Cash Flow</h2>
+              </div>
+              <button type="button" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
+            </div>
+
+            <div className="cash-snapshot-big">
+              <strong>{signedMoney((dashboardState.transactions || []).filter(t=>t.type==="income").reduce((s,t)=>s+Number(t.amount||0),0) - (dashboardState.transactions || []).filter(t=>t.type==="expense").reduce((s,t)=>s+Number(t.amount||0),0))}</strong>
+              <span>projected balance</span>
+            </div>
+
+            <div className="cash-bars">
+              <i></i><i></i><i></i><i></i><i></i>
+            </div>
+          </article>
         </div>
-        <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
-          <polyline points={points} />
-        </svg>
+
+        <div className="feature-dots">
+          {[0,1,2].map(i => (
+            <button
+              key={i}
+              type="button"
+              className={dashboardCarousel.index === i ? "active" : ""}
+              onClick={() => {
+                dashboardCarousel.pauseThenResume();
+                dashboardCarousel.scrollToIndex(i);
+              }}
+              aria-label={`Show dashboard card ${i + 1}`}
+            />
+          ))}
+        </div>
       </section>
 
       {topAsset && (
@@ -1342,6 +2205,10 @@ function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMe
         isDemo={isDemo}
         setMenuOpen={setMenuOpen}
       />
+
+      <InsightsStrip state={state} totals={totals} openInsights={()=>setInsightsOpen?.(true)} />
+
+      <WealthTimelineBriefCard state={state} openTimeline={()=>setTimelineOpen?.(true)} />
 
       <div className="kpi-grid">
         <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(dashboardTotals.assets)} sub={`${signedMoney(dashboardTotals.assets - dashboardTotals.prevAssets)} vs last month`} icon="💼" dot="green" />
@@ -1899,7 +2766,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
                     <strong>{g.archivedAt ? new Date(g.archivedAt).toLocaleDateString() : "Saved"}</strong>
                   </div>
                   <div className="archived-goal-actions">
-                    <button type="button" className="ghost" onClick={()=>restore(g.id)}>Restore</button>
+                    <button type="button" className="ghost" onClick={()=>restore(g.id)}>Restore from Cloud</button>
                     <button type="button" className="danger-mini" onClick={()=>del(g.id)}>Delete</button>
                   </div>
                 </article>
@@ -2114,6 +2981,112 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
           {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}
         </button>
       </Card>
+      <Card>
+        <h2>Email Reminders</h2>
+        <p>Send reliable email reminders for recurring transactions, monthly balance updates, goal deadlines, and milestone moments.</p>
+
+        <div className="email-reminder-card">
+          <div className="email-reminder-main">
+            <div>
+              <strong>{state.emailRemindersEnabled ? "Email reminders enabled" : "Email reminders off"}</strong>
+              <span>{session?.user?.email || "Sign in to enable email reminders"}</span>
+            </div>
+
+            <button
+              type="button"
+              className={state.emailRemindersEnabled ? "secondary" : "primary"}
+              onClick={async()=>{
+                const nextEnabled = !state.emailRemindersEnabled;
+                const saved = await saveEmailReminderPreferences({
+                  session,
+                  state,
+                  update,
+                  overrides: { emailRemindersEnabled: nextEnabled }
+                });
+                if (saved && nextEnabled) alert("Email reminders are now enabled.");
+              }}
+            >
+              {state.emailRemindersEnabled ? "Turn off" : "Enable"}
+            </button>
+          </div>
+
+          <div className="email-reminder-grid">
+            <label>
+              <span>Transaction reminder</span>
+              <select
+                value={state.emailReminderDays ?? 1}
+                onChange={async e=>{
+                  await saveEmailReminderPreferences({
+                    session,
+                    state,
+                    update,
+                    overrides: { emailRemindersEnabled: true, emailReminderDays: Number(e.target.value) }
+                  });
+                }}
+              >
+                <option value={0}>Due day</option>
+                <option value={1}>1 day before</option>
+                <option value={2}>2 days before</option>
+                <option value={7}>1 week before</option>
+              </select>
+            </label>
+
+            <label>
+              <span>Monthly balance day</span>
+              <select
+                value={state.monthlyBalanceReminderDay ?? 28}
+                onChange={async e=>{
+                  await saveEmailReminderPreferences({
+                    session,
+                    state,
+                    update,
+                    overrides: { emailRemindersEnabled: true, monthlyBalanceReminderDay: Number(e.target.value) }
+                  });
+                }}
+              >
+                <option value={25}>25th</option>
+                <option value={28}>28th</option>
+                <option value={30}>30th</option>
+                <option value={31}>Last day</option>
+              </select>
+            </label>
+          </div>
+
+          <div className="email-reminder-toggles">
+            <button
+              type="button"
+              className={state.emailGoalReminders ? "active" : ""}
+              onClick={async()=> {
+                await saveEmailReminderPreferences({
+                  session,
+                  state,
+                  update,
+                  overrides: { emailRemindersEnabled: true, emailGoalReminders: !state.emailGoalReminders }
+                });
+              }}
+            >
+              <span>{state.emailGoalReminders ? "✓" : "○"}</span>
+              Goal reminders
+            </button>
+
+            <button
+              type="button"
+              className={state.emailMilestoneEmails ? "active" : ""}
+              onClick={async()=> {
+                await saveEmailReminderPreferences({
+                  session,
+                  state,
+                  update,
+                  overrides: { emailRemindersEnabled: true, emailMilestoneEmails: !state.emailMilestoneEmails }
+                });
+              }}
+            >
+              <span>{state.emailMilestoneEmails ? "✓" : "○"}</span>
+              Milestone emails
+            </button>
+          </div>
+        </div>
+      </Card>
 
 
       <Card>
@@ -2148,7 +3121,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <p>Keep a secure cloud backup of your Grow UP data and restore your latest saved version when needed.</p>
         <div className="button-row">
           <button className="primary" disabled={isDemo} onClick={saveSnapshot}><Save size={18}/> Back up data</button>
-          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore latest saved data</button>
+          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore from Cloud</button>
         </div>
       </Card>
 
@@ -2187,11 +3160,11 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode }) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen}) {
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
-      <div className="menu-sheet" onClick={(e)=>e.stopPropagation()}>
-        <div className="sheet-head"><div className="app-icon">GV</div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
+      <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
+        <div className="sheet-head"><div className="app-icon drawer-logo"><img src="/icons/growup-logo.png" alt="Grow UP" /></div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
         <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
         <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
         <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
@@ -2200,7 +3173,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <hr/>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
         <button disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
-        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore latest saved data from Supabase</button>
+        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
         <button onClick={()=>{ window.location.href = "/privacy"; }}><SlidersHorizontal/> Privacy Policy</button>
         <button onClick={()=>{ window.location.href = "/terms"; }}><SlidersHorizontal/> Terms</button>
