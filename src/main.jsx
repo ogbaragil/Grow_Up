@@ -54,6 +54,86 @@ const EMPTY_STATE = {
   monthSnapshots: {}
 };
 
+
+function normalizeAccounts(accounts = []) {
+  const list = Array.isArray(accounts) ? accounts : [];
+  const hasCurrentModel = list.some(a => a?.kind === "asset" || a?.kind === "debt");
+  const byId = new Map();
+
+  for (const account of list) {
+    if (!account) continue;
+
+    // If the array contains current-model accounts, drop legacy category-only rows.
+    // If an old backup only has category rows, migrate category -> kind instead.
+    const kind =
+      account.kind === "asset" || account.kind === "debt"
+        ? account.kind
+        : !hasCurrentModel && (account.category === "asset" || account.category === "debt")
+          ? account.category
+          : null;
+
+    if (!kind) continue;
+
+    const id = account.id || safeId();
+    byId.set(id, {
+      id,
+      name: account.name || "Account",
+      icon: account.icon || (kind === "asset" ? "🏦" : "💳"),
+      kind,
+      balance: Number(account.balance || 0),
+      previous: Number(account.previous || 0)
+    });
+  }
+
+  return Array.from(byId.values());
+}
+
+function normalizeSnapshot(snapshot = {}) {
+  const accounts = normalizeAccounts(snapshot.accounts || []);
+
+  if (!accounts.length) {
+    return { ...snapshot };
+  }
+
+  const assets = accounts
+    .filter(a => a.kind === "asset")
+    .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+  const debts = accounts
+    .filter(a => a.kind === "debt")
+    .reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+  return {
+    ...snapshot,
+    accounts,
+    assets,
+    debts,
+    net: assets - debts
+  };
+}
+
+function normalizeGrowState(rawState = {}) {
+  const base = { ...EMPTY_STATE, ...rawState };
+
+  const monthSnapshots = Object.fromEntries(
+    Object.entries(base.monthSnapshots || {}).map(([key, snapshot]) => [
+      key,
+      normalizeSnapshot(snapshot || {})
+    ])
+  );
+
+  const rootAccounts = normalizeAccounts(base.accounts || []);
+  const selectedSnapshotAccounts = monthSnapshots?.[base.selectedMonth]?.accounts || [];
+  const latestKey = Object.keys(monthSnapshots).sort().at(-1);
+  const latestSnapshotAccounts = latestKey ? monthSnapshots[latestKey]?.accounts || [] : [];
+
+  return {
+    ...base,
+    accounts: rootAccounts.length ? rootAccounts : selectedSnapshotAccounts.length ? selectedSnapshotAccounts : latestSnapshotAccounts,
+    monthSnapshots
+  };
+}
+
 function safeId() {
   return globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random()}`;
 }
@@ -62,7 +142,7 @@ function useGrowState() {
   const [state, setState] = useState(() => {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? { ...EMPTY_STATE, ...JSON.parse(raw) } : EMPTY_STATE;
+      return raw ? normalizeGrowState(JSON.parse(raw)) : EMPTY_STATE;
     } catch {
       return EMPTY_STATE;
     }
@@ -1369,14 +1449,7 @@ function App() {
       const existingSnapshot = currentState.monthSnapshots?.[currentState.selectedMonth];
       const sourceAccounts = existingSnapshot?.accounts || currentState.accounts;
 
-      const cleanAccounts = sourceAccounts.map(a => ({
-        id: a.id,
-        name: a.name,
-        icon: a.icon,
-        kind: a.kind,
-        balance: Number(a.balance || 0),
-        previous: Number(a.previous || 0)
-      }));
+      const cleanAccounts = normalizeAccounts(sourceAccounts);
 
       const assets = cleanAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
       const debts = cleanAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
@@ -1393,6 +1466,7 @@ function App() {
 
       const next = {
         ...currentState,
+        accounts: cleanAccounts,
         monthSnapshots: {
           ...(currentState.monthSnapshots || {}),
           [currentState.selectedMonth]: snapshot
@@ -1447,7 +1521,9 @@ function App() {
     const restored = data?.[0]?.app_state || data?.[0]?.state;
     if (!restored) return alert("No saved backup found for this account.");
 
-    setState({ ...EMPTY_STATE, ...restored });
+    const normalizedRestored = normalizeGrowState(restored);
+    setState(normalizedRestored);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedRestored));
     alert("Latest saved data restored.");
   };
 
