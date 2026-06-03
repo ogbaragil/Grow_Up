@@ -156,6 +156,15 @@ const EMPTY_STATE = {
   emailMilestoneEmails: true,
   onboardingDismissed: false,
   firstSnapshotCelebrationDismissed: false,
+  profileComplete: false,
+  profile: {
+    age: null,
+    retirementAge: 65,
+    income: null,
+    expenses: [],        // [{ name, amount, icon }]
+    primaryGoal: null,   // "debt" | "savings" | "house" | "fire" | "invest"
+    roughDebt: null
+  },
   mode: "Real Mode",
   currency: "USD",
   selectedMonth: monthKey(),
@@ -906,6 +915,7 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   const now = new Date();
   const netWorth = Number(totals.net || 0);
   const prevNetWorth = Number(totals.prevNet || 0);
+  const profile = state.profile || {};
 
   const scenarioConfig = {
     conservative: { label:"Conservative", multiplier:.65, annualReturn:.035 },
@@ -917,13 +927,24 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   const growths = history.slice(-6).map((r,i,arr)=> i ? Number(r.net||0) - Number(arr[i-1].net||0) : null).filter(v=>Number.isFinite(v));
   const avgGrowth = growths.length ? growths.reduce((s,v)=>s+v,0)/growths.length : Math.max(0, netWorth - prevNetWorth);
 
-  const income = totals.income;
-  const out = totals.expenses;
+  // Use profile income/expenses as fallback when no transactions exist
+  const income = getProfileMonthlyIncome(state, totals);
+  const out = getProfileMonthlyExpenses(state, totals);
   const cashSurplus = income - out;
-  const monthlyAdd = Math.max(1, avgGrowth, cashSurplus * .55) * scenarioConfig.multiplier;
+
+  // No $1 floor — only project if we have real data
+  const hasHistory = growths.length >= 2;
+  const hasSurplus = cashSurplus > 0;
+  const monthlyAdd = hasHistory
+    ? avgGrowth * scenarioConfig.multiplier
+    : hasSurplus
+      ? cashSurplus * 0.55 * scenarioConfig.multiplier
+      : null;
+
   const monthlyReturn = Math.pow(1 + scenarioConfig.annualReturn, 1/12) - 1;
 
   const monthsTo = (target) => {
+    if (monthlyAdd === null) return null;
     if (netWorth >= target) return 0;
     let projected = netWorth;
     for (let m=1; m<=720; m++) {
@@ -933,7 +954,7 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
     return null;
   };
   const futureDate = (months) => months === null || months === undefined ? null : new Date(now.getFullYear(), now.getMonth() + months, 1);
-  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : "Needs more trend data";
+  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : monthlyAdd === null ? "Add income & expenses for a forecast" : "Beyond 60 years";
 
   const rows = [{
     icon:"●",
@@ -979,13 +1000,13 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
     });
   });
 
+  // Debt Free — purely historical, falls back to profile roughDebt
   const debts = accounts.filter(a=>a.kind==="debt" && Number(a.balance||0)>0);
   const totalDebt = debts.reduce((s,a)=>s+Number(a.balance||0),0);
-  if (totalDebt > 0) {
-    // Use historical monthly debt reduction averaged across all snapshots.
-    // For each snapshot pair (oldest→newest), sum the drop in total debt balance,
-    // then divide by the number of months spanned. Falls back to null (no ETA)
-    // if fewer than 2 snapshots exist — never uses surplus as a substitute.
+  const profileDebt = Number(profile.roughDebt || 0);
+  const effectiveDebt = totalDebt > 0 ? totalDebt : profileDebt;
+
+  if (effectiveDebt > 0) {
     const snapKeys = Object.keys(state.monthSnapshots || {}).sort();
     let historicalMonthlyPaydown = null;
     if (snapKeys.length >= 2) {
@@ -998,35 +1019,42 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
       const avgMonthly = totalReduction / monthsSpanned;
       if (avgMonthly > 0) historicalMonthlyPaydown = avgMonthly * scenarioConfig.multiplier;
     }
-    const d = historicalMonthlyPaydown
-      ? futureDate(Math.ceil(totalDebt / historicalMonthlyPaydown))
-      : null;
+    const d = historicalMonthlyPaydown ? futureDate(Math.ceil(effectiveDebt / historicalMonthlyPaydown)) : null;
     rows.push({
       icon:"⚡",
       title:"Debt Free",
-      label: historicalMonthlyPaydown ? dateLabel(d) : "Need more history",
+      label: historicalMonthlyPaydown ? dateLabel(d) : "Save 2+ snapshots for a forecast",
       detail: historicalMonthlyPaydown
-        ? `${money(totalDebt)} remaining · ${money(historicalMonthlyPaydown)}/mo avg paydown`
-        : `${money(totalDebt)} remaining · save 2+ snapshots for a forecast`,
+        ? `${money(effectiveDebt)} remaining · ${money(historicalMonthlyPaydown)}/mo avg paydown`
+        : `${money(effectiveDebt)} remaining · tracking begins once you save monthly snapshots`,
       tone:"risk",
       category:"Freedom",
       sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 6
     });
   }
 
-  if (out > 0) {
+  // FIRE + age-aware Coast FIRE using profile data as fallback
+  const monthlyExpenses = out;
+  if (monthlyExpenses > 0) {
+    const annualExpenses = monthlyExpenses * 12;
+    const fireTarget = annualExpenses * 25;
+    const age = Number(profile.age || 35);
+    const retirementAge = Number(profile.retirementAge || 65);
+    const yearsToRetirement = Math.max(1, retirementAge - age);
+    const realReturn = 0.05;
+    const coastFireTarget = Math.round(fireTarget / Math.pow(1 + realReturn, yearsToRetirement));
+    const sourceLabel = out > 0 && totals.expenses > 0 ? "" : " · from profile";
+
     [
-      { title:"Coast FIRE", icon:"🌤️", target:out*12*12, detail:"Approx. 12× annual spend", tone:"forecast" },
-      { title:"FIRE", icon:"🔥", target:out*12*25, detail:"Approx. 25× annual spend", tone:"gain" }
+      { title:"Coast FIRE", icon:"🌤️", target: coastFireTarget,
+        detail:`${money(coastFireTarget)} · age ${age}→${retirementAge} at 5% real return${sourceLabel}`, tone:"forecast" },
+      { title:"FIRE", icon:"🔥", target: fireTarget,
+        detail:`${money(fireTarget)} · 25× annual spend${sourceLabel}`, tone:"gain" }
     ].filter(m=>netWorth < m.target).forEach((m,i) => {
       const d = futureDate(monthsTo(m.target));
       rows.push({
-        icon:m.icon,
-        title:m.title,
-        label:dateLabel(d),
-        detail:`${money(m.target)} target · ${m.detail}`,
-        tone:m.tone,
-        category:"Independence",
+        icon:m.icon, title:m.title, label:dateLabel(d), detail:m.detail,
+        tone:m.tone, category:"Independence",
         sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 4 + i
       });
     });
@@ -1034,7 +1062,6 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
 
   return rows.sort((a,b)=>a.sort-b.sort).slice(0,10);
 }
-
 function timelineScenarioSummary(state, scenario = "balanced") {
   const latest = latestDashboardState(state);
   const totals = computeTotals(latest);
@@ -1364,6 +1391,322 @@ async function loadEmailReminderPreferences({ session, update }) {
   });
 }
 
+
+// Returns monthly expenses from profile if no transactions set up yet,
+// otherwise uses real transaction data. Callers get a consistent number either way.
+function getProfileMonthlyExpenses(state, totals) {
+  if (totals && totals.expenses > 0) return totals.expenses;
+  const profileExpenses = (state.profile?.expenses || []);
+  return profileExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+}
+
+function getProfileMonthlyIncome(state, totals) {
+  if (totals && totals.income > 0) return totals.income;
+  return Number(state.profile?.income || 0);
+}
+
+// ── Onboarding Wizard ────────────────────────────────────────────────────────
+const PRIMARY_GOAL_OPTIONS = [
+  { value: "debt",    icon: "⚡", label: "Pay off debt",              sub: "Get out of debt faster" },
+  { value: "savings", icon: "🛡️", label: "Build savings",             sub: "Emergency fund or cash buffer" },
+  { value: "house",   icon: "🏠", label: "Save for a house",          sub: "Home deposit or upgrade" },
+  { value: "invest",  icon: "📈", label: "Grow investments",          sub: "Build a portfolio over time" },
+  { value: "fire",    icon: "🔥", label: "Reach financial independence", sub: "Retire early or work optionally" },
+];
+
+const COMMON_EXPENSE_PRESETS = [
+  { name: "Rent / Mortgage", icon: "🏠" },
+  { name: "Groceries",       icon: "🛒" },
+  { name: "Car / Transport", icon: "🚗" },
+  { name: "Insurance",       icon: "🛡️" },
+  { name: "Childcare",       icon: "👶" },
+  { name: "Subscriptions",   icon: "📺" },
+  { name: "Utilities",       icon: "⚡" },
+  { name: "Phone / Internet",icon: "📱" },
+];
+
+function OnboardingWizard({ state, setState, onComplete }) {
+  const [step, setStep] = useState(0);
+  const [profile, setProfile] = useState({
+    age: state.profile?.age || "",
+    retirementAge: state.profile?.retirementAge || 65,
+    income: state.profile?.income || "",
+    expenses: state.profile?.expenses?.length ? state.profile.expenses : [
+      { name: "", icon: "🏠", amount: "" },
+      { name: "", icon: "🛒", amount: "" },
+      { name: "", icon: "📱", amount: "" },
+    ],
+    primaryGoal: state.profile?.primaryGoal || null,
+    roughDebt: state.profile?.roughDebt || "",
+  });
+
+  const set = (k, v) => setProfile(p => ({ ...p, [k]: v }));
+  const setExpense = (i, k, v) => setProfile(p => {
+    const expenses = [...p.expenses];
+    expenses[i] = { ...expenses[i], [k]: v };
+    return { ...p, expenses };
+  });
+
+  const TOTAL_STEPS = profile.primaryGoal === "debt" ? 5 : 4;
+
+  const next = () => setStep(s => s + 1);
+  const back = () => setStep(s => s - 1);
+
+  const finish = () => {
+    // Build starter transactions from profile expenses
+    const starterTransactions = [
+      ...(profile.income > 0 ? [{
+        id: safeId(), type: "income", name: "Salary", icon: "💵",
+        amount: Number(profile.income), frequency: "monthly", recurring: true,
+        date: new Date().toISOString(), endsOn: null
+      }] : []),
+      ...profile.expenses
+        .filter(e => e.name && Number(e.amount) > 0)
+        .map(e => ({
+          id: safeId(), type: "expense", name: e.name, icon: e.icon || "💳",
+          amount: Number(e.amount), frequency: "monthly", recurring: true,
+          date: new Date().toISOString(), endsOn: null
+        }))
+    ];
+
+    // Build starter goal from primaryGoal
+    const starterGoals = [];
+    if (profile.primaryGoal === "fire") {
+      const expenses = profile.expenses.reduce((s,e) => s + Number(e.amount||0), 0);
+      const fireTarget = expenses > 0 ? Math.round(expenses * 12 * 25) : 0;
+      starterGoals.push({
+        id: safeId(), name: "Financial Independence", icon: "🔥",
+        goalType: "fire", color: "gold", target: fireTarget,
+        current: "", start: "", accountId: "", account: "", deadline: "",
+        open: false, archived: false
+      });
+    } else if (profile.primaryGoal === "debt" && Number(profile.roughDebt) > 0) {
+      starterGoals.push({
+        id: safeId(), name: "Pay off debt", icon: "⚡",
+        goalType: "debtPayoff", color: "red",
+        start: Number(profile.roughDebt), current: Number(profile.roughDebt),
+        target: 0, accountId: "", account: "", deadline: "",
+        open: false, archived: false
+      });
+    } else if (profile.primaryGoal === "house") {
+      starterGoals.push({
+        id: safeId(), name: "Home deposit", icon: "🏠",
+        goalType: "savings", color: "blue", target: "",
+        current: "", start: "", accountId: "", account: "", deadline: "",
+        open: false, archived: false
+      });
+    } else if (profile.primaryGoal === "savings") {
+      const expenses = profile.expenses.reduce((s,e) => s + Number(e.amount||0), 0);
+      starterGoals.push({
+        id: safeId(), name: "Emergency fund", icon: "🛡️",
+        goalType: "savings", color: "blue",
+        target: expenses > 0 ? Math.round(expenses * 3) : "",
+        current: "", start: "", accountId: "", account: "", deadline: "",
+        open: false, archived: false
+      });
+    } else if (profile.primaryGoal === "invest") {
+      starterGoals.push({
+        id: safeId(), name: "Investment portfolio", icon: "📈",
+        goalType: "accountGrowth", color: "green", target: "",
+        current: "", start: "", accountId: "", account: "", deadline: "",
+        open: false, archived: false
+      });
+    }
+
+    setState(s => ({
+      ...s,
+      firstName: profile.firstName || s.firstName,
+      profileComplete: true,
+      profile: {
+        age: Number(profile.age) || null,
+        retirementAge: Number(profile.retirementAge) || 65,
+        income: Number(profile.income) || null,
+        expenses: profile.expenses.filter(e => e.name && Number(e.amount) > 0),
+        primaryGoal: profile.primaryGoal,
+        roughDebt: Number(profile.roughDebt) || null,
+      },
+      transactions: s.transactions.length ? s.transactions : starterTransactions,
+      goals: s.goals.length ? s.goals : starterGoals,
+    }));
+    onComplete();
+  };
+
+  const progressPct = Math.round((step / TOTAL_STEPS) * 100);
+
+  // Step 0 — Welcome + name + age
+  if (step === 0) return (
+    <WizardScreen step={0} total={TOTAL_STEPS} progress={progressPct} onBack={null} onNext={next} nextLabel="Let's go →">
+      <div className="wizard-hero">
+        <div className="wizard-logo">🌱</div>
+        <h1>Welcome to Grow UP</h1>
+        <p>Three quick questions and your personalised financial picture is ready.</p>
+      </div>
+      <label className="wizard-label">What should we call you?
+        <input className="wizard-input" placeholder="First name" value={profile.firstName || ""} onChange={e => set("firstName", e.target.value)} />
+      </label>
+      <div className="wizard-row">
+        <label className="wizard-label">Your age
+          <input className="wizard-input" type="number" placeholder="e.g. 34" value={profile.age} onChange={e => set("age", e.target.value)} min="18" max="99" />
+        </label>
+        <label className="wizard-label">Target retirement age
+          <input className="wizard-input" type="number" placeholder="e.g. 65" value={profile.retirementAge} onChange={e => set("retirementAge", e.target.value)} min="40" max="99" />
+        </label>
+      </div>
+    </WizardScreen>
+  );
+
+  // Step 1 — Primary goal
+  if (step === 1) return (
+    <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →" nextDisabled={!profile.primaryGoal}>
+      <h2 className="wizard-question">What's your main financial focus right now?</h2>
+      <p className="wizard-sub">Pick one — you can add more goals later.</p>
+      <div className="wizard-goal-options">
+        {PRIMARY_GOAL_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            type="button"
+            className={`wizard-goal-option ${profile.primaryGoal === opt.value ? "selected" : ""}`}
+            onClick={() => set("primaryGoal", opt.value)}
+          >
+            <span className="wizard-goal-icon">{opt.icon}</span>
+            <div>
+              <strong>{opt.label}</strong>
+              <small>{opt.sub}</small>
+            </div>
+            {profile.primaryGoal === opt.value && <span className="wizard-check">✓</span>}
+          </button>
+        ))}
+      </div>
+    </WizardScreen>
+  );
+
+  // Step 2 — Monthly income
+  if (step === 2) return (
+    <WizardScreen step={2} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
+      <h2 className="wizard-question">What's your monthly take-home income?</h2>
+      <p className="wizard-sub">After tax. We'll pre-fill Cash Flow with this — you can refine it later.</p>
+      <div className="wizard-amount-wrap">
+        <span className="wizard-currency">$</span>
+        <input
+          className="wizard-input large"
+          type="number"
+          placeholder="e.g. 5000"
+          value={profile.income}
+          onChange={e => set("income", e.target.value)}
+        />
+        <span className="wizard-per">/mo</span>
+      </div>
+      <button type="button" className="wizard-skip" onClick={next}>Skip for now</button>
+    </WizardScreen>
+  );
+
+  // Step 3 — Top 3 expenses
+  if (step === 3) return (
+    <WizardScreen step={3} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={profile.primaryGoal === "debt" ? next : finish} nextLabel={profile.primaryGoal === "debt" ? "Continue →" : "Finish setup ✓"}>
+      <h2 className="wizard-question">What are your biggest monthly expenses?</h2>
+      <p className="wizard-sub">Just the top 3 — roughly is fine. These unlock your FIRE number and spending chart.</p>
+
+      {profile.expenses.map((exp, i) => (
+        <div key={i} className="wizard-expense-row">
+          <button
+            type="button"
+            className="wizard-expense-icon"
+            onClick={() => {
+              const presets = COMMON_EXPENSE_PRESETS;
+              const next = presets[i % presets.length];
+              setExpense(i, "icon", next.icon);
+              if (!exp.name) setExpense(i, "name", next.name);
+            }}
+            title="Tap to cycle icon"
+          >{exp.icon || "💳"}</button>
+          <input
+            className="wizard-input flex1"
+            placeholder={["Rent / Mortgage", "Groceries", "Other expense"][i]}
+            value={exp.name}
+            onChange={e => setExpense(i, "name", e.target.value)}
+          />
+          <div className="wizard-amount-wrap small">
+            <span className="wizard-currency">$</span>
+            <input
+              className="wizard-input"
+              type="number"
+              placeholder="0"
+              value={exp.amount}
+              onChange={e => setExpense(i, "amount", e.target.value)}
+            />
+          </div>
+        </div>
+      ))}
+
+      <div className="wizard-expense-presets">
+        {COMMON_EXPENSE_PRESETS.map(p => (
+          <button
+            key={p.name}
+            type="button"
+            className="quickadd-chip small"
+            onClick={() => {
+              const emptyIdx = profile.expenses.findIndex(e => !e.name);
+              const idx = emptyIdx >= 0 ? emptyIdx : 0;
+              setExpense(idx, "name", p.name);
+              setExpense(idx, "icon", p.icon);
+            }}
+          >{p.icon} {p.name}</button>
+        ))}
+      </div>
+
+      <button type="button" className="wizard-skip" onClick={profile.primaryGoal === "debt" ? next : finish}>Skip for now</button>
+    </WizardScreen>
+  );
+
+  // Step 4 — Debt amount (only if primaryGoal === "debt")
+  if (step === 4) return (
+    <WizardScreen step={4} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={finish} nextLabel="Finish setup ✓">
+      <h2 className="wizard-question">Roughly how much debt do you have?</h2>
+      <p className="wizard-sub">A ballpark is fine — this powers your debt-free timeline and goal tracking.</p>
+      <div className="wizard-amount-wrap">
+        <span className="wizard-currency">$</span>
+        <input
+          className="wizard-input large"
+          type="number"
+          placeholder="e.g. 12000"
+          value={profile.roughDebt}
+          onChange={e => set("roughDebt", e.target.value)}
+        />
+      </div>
+      <button type="button" className="wizard-skip" onClick={finish}>Skip for now</button>
+    </WizardScreen>
+  );
+
+  return null;
+}
+
+function WizardScreen({ children, step, total, progress, onBack, onNext, nextLabel, nextDisabled }) {
+  return (
+    <div className="wizard-screen">
+      <div className="wizard-progress-bar">
+        <div className="wizard-progress-fill" style={{ width: `${progress}%` }} />
+      </div>
+      <div className="wizard-dots">
+        {Array.from({ length: total + 1 }).map((_, i) => (
+          <span key={i} className={`wizard-dot ${i <= step ? "active" : ""}`} />
+        ))}
+      </div>
+      <div className="wizard-body">
+        {children}
+      </div>
+      <div className="wizard-footer">
+        {onBack && (
+          <button type="button" className="wizard-back" onClick={onBack}>← Back</button>
+        )}
+        <button
+          type="button"
+          className={`wizard-next ${nextDisabled ? "disabled" : ""}`}
+          onClick={!nextDisabled ? onNext : undefined}
+        >{nextLabel || "Continue →"}</button>
+      </div>
+    </div>
+  );
+}
 
 function OnboardingTips({ state, setState, setTab }) {
   if (state.onboardingDismissed) return null;
@@ -1732,6 +2075,21 @@ function App() {
     return <AuthScreen enterDemoMode={enterDemoMode} />;
   }
 
+  // Show onboarding wizard for new users who haven't completed profile setup
+  if (!demoMode && !state.profileComplete) {
+    return (
+      <div className="app-shell">
+        <main className="phone">
+          <OnboardingWizard
+            state={state}
+            setState={setState}
+            onComplete={() => setState(s => ({ ...s, profileComplete: true }))}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <main className="phone">
@@ -1799,7 +2157,7 @@ function App() {
         />
       )}
 
-      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} />}
+      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} totals={totals} />}
     </div>
   );
 }
@@ -3409,13 +3767,20 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
         <div className="goal-details">
           <div className="progress-line">
             <span>
-              {(calc.goalType || g.goalType) === "debtPayoff"
-                ? `${money(Math.max(0, Number(calc.start || 0) - Number(calc.current || 0)))} / ${money(calc.start)} paid`
-                : `${money(calc.current)} / ${money(calc.target)}`}
+              {calc.noTarget
+                ? "No target set"
+                : (calc.goalType || g.goalType) === "debtPayoff"
+                  ? `${money(Math.max(0, Number(calc.start || 0) - Number(calc.current || 0)))} / ${money(calc.start)} paid`
+                  : `${money(calc.current)} / ${money(calc.target)}`}
             </span>
-            <b>{pct}%</b>
+            <b>{calc.noTarget ? "—" : pct + "%"}</b>
           </div>
-          <div className="bar"><i style={{width:`${pct}%`}}></i></div>
+          <div className="bar"><i style={{width: calc.noTarget ? "0%" : `${pct}%`}}></i></div>
+          {calc.noTarget && (
+            <p className="muted" style={{fontSize:"13px",marginTop:"8px"}}>
+              Edit this goal and enter your FIRE number to start tracking progress.
+            </p>
+          )}
 
           {sparkPoints && (
             <div style={{margin:"10px 0 0"}}>
@@ -3926,7 +4291,7 @@ function EmojiPicker({ value, onChange }) {
   );
 }
 
-function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot }) {
+function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot, totals }) {
   const item = editor.item || {};
   const isNew = !item.id;
   const [presetPicked, setPresetPicked] = useState(!isNew); // skip preset screen when editing
@@ -3956,6 +4321,9 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
   const change = (k,v) => setForm(f => ({ ...f, [k]:v }));
 
   const applyPreset = (p) => {
+    const expenseBased = p.goalType === "fire" && totals
+      ? Math.round(Number(totals.expenses || 0) * 12 * 25)
+      : 0;
     setForm(f => ({
       ...f,
       name: p.name || f.name,
@@ -3964,6 +4332,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
       ...(p.frequency && { frequency: p.frequency, recurring: p.frequency !== "oneOff" }),
       ...(p.goalType  && { goalType:  p.goalType }),
       ...(p.color     && { color:     p.color }),
+      ...(expenseBased > 0 && { target: expenseBased }),
     }));
     setPresetPicked(true);
   };
@@ -4145,8 +4514,26 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <option value="fire">FIRE / Financial Independence</option>
             </select>
           </label>
-          {form.goalType === "netWorth" || form.goalType === "fire" ? (
-            <label>Metric<input value={form.goalType === "fire" ? "Financial Independence (25× expenses)" : "Net Worth"} disabled /></label>
+          {form.goalType === "netWorth" ? (
+            <label>Metric<input value="Net Worth" disabled /></label>
+          ) : form.goalType === "fire" ? (
+            <>
+              <label>
+                Your FIRE number
+                <input
+                  type="number"
+                  value={form.target}
+                  onChange={e => change("target", e.target.value)}
+                  placeholder="e.g. 1500000"
+                />
+                {(() => {
+                  const expenseBased = Math.round(Number(totals?.expenses || 0) * 12 * 25);
+                  return expenseBased > 0
+                    ? <small className="field-caption">Suggested from your expenses: {money(expenseBased)} (25× annual spend). Edit to override.</small>
+                    : <small className="field-caption">Enter your target net worth to reach financial independence. Add expenses in Cash Flow for an automatic suggestion.</small>;
+                })()}
+              </label>
+            </>
           ) : (
             <label>Linked Account
               <select value={form.accountId} onChange={e=>change("accountId", e.target.value)}>
@@ -4162,7 +4549,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <label>Starting Debt<input type="number" value={form.start} onChange={e=>change("start", e.target.value)} placeholder="Original debt amount" /></label>
               <label>Current Debt Override<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} placeholder="Only used if no account linked" /></label>
             </>
-          ) : form.goalType === "fire" ? null : (
+          ) : form.goalType === "fire" || form.goalType === "netWorth" ? null : (
             <>
               <label>Current Override<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} placeholder="Only used if no account linked" /></label>
               <label>Target<input type="number" value={form.target} onChange={e=>change("target", e.target.value)} /></label>
@@ -4257,8 +4644,15 @@ function calculateGoalProgress(goal, totals, accounts) {
 
   if (goalType === "fire") {
     current = Number(totals.net || 0);
-    const fireTarget = Math.max(1, Number(totals.expenses || 0) * 12 * 25);
+    // Use the user's manually set target. Fall back to 25× expenses only if
+    // no target has been set and expenses exist. Show 0 progress if neither.
+    const manualTarget = Number(goal.target || 0);
+    const expenseBased = Number(totals.expenses || 0) * 12 * 25;
+    const fireTarget = manualTarget > 0 ? manualTarget : expenseBased > 0 ? expenseBased : 0;
     sourceLabel = "Financial Independence";
+    if (fireTarget <= 0) {
+      return { goalType, current, target: 0, start, progress: 0, remaining: 0, sourceLabel, monthlyNeeded: 0, noTarget: true };
+    }
     const progress = clamp((current / fireTarget) * 100);
     const remaining = Math.max(0, fireTarget - current);
     return { goalType, current, target: fireTarget, start, progress, remaining, sourceLabel, monthlyNeeded: monthlyNeeded(remaining, goal.deadline) };
