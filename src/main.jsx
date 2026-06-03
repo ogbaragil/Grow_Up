@@ -932,14 +932,10 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   const out = getProfileMonthlyExpenses(state, totals);
   const cashSurplus = income - out;
 
-  // No $1 floor — only project if we have real data
-  const hasHistory = growths.length >= 2;
-  const hasSurplus = cashSurplus > 0;
+  // Only project from real historical growth — no surplus assumptions
   const monthlyAdd = hasHistory
     ? avgGrowth * scenarioConfig.multiplier
-    : hasSurplus
-      ? cashSurplus * 0.55 * scenarioConfig.multiplier
-      : null;
+    : null; // not enough data — show honest message
 
   const monthlyReturn = Math.pow(1 + scenarioConfig.annualReturn, 1/12) - 1;
 
@@ -954,7 +950,7 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
     return null;
   };
   const futureDate = (months) => months === null || months === undefined ? null : new Date(now.getFullYear(), now.getMonth() + months, 1);
-  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : monthlyAdd === null ? "Add income & expenses for a forecast" : "Beyond 60 years";
+  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : monthlyAdd === null ? "Save 2+ snapshots for a forecast" : "Beyond 60 years";
 
   const rows = [{
     icon:"●",
@@ -4775,24 +4771,7 @@ function estimateGoalCompletion(goal, state, currentCalc, totals) {
     })
     .filter(row => row.value !== null && Number.isFinite(row.value));
 
-  const cashSurplus = Math.max(0,
-    (state.transactions || []).filter(t => t.type === "income").reduce((s, t) => s + monthlyEquivalent(t), 0) -
-    (state.transactions || []).filter(t => t.type === "expense").reduce((s, t) => s + monthlyEquivalent(t), 0)
-  );
-
   if (rows.length < 2) {
-    if (cashSurplus > 0 && currentCalc.remaining > 0) {
-      const effectiveRate = cashSurplus * 0.6;
-      const monthsToFinish = Math.ceil(currentCalc.remaining / effectiveRate);
-      const completionKey = addMonths(state.selectedMonth || currentMonthKey(), monthsToFinish);
-      return {
-        label: monthLabel(completionKey),
-        detail: `Based on cash surplus · ${money(effectiveRate)}/mo`,
-        monthlyRate: effectiveRate,
-        monthsToFinish,
-        kind: "active"
-      };
-    }
     return {
       label: "Need more history",
       detail: "Save at least 2 monthly snapshots for a forecast.",
@@ -4842,40 +4821,31 @@ function estimateGoalCompletion(goal, state, currentCalc, totals) {
     remaining = Number(currentCalc.remaining || 0);
   }
 
-  // Task 8: blend with cash surplus
-  const surplusSignal = cashSurplus * 0.6;
-  const blendedRate = monthlyRate > 0 && cashSurplus > 0
-    ? (monthlyRate * 0.65) + (surplusSignal * 0.35)
-    : monthlyRate <= 0 && cashSurplus > 0
-      ? surplusSignal
-      : monthlyRate;
-  const basisLabel = cashSurplus > 0 ? "pace + surplus" : "historical pace";
-
   if (currentCalc.progress >= 100 || remaining <= 0) {
     return {
       label: "Already complete",
       detail: "Goal has been reached.",
-      monthlyRate: blendedRate,
+      monthlyRate,
       kind: "complete"
     };
   }
 
-  if (blendedRate <= 0) {
+  if (monthlyRate <= 0) {
     return {
       label: "No clear ETA",
-      detail: `Past data is flat or moving away from the goal. · based on ${basisLabel}`,
-      monthlyRate: blendedRate,
+      detail: "Historical data is flat or moving away from this goal.",
+      monthlyRate,
       kind: "warning"
     };
   }
 
-  const monthsToFinish = Math.ceil(remaining / blendedRate);
+  const monthsToFinish = Math.ceil(remaining / monthlyRate);
   const completionKey = addMonths(state.selectedMonth || currentMonthKey(), monthsToFinish);
 
   return {
     label: monthLabel(completionKey),
-    detail: `Based on ${money(blendedRate)}/mo · ${basisLabel}`,
-    monthlyRate: blendedRate,
+    detail: `Based on ${money(monthlyRate)}/mo historical pace`,
+    monthlyRate,
     monthsToFinish,
     kind: "active"
   };
