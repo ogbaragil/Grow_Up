@@ -5501,3 +5501,142 @@ button:focus-visible {
   background: rgba(251, 242, 216, 0.7) !important;
   border-color: rgba(201, 154, 46, .18) !important;
 }
+
+/* =========================================================
+   New Features CSS — Tasks 1–14
+   ========================================================= */
+
+/* Task 1: Snapshot note textarea */
+.snapshot-note-textarea {
+  width: 100%;
+  min-height: 72px;
+  border-radius: 14px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  resize: vertical;
+  margin-top: 12px;
+  display: block;
+}
+
+/* Task 1: Snapshot note display in history */
+.snapshot-note-display {
+  background: var(--bg);
+  border-left: 3px solid var(--line);
+  border-radius: 0 12px 12px 0;
+  padding: 14px 16px;
+  margin: 0 0 18px;
+}
+.snapshot-note-display p {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* Task 2: Look-ahead pills */
+.lookahead-pills {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.lookahead-pill {
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 999px;
+  font-weight: 900;
+  font-size: 14px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  color: var(--muted);
+  cursor: pointer;
+}
+.lookahead-pill.active {
+  background: var(--green);
+  color: white;
+  border-color: var(--green);
+}
+
+/* Task 3: Category breakdown */
+.category-breakdown-row {
+  padding: 10px 0;
+}
+
+/* Task 4: Gold goal card */
+.goal-card.gold { background: #f3e7c4; border-color: #e2c97e; }
+:root[data-theme="dark"] .goal-card.gold { background: #3a2e10; border-color: #6b5520; }
+
+/* Task 6: Account history drill-down */
+.account-history-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+}
+.account-history-row:last-child { border-bottom: none; }
+.account-history-row:active { opacity: 0.75; }
+.account-history-back {
+  color: var(--green);
+  font-weight: 900;
+  font-size: 14px;
+  margin-bottom: 8px;
+  display: block;
+}
+.kind-badge {
+  font-size: 11px;
+  font-weight: 900;
+  padding: 4px 8px;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+.kind-badge.asset { background: var(--green2); color: var(--green); }
+.kind-badge.debt { background: var(--red2); color: var(--red); }
+
+/* Task 10: ScreenTitle action slot */
+.screen-title-action {
+  display: flex;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+/* Task 12: Snapshot celebration banner */
+.snapshot-celebration-banner {
+  background: var(--green);
+  color: white;
+  border-radius: 16px;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 900;
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.snapshot-celebration-banner button {
+  color: white;
+  opacity: 0.8;
+  font-size: 20px;
+  background: none;
+  border: none;
+  flex: 0 0 auto;
+  line-height: 1;
+}
+
+/* Task 13: Past month info banner */
+.snapshot-banner.info {
+  background: var(--blue2);
+  color: var(--blue);
+  border-color: rgba(59,130,246,.22);
+}
+:root[data-theme="dark"] .snapshot-banner.info {
+  background: rgba(59,130,246,.15);
+  color: #93c5fd;
+  border-color: rgba(59,130,246,.28);
+}

@@ -155,6 +155,7 @@ const EMPTY_STATE = {
   emailGoalReminders: true,
   emailMilestoneEmails: true,
   onboardingDismissed: false,
+  firstSnapshotCelebrationDismissed: false,
   mode: "Real Mode",
   currency: "USD",
   selectedMonth: monthKey(),
@@ -864,7 +865,7 @@ function buildGrowUpInsights(state, totals) {
     const goalScores = activeGoals.map(g => {
       let calc = calculateGoalProgress(g, latestTotals, accountsForMonth);
       calc = refineDebtPayoffCalcWithHistory(g, latest, calc);
-      const forecast = estimateGoalCompletion(g, latest, calc);
+      const forecast = estimateGoalCompletion(g, latest, calc, latestTotals);
       return { goal:g, calc, forecast };
     }).sort((a,b)=>Number(b.calc.progress||0)-Number(a.calc.progress||0));
 
@@ -947,7 +948,7 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   activeGoals.forEach(goal => {
     let calc = calculateGoalProgress(goal, totals, accounts);
     calc = refineDebtPayoffCalcWithHistory(goal, latest, calc);
-    const forecast = estimateGoalCompletion(goal, latest, calc);
+    const forecast = estimateGoalCompletion(goal, latest, calc, totals);
     let d = forecast?.etaDate ? new Date(forecast.etaDate) : goal.deadline ? new Date(goal.deadline) : null;
     rows.push({
       icon: goal.icon || goalIconForType(goal.goalType),
@@ -1356,44 +1357,54 @@ function OnboardingTips({ state, setState, setTab }) {
 
   const steps = [
     { done: accountsDone, title:"Add your accounts", detail:"Start with the assets and debts that drive your net worth.", tab:"assets" },
-    { done: snapshotsDone, title:"Update two months", detail:"Two saved months unlock more useful trends and forecasting.", tab:"assets" },
+    { done: snapshotsDone, title:"Update two months", detail:"Save this month's balances, then come back next month and save again. Two snapshots unlock your trend chart, goal forecasting, and the full history table.", tab:"assets" },
     { done: cashDone, title:"Add cash flow", detail:"Salary, rent, subscriptions, and recurring bills make insights smarter.", tab:"cash" },
     { done: goalsDone, title:"Create one goal", detail:"A single target gives the timeline something meaningful to project.", tab:"goals" }
   ];
 
   const completeCount = steps.filter(s => s.done).length;
+  const snapshotCount = Object.keys(state.monthSnapshots || {}).length;
+  const showCelebration = snapshotCount === 1 && !state.firstSnapshotCelebrationDismissed;
 
   return (
-    <section className="onboarding-tips-card">
-      <div className="onboarding-head">
-        <div>
-          <p>Quick setup</p>
-          <h2>Get the best from Grow UP</h2>
+    <>
+      {showCelebration && (
+        <div className="snapshot-celebration-banner">
+          <span>First snapshot saved 🎉 Come back next month and save again to unlock trends and forecasting.</span>
+          <button onClick={() => setState(s => ({ ...s, firstSnapshotCelebrationDismissed: true }))}>×</button>
         </div>
-        <button type="button" onClick={()=>setState(s=>({...s,onboardingDismissed:true}))}>×</button>
-      </div>
+      )}
+      <section className="onboarding-tips-card">
+        <div className="onboarding-head">
+          <div>
+            <p>Quick setup</p>
+            <h2>Get the best from Grow UP</h2>
+          </div>
+          <button type="button" onClick={()=>setState(s=>({...s,onboardingDismissed:true}))}>×</button>
+        </div>
 
-      <div className="onboarding-progress">
-        <i style={{ width:`${(completeCount / steps.length) * 100}%` }}></i>
-      </div>
+        <div className="onboarding-progress">
+          <i style={{ width:`${(completeCount / steps.length) * 100}%` }}></i>
+        </div>
 
-      <div className="onboarding-steps">
-        {steps.map(step => (
-          <button
-            type="button"
-            key={step.title}
-            className={step.done ? "done" : ""}
-            onClick={()=>setTab(step.tab)}
-          >
-            <span>{step.done ? "✓" : "○"}</span>
-            <div>
-              <strong>{step.title}</strong>
-              <small>{step.detail}</small>
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
+        <div className="onboarding-steps">
+          {steps.map(step => (
+            <button
+              type="button"
+              key={step.title}
+              className={step.done ? "done" : ""}
+              onClick={()=>setTab(step.tab)}
+            >
+              <span>{step.done ? "✓" : "○"}</span>
+              <div>
+                <strong>{step.title}</strong>
+                <small>{step.detail}</small>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+    </>
   );
 }
 
@@ -1490,6 +1501,7 @@ function createMonthlySnapshotState(currentState = {}) {
     debts,
     net: assets - debts,
     accounts: cleanAccounts,
+    note: existingSnapshot?.note || "",
     createdAt: existingSnapshot?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -1710,7 +1722,7 @@ function App() {
         ) : insightsOpen ? (
           <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
         ) : compoundOpen ? (
-          <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} />
+          <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} state={activeState} totals={totals} />
         ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
@@ -1959,7 +1971,7 @@ function computeTotals(state) {
   return { assets, debts, net: assets-debts, prevAssets, prevDebts, prevNet: prevAssets-prevDebts, income, expenses };
 }
 
-function ScreenTitle({ title, sub, setMenuOpen, back }) {
+function ScreenTitle({ title, sub, setMenuOpen, back, action }) {
   return (
     <section className="page-header">
       {back && <button className="round-nav-btn" onClick={back}><ArrowLeft size={24}/></button>}
@@ -1967,6 +1979,7 @@ function ScreenTitle({ title, sub, setMenuOpen, back }) {
         <h1>{title}</h1>
         {sub && <p>{sub}</p>}
       </div>
+      {action && <div className="screen-title-action">{action}</div>}
       <button className="mini-menu-btn" onClick={() => setMenuOpen?.(true)} aria-label="Open menu"><Menu size={22}/></button>
     </section>
   );
@@ -2088,7 +2101,7 @@ function selectSmartDashboardGoal(goals, dashboardState, dashboardTotals, accoun
   const enriched = activeGoals.map(goal => {
     let calc = calculateGoalProgress(goal, dashboardTotals, accounts);
     calc = refineDebtPayoffCalcWithHistory(goal, dashboardState, calc);
-    const forecast = estimateGoalCompletion(goal, dashboardState, calc);
+    const forecast = estimateGoalCompletion(goal, dashboardState, calc, dashboardTotals);
 
     const deadlineScore = goal.deadline
       ? Math.max(0, new Date(goal.deadline).getTime() - Date.now())
@@ -2274,7 +2287,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
   if (primaryGoal && !goalCalc) {
     goalCalc = calculateGoalProgress(primaryGoal, dashboardTotals, accounts);
     goalCalc = refineDebtPayoffCalcWithHistory(primaryGoal, dashboardState, goalCalc);
-    goalForecast = estimateGoalCompletion(primaryGoal, dashboardState, goalCalc);
+    goalForecast = estimateGoalCompletion(primaryGoal, dashboardState, goalCalc, dashboardTotals);
   }
 
   return (
@@ -2550,13 +2563,13 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   const [editingBalances, setEditingBalances] = useState(false);
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const [hasUnsavedBalances, setHasUnsavedBalances] = useState(false);
+  const noteDebounceRef = useRef(null);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
   const prevSnapshot = state.monthSnapshots?.[addMonths(state.selectedMonth, -1)];
 
   const displayedAccounts = selectedSnapshot?.accounts || state.accounts;
   const accountsWithPrev = displayedAccounts.map(account => {
     const prevAccount = prevSnapshot?.accounts?.find(a => a.id === account.id);
-    // Rule: if previous month has no saved account balance, assume zero.
     const previous = prevAccount ? Number(prevAccount.balance || 0) : 0;
     return { ...account, previous };
   });
@@ -2571,7 +2584,6 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     setState(s => {
       const existingSnapshot = s.monthSnapshots?.[s.selectedMonth];
 
-      // If this month already has a snapshot, edit that snapshot directly.
       if (existingSnapshot) {
         const updatedAccounts = (existingSnapshot.accounts || s.accounts).map(a =>
           a.id === id ? { ...a, balance:numericValue } : a
@@ -2596,7 +2608,6 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
         };
       }
 
-      // If no snapshot exists yet, edit live account balances.
       const priorSnapshot = s.monthSnapshots?.[addMonths(s.selectedMonth, -1)];
 
       return {
@@ -2612,6 +2623,23 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
         })
       };
     });
+  };
+
+  const updateNote = (value) => {
+    if (noteDebounceRef.current) clearTimeout(noteDebounceRef.current);
+    noteDebounceRef.current = setTimeout(() => {
+      setState(s => {
+        const snap = s.monthSnapshots?.[s.selectedMonth];
+        if (!snap) return s;
+        return {
+          ...s,
+          monthSnapshots: {
+            ...s.monthSnapshots,
+            [s.selectedMonth]: { ...snap, note: value }
+          }
+        };
+      });
+    }, 600);
   };
 
   const openAddAccount = (kind) => {
@@ -2630,6 +2658,13 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     setEditingBalances(value => !value);
   };
 
+  const openLogHistory = () => {
+    if (isDemo) return readOnlyDemoAlert();
+    setAssetMenuOpen(false);
+    setState(s => ({ ...s, selectedMonth: addMonths(s.selectedMonth, -1) }));
+    setEditingBalances(true);
+  };
+
   const saveAndClose = async () => {
     if (isDemo) return readOnlyDemoAlert();
     setAssetMenuOpen(false);
@@ -2638,10 +2673,18 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     await (autoSaveMonthSnapshot ? autoSaveMonthSnapshot(state) : saveSnapshot());
   };
 
+  const isPastMonth = !isFutureMonth(state.selectedMonth) && state.selectedMonth !== currentMonthKey();
+
   return (
     <div className="screen">
       <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
       <MonthBar state={state} setState={setState} thin hasUnsaved={hasUnsavedBalances} />
+
+      {isPastMonth && editingBalances && (
+        <div className="snapshot-banner info">
+          You're editing a past month — enter the balances as they were then and tap ✓ to save.
+        </div>
+      )}
 
       <div className={`snapshot-banner ${hasUnsavedBalances ? "unsaved" : "saved"}`}>
         {hasUnsavedBalances
@@ -2650,6 +2693,15 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             ? `Snapshot saved for ${monthLabel(state.selectedMonth)} · ${editingBalances ? "editing enabled" : "locked"}`
             : "Current month · changes save when you tap the green check"}
       </div>
+
+      {selectedSnapshot && (
+        <textarea
+          className="snapshot-note-textarea"
+          placeholder="Add a note about this month — a bonus, a big purchase, a market event…"
+          defaultValue={selectedSnapshot.note || ""}
+          onChange={e => updateNote(e.target.value)}
+        />
+      )}
 
       {state.accounts.length === 0 ? (
         <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>openAddAccount("asset")}/>
@@ -2690,6 +2742,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
           <button onClick={()=>openAddAccount("asset")}><span className="menu-icon green">+</span><b>Add Asset</b></button>
           <button onClick={()=>openAddAccount("debt")}><span className="menu-icon red">+</span><b>Add Debt</b></button>
           <button onClick={toggleBalanceEdit}><span className="menu-icon gray">✎</span><b>{editingBalances ? "Done Editing" : "Edit Balances"}</b></button>
+          <button onClick={openLogHistory}><span className="menu-icon gray">📅</span><b>Log past month</b></button>
         </div>
       )}
 
@@ -2784,14 +2837,57 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBa
   );
 }
 
+function exportHistoryCSV(state) {
+  const rows = historyRows(state);
+  const header = "Month,Assets,Debts,Net Worth,Note";
+  const lines = rows.map(r => {
+    const note = (state.monthSnapshots?.[r.key]?.note || "").replace(/"/g, '""');
+    return `${monthLabel(r.key)},${r.assets},${r.debts},${r.net},"${note}"`;
+  });
+  const csv = [header, ...lines].join("\n");
+  const a = document.createElement("a");
+  a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+  a.download = "growup-history.csv";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
 function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMenuOpen }) {
   const rows = historyRows(state);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
   const current = state.monthSnapshots?.[state.selectedMonth] || { assets:totals.assets, debts:totals.debts, net:totals.net, accounts:state.accounts };
   const titleMap = { net:"Net Worth", assets:"Total Assets", debts:"Total Debts" };
+  const currentNote = state.monthSnapshots?.[state.selectedMonth]?.note;
+
+  // Build unique accounts list across all snapshots
+  const allAccountsMap = new Map();
+  Object.values(state.monthSnapshots || {}).forEach(snap => {
+    (snap.accounts || []).forEach(a => {
+      if (!allAccountsMap.has(a.id)) allAccountsMap.set(a.id, a);
+    });
+  });
+  const allAccounts = Array.from(allAccountsMap.values());
+
+  // Build chart data for selected account
+  const selectedAccount = selectedAccountId ? allAccountsMap.get(selectedAccountId) : null;
+  const accountChartData = selectedAccountId
+    ? rows.slice().reverse().map(r => {
+        const snap = state.monthSnapshots?.[r.key];
+        const acc = (snap?.accounts || []).find(a => a.id === selectedAccountId);
+        return acc ? { month: shortMonthLabel(r.key), balance: Number(acc.balance || 0) } : null;
+      }).filter(Boolean)
+    : [];
 
   return (
     <div className="screen">
-      <ScreenTitle title="History" sub="Month-by-month financial summary." setMenuOpen={setMenuOpen} back={()=>setHistoryMetric(null)} />
+      <ScreenTitle
+        title="History"
+        sub="Month-by-month financial summary."
+        setMenuOpen={setMenuOpen}
+        back={()=>setHistoryMetric(null)}
+        action={rows.length > 0 ? <button className="secondary" style={{fontSize:"13px",padding:"8px 12px"}} onClick={() => exportHistoryCSV(state)}>Export CSV</button> : null}
+      />
       <MonthBar state={state} setState={setState} thin />
 
       <Card className="center-card">
@@ -2800,8 +2896,47 @@ function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMen
         <p>{titleMap[metric]} for {monthLabel(state.selectedMonth)}</p>
       </Card>
 
+      {currentNote && (
+        <div className="snapshot-note-display">
+          <p>{currentNote}</p>
+        </div>
+      )}
+
       <DonutCard title="What I Own" kind="asset" accounts={(current.accounts || []).filter(a=>a.kind==="asset")} />
       <DonutCard title="What I Owe" kind="debt" accounts={(current.accounts || []).filter(a=>a.kind==="debt")} />
+
+      <Card>
+        <h2>Account History</h2>
+        {selectedAccount ? (
+          <>
+            <button className="account-history-back" onClick={() => setSelectedAccountId(null)}>← All accounts</button>
+            <p style={{margin:"8px 0 0",fontWeight:900}}>{selectedAccount.icon || "💼"} {selectedAccount.name}</p>
+            {accountChartData.length >= 2 ? (
+              <div style={{height:"180px", marginTop:"12px"}}>
+                <ResponsiveContainer width="100%" height={180}>
+                  <LineChart data={accountChartData}>
+                    <XAxis dataKey="month" tick={{fontSize:11}} axisLine={false} tickLine={false} />
+                    <YAxis hide />
+                    <Tooltip formatter={(v) => money(v)} />
+                    <Line type="monotone" dataKey="balance" stroke={selectedAccount.kind === "debt" ? "var(--red)" : "var(--green)"} strokeWidth={3} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <p className="muted" style={{marginTop:"12px"}}>Not enough history for this account yet.</p>
+            )}
+          </>
+        ) : (
+          allAccounts.length ? allAccounts.map(a => (
+            <div key={a.id} className="account-history-row" onClick={() => setSelectedAccountId(a.id)}>
+              <span className={`round-icon ${a.kind === "debt" ? "debt" : "asset"}`} style={{width:"36px",height:"36px",fontSize:"18px"}}>{a.icon || (a.kind==="debt"?"💳":"💼")}</span>
+              <span style={{flex:1,fontWeight:800,fontSize:"15px"}}>{a.name}</span>
+              <span className={`kind-badge ${a.kind}`}>{a.kind}</span>
+              <span style={{color:"var(--muted)",fontSize:"18px"}}>›</span>
+            </div>
+          )) : <p className="muted">No account data in snapshots yet.</p>
+        )}
+      </Card>
 
       <Card className="history-table">
         <div className="table-head"><span>Month</span><span>Assets</span><span>Debts</span><span>Net · MoM</span></div>
@@ -2857,9 +2992,52 @@ function DonutCard({ title, kind, accounts }) {
 }
 
 function CashFlow({ state, totals, setEditor, setMenuOpen }) {
-  const next7 = upcomingTransactions(state.transactions, 7);
+  const [lookAhead, setLookAhead] = useState(7);
+  const next = upcomingTransactions(state.transactions, lookAhead);
   const recurringIncome = recurringCashflowTransactions(state.transactions, "income");
   const recurringExpenses = recurringCashflowTransactions(state.transactions, "expense");
+
+  // Category breakdown
+  const categoryMap = new Map();
+  recurringExpenses.forEach(t => {
+    const cat = (t.category || "").trim();
+    if (!cat) return;
+    categoryMap.set(cat, (categoryMap.get(cat) || 0) + monthlyEquivalent(t));
+  });
+  const categoryRows = Array.from(categoryMap.entries())
+    .map(([cat, total]) => ({ cat, total }))
+    .sort((a, b) => b.total - a.total);
+  const categoryTotal = categoryRows.reduce((s, r) => s + r.total, 0);
+
+  if (state.transactions.length === 0) {
+    return (
+      <div className="screen">
+        <ScreenTitle title="Cash Flow" sub="See what's coming in and what's going out." setMenuOpen={setMenuOpen} />
+        <Card>
+          <h2>Your cash flow, at a glance</h2>
+          <p className="muted">Add recurring income and expenses to see your monthly surplus, upcoming bills, and spending by category.</p>
+          <div style={{margin:"18px 0 6px"}}>
+            {[
+              { icon:"💵", name:"Salary", sub:"monthly · income", amount:"+$5,000", income:true },
+              { icon:"🏡", name:"Rent", sub:"monthly · expense", amount:"-$1,800", income:false },
+              { icon:"📱", name:"Phone plan", sub:"monthly · expense", amount:"-$45", income:false }
+            ].map(ex => (
+              <div key={ex.name} className="transaction-row" style={{opacity:0.6}}>
+                <div className={`round-icon ${ex.income ? "asset" : "debt"}`}>{ex.icon}</div>
+                <div className="row-main">
+                  <strong>{ex.name}</strong>
+                  <span>{ex.sub}</span>
+                </div>
+                <strong className={ex.income ? "success" : "danger"}>{ex.amount}</strong>
+              </div>
+            ))}
+          </div>
+          <button className="primary full" style={{marginTop:"8px"}} onClick={()=>setEditor({ type:"transaction" })}>Add your first transaction</button>
+        </Card>
+        <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
+      </div>
+    );
+  }
 
   return (
     <div className="screen">
@@ -2873,24 +3051,40 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
         <div className="net-line"><span>Net</span><strong className={totals.income - totals.expenses >= 0 ? "success" : "danger"}>{money(totals.income - totals.expenses)}</strong></div>
       </Card>
 
-      {state.transactions.length === 0 ? (
-        <EmptyState
-          title="Start your cash flow"
-          text="Add an income or expense to see upcoming bills, monthly surplus, and recurring patterns here."
-          action="Add your first transaction"
-          onClick={()=>setEditor({ type:"transaction" })}
-        />
-      ) : (
-        <>
-          <Card>
-            <div className="section-title"><h2>Next 7 Days <ChevronDown size={20}/></h2><b>{next7.length} upcoming</b></div>
-            {next7.length ? next7.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor}/>) : <p className="muted">No upcoming transactions yet.</p>}
-          </Card>
+      <Card>
+        <div className="lookahead-pills">
+          {[7, 14, 30].map(d => (
+            <button
+              key={d}
+              className={lookAhead === d ? "lookahead-pill active" : "lookahead-pill"}
+              onClick={() => setLookAhead(d)}
+            >{d} days</button>
+          ))}
+        </div>
+        <div className="section-title"><h2>Next {lookAhead} Days <ChevronDown size={20}/></h2><b>{next.length} upcoming</b></div>
+        {next.length ? next.map(t => <TransactionRow key={t.id + (t.occurrenceDate||"")} t={t} setEditor={setEditor}/>) : <p className="muted">No upcoming transactions in this window.</p>}
+      </Card>
 
-          <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
-          <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
-        </>
+      <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
+      <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+
+      {categoryRows.length >= 2 && (
+        <Card>
+          <h2>Spending by Category</h2>
+          {categoryRows.map((row, i) => (
+            <div key={row.cat} className="category-breakdown-row" style={{borderBottom: i < categoryRows.length - 1 ? "1px solid var(--line)" : "none"}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:"15px"}}>{row.cat}</span>
+                <span style={{fontSize:"15px",fontWeight:900,color:"var(--muted)"}}>{money(row.total)}</span>
+              </div>
+              <div style={{height:"6px",borderRadius:"999px",background:"var(--line)",marginTop:"6px",overflow:"hidden"}}>
+                <div style={{height:"100%",borderRadius:"999px",background:"var(--green)",width:`${categoryTotal > 0 ? (row.total/categoryTotal)*100 : 0}%`}}></div>
+              </div>
+            </div>
+          ))}
+        </Card>
       )}
+
       <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
     </div>
   );
@@ -2912,7 +3106,7 @@ function TransactionRow({ t, setEditor, controls=false }) {
       <div className={`round-icon ${t.type === "income" ? "asset" : "debt"}`}>{t.icon || (t.type==="income" ? "💵" : "💳")}</div>
       <div className="row-main">
         <strong>{t.name}</strong>
-        <span>{formatDate(t.occurrenceDate || t.date)} · {relativeDate(t.occurrenceDate || t.date)} · {frequencyLabel(t.frequency || (t.recurring ? "monthly" : "oneOff"))}</span>
+        <span>{formatDate(t.occurrenceDate || t.date)} · {relativeDate(t.occurrenceDate || t.date)} · {frequencyLabel(t.frequency || (t.recurring ? "monthly" : "oneOff"))}{t.endsOn ? ` · ends ${formatDate(t.endsOn)}` : ""}</span>
       </div>
       <strong className={t.type === "income" ? "success" : "danger"}>{t.type === "income" ? "+" : "-"}{money(t.amount)}</strong>
       {controls && <button className="icon-btn" onClick={()=>setEditor({ type:"transaction", item:t })}><Pencil size={20}/></button>}
@@ -2938,6 +3132,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
   const [goalMenuOpen, setGoalMenuOpen] = useState(false);
   const [reorderMode, setReorderMode] = useState(false);
   const [showArchivedGoals, setShowArchivedGoals] = useState(false);
+  const [debtStrategy, setDebtStrategy] = useState("avalanche");
 
   const totals = computeTotals(state);
   const accountsForMonth = getAccountsForSelectedMonth(state);
@@ -2945,6 +3140,29 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
   const allGoals = state.goals || [];
   const activeGoals = allGoals.filter(g => !g.archived);
   const archivedGoals = allGoals.filter(g => g.archived);
+  const debtGoals = activeGoals.filter(g => g.goalType === "debtPayoff");
+
+  const sortedDebtGoalIds = debtGoals.length >= 2
+    ? debtGoals
+        .map(g => {
+          let calc = calculateGoalProgress(g, totals, accountsForMonth);
+          calc = refineDebtPayoffCalcWithHistory(g, state, calc);
+          return { id: g.id, remaining: Number(calc.remaining || 0) };
+        })
+        .sort((a, b) => debtStrategy === "avalanche" ? b.remaining - a.remaining : a.remaining - b.remaining)
+        .map(g => g.id)
+    : null;
+
+  const sortedActiveGoals = sortedDebtGoalIds
+    ? activeGoals.slice().sort((a, b) => {
+        const ai = sortedDebtGoalIds.indexOf(a.id);
+        const bi = sortedDebtGoalIds.indexOf(b.id);
+        if (ai === -1 && bi === -1) return 0;
+        if (ai === -1) return 1;
+        if (bi === -1) return -1;
+        return ai - bi;
+      })
+    : activeGoals;
 
   const toggle = (id) => setState(s => ({
     ...s,
@@ -3006,9 +3224,24 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
 
       {reorderMode && <div className="snapshot-banner">Reorder mode enabled · use ↑ ↓ on each goal</div>}
 
+      {debtGoals.length >= 2 && (
+        <Card>
+          <h2>Debt Payoff Strategy</h2>
+          <div className="dashboard-style-toggle" style={{marginTop:"12px"}}>
+            <button type="button" className={debtStrategy === "avalanche" ? "active" : ""} onClick={() => setDebtStrategy("avalanche")}>Avalanche</button>
+            <button type="button" className={debtStrategy === "snowball" ? "active" : ""} onClick={() => setDebtStrategy("snowball")}>Snowball</button>
+          </div>
+          <p className="muted" style={{marginTop:"10px",fontSize:"14px"}}>
+            {debtStrategy === "avalanche"
+              ? "Attack the largest debt first to minimise total interest."
+              : "Clear the smallest debt first for quick wins and momentum."}
+          </p>
+        </Card>
+      )}
+
       <section className="goals-section active-goals-section">
         <div className="goals-section-label"><span></span><strong>Active Goals</strong></div>
-        {activeGoals.length ? activeGoals.map((g, index) => (
+        {sortedActiveGoals.length ? sortedActiveGoals.map((g, index) => (
           <GoalCard
             key={g.id}
             g={g}
@@ -3022,7 +3255,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
             reorderMode={reorderMode}
             moveGoal={moveGoal}
             canMoveUp={index > 0}
-            canMoveDown={index < activeGoals.length - 1}
+            canMoveDown={index < sortedActiveGoals.length - 1}
           />
         )) : (
           <EmptyState title="No active goals" text="Add your next wealth goal or restore one from the archive." action="Add goal" onClick={openAddGoal}/>
@@ -3091,7 +3324,34 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
   calc = refineDebtPayoffCalcWithHistory(g, state, calc);
   const pct = Math.round(calc.progress);
   const status = goalStatus(calc, g);
-  const forecast = estimateGoalCompletion(g, state, calc);
+  const forecast = estimateGoalCompletion(g, state, calc, totals);
+
+  // Build sparkline from historical snapshots (Task 7)
+  const sparkData = Object.entries(state.monthSnapshots || {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, snap]) => {
+      const val = goalValueForSnapshot(g, snap);
+      if (val === null || !Number.isFinite(val)) return null;
+      const target = Number(g.target || 0);
+      const goalType = g.goalType || "accountGrowth";
+      if (goalType === "debtPayoff") {
+        const start = Math.max(Number(g.start || 0), Number(g.current || 0), val);
+        return start > 0 ? clamp(((start - val) / start) * 100) : 0;
+      }
+      return target > 0 ? clamp((val / target) * 100) : 0;
+    })
+    .filter(v => v !== null);
+
+  const sparkPoints = sparkData.length >= 2 ? (() => {
+    const min = Math.min(...sparkData);
+    const max = Math.max(...sparkData);
+    const range = Math.max(1, max - min);
+    return sparkData.map((v, i) => {
+      const x = (i / (sparkData.length - 1)) * 200;
+      const y = 38 - ((v - min) / range) * 34;
+      return `${x},${y}`;
+    }).join(" ");
+  })() : null;
 
   return (
     <div className={`goal-card slim ${g.color || goalColorForType(g.goalType)} ${g.open ? "open":""}`}>
@@ -3125,6 +3385,16 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
             <b>{pct}%</b>
           </div>
           <div className="bar"><i style={{width:`${pct}%`}}></i></div>
+
+          {sparkPoints && (
+            <div style={{margin:"10px 0 0"}}>
+              <svg viewBox="0 0 200 40" style={{width:"100%",height:"40px",display:"block"}}>
+                <polyline points={sparkPoints} fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+              <p style={{fontSize:"11px",opacity:0.7,margin:"2px 0 0",color:"inherit"}}>Progress over time</p>
+            </div>
+          )}
+
           <dl>
             <dt>Goal type</dt><dd>{goalTypeLabel(g.goalType)}</dd>
             <dt>Target</dt><dd>{money(calc.target)}</dd>
@@ -3156,12 +3426,15 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
   );
 }
 
-function CompoundWealthPage({ setCompoundOpen, setMenuOpen }) {
+function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, totals }) {
+  const startingNet = totals ? Math.max(0, Number(totals.net || 0)) : 20000;
+  const startingSurplus = totals ? Math.max(0, Math.round((totals.income || 0) - (totals.expenses || 0))) : 2100;
+
   const [inputs, setInputs] = useState({
-    start: 20000,
-    monthly: 2100,
-    years: 16,
-    rate: 10,
+    start: startingNet || 20000,
+    monthly: startingSurplus || 2100,
+    years: 20,
+    rate: 7,
     startYear: new Date().getFullYear(),
     age: 35
   });
@@ -3198,7 +3471,7 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen }) {
   const totalContributions = Number(inputs.start || 0) + (Number(inputs.monthly || 0) * 12 * Number(inputs.years || 0));
   const totalGrowth = Math.max(0, futureValue - totalContributions);
 
-  const reset = () => setInputs({ start:20000, monthly:2100, years:16, rate:10, startYear:new Date().getFullYear(), age:35 });
+  const reset = () => setInputs({ start: startingNet || 20000, monthly: startingSurplus || 2100, years: 20, rate: 7, startYear: new Date().getFullYear(), age: 35 });
 
   return (
     <div className="screen compound-screen">
@@ -3214,8 +3487,8 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen }) {
       <Card>
         <span className="section-chip">Scenario inputs</span>
         <div className="compound-grid">
-          <label>Starting amount ($)<input type="number" value={inputs.start} onChange={e=>change("start", e.target.value)} /></label>
-          <label>Monthly contribution ($)<input type="number" value={inputs.monthly} onChange={e=>change("monthly", e.target.value)} /></label>
+          <label>Starting amount ($)<input type="number" value={inputs.start} onChange={e=>change("start", e.target.value)} /><small className="field-caption">Pre-filled from your current net worth</small></label>
+          <label>Monthly contribution ($)<input type="number" value={inputs.monthly} onChange={e=>change("monthly", e.target.value)} /><small className="field-caption">Pre-filled from your cash surplus</small></label>
           <label>Years<input type="number" value={inputs.years} onChange={e=>change("years", e.target.value)} /></label>
           <label>Annual rate (%)<input type="number" value={inputs.rate} onChange={e=>change("rate", e.target.value)} /></label>
           <label>Start year (calendar)<input type="number" value={inputs.startYear} onChange={e=>change("startYear", e.target.value)} /></label>
@@ -3529,6 +3802,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
     date:item.date ? item.date.slice(0,10) : new Date().toISOString().slice(0,10),
     recurring:item.recurring || false,
     frequency:item.frequency || (item.recurring ? "monthly" : "oneOff"),
+    endsOn:item.endsOn || "",
     goalType:item.goalType || "netWorth",
     accountId:item.accountId || "",
     account:item.account || "",
@@ -3590,7 +3864,8 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         category:form.category,
         date:new Date(form.date).toISOString(),
         frequency,
-        recurring:frequency !== "oneOff"
+        recurring:frequency !== "oneOff",
+        endsOn: form.endsOn || null
       };
       setState(s => ({ ...s, transactions:item.id ? s.transactions.map(t => t.id === item.id ? tx : t) : [...s.transactions, tx] }));
     }
@@ -3660,6 +3935,12 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <option value="yearly">Yearly</option>
             </select>
           </label>
+          {form.frequency !== "oneOff" && (
+            <label>Ends on (optional)
+              <input type="date" value={form.endsOn || ""} onChange={e => change("endsOn", e.target.value)} />
+              <small className="field-caption">Leave blank for ongoing</small>
+            </label>
+          )}
         </>}
 
         {editor.type === "goal" && <>
@@ -3668,11 +3949,13 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <option value="netWorth">Net Worth Goal</option>
               <option value="accountGrowth">Account Growth Goal</option>
               <option value="debtPayoff">Debt Payoff Goal</option>
+              <option value="savings">Savings Goal</option>
+              <option value="fire">FIRE / Financial Independence</option>
             </select>
           </label>
 
-          {form.goalType === "netWorth" ? (
-            <label>Metric<input value="Net Worth" disabled /></label>
+          {form.goalType === "netWorth" || form.goalType === "fire" ? (
+            <label>Metric<input value={form.goalType === "fire" ? "Financial Independence (25× expenses)" : "Net Worth"} disabled /></label>
           ) : (
             <label>Linked Account
               <select value={form.accountId} onChange={e=>change("accountId", e.target.value)}>
@@ -3689,7 +3972,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <label>Starting Debt<input type="number" value={form.start} onChange={e=>change("start", e.target.value)} placeholder="Original debt amount" /></label>
               <label>Current Debt Override<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} placeholder="Only used if no account linked" /></label>
             </>
-          ) : (
+          ) : form.goalType === "fire" ? null : (
             <>
               <label>Current Override<input type="number" value={form.current} onChange={e=>change("current", e.target.value)} placeholder="Only used if no account linked" /></label>
               <label>Target<input type="number" value={form.target} onChange={e=>change("target", e.target.value)} /></label>
@@ -3697,7 +3980,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
           )}
 
           <label>Deadline<input type="date" value={form.deadline} onChange={e=>change("deadline", e.target.value)} /></label>
-          <label>Color<select value={form.color} onChange={e=>change("color", e.target.value)}><option value="green">Green</option><option value="purple">Purple</option><option value="red">Red</option></select></label>
+          <label>Color<select value={form.color} onChange={e=>change("color", e.target.value)}><option value="green">Green</option><option value="purple">Purple</option><option value="red">Red</option><option value="blue">Blue</option><option value="gold">Gold</option></select></label>
         </>}
 
         <button className="primary full" onClick={save}>Save</button>
@@ -3773,6 +4056,23 @@ function calculateGoalProgress(goal, totals, accounts) {
       sourceLabel,
       monthlyNeeded: monthlyNeeded(remaining, goal.deadline)
     };
+  }
+
+  if (goalType === "savings") {
+    current = linkedAccount ? Number(linkedAccount.balance || 0) : Number(goal.current || 0);
+    sourceLabel = linkedAccount?.name || goal.account || "Manual account";
+    const progress = target > 0 ? clamp((current / target) * 100) : 0;
+    const remaining = Math.max(0, target - current);
+    return { goalType, current, target, start, progress, remaining, sourceLabel, monthlyNeeded: monthlyNeeded(remaining, goal.deadline) };
+  }
+
+  if (goalType === "fire") {
+    current = Number(totals.net || 0);
+    const fireTarget = Math.max(1, Number(totals.expenses || 0) * 12 * 25);
+    sourceLabel = "Financial Independence";
+    const progress = clamp((current / fireTarget) * 100);
+    const remaining = Math.max(0, fireTarget - current);
+    return { goalType, current, target: fireTarget, start, progress, remaining, sourceLabel, monthlyNeeded: monthlyNeeded(remaining, goal.deadline) };
   }
 
   const progress = target > 0 ? clamp((current / target) * 100) : 0;
@@ -3879,7 +4179,7 @@ function goalValueForSnapshot(goal, snapshot) {
   return Number(account.balance || 0);
 }
 
-function estimateGoalCompletion(goal, state, currentCalc) {
+function estimateGoalCompletion(goal, state, currentCalc, totals) {
   const rows = historyRows(state)
     .slice()
     .sort((a, b) => a.key.localeCompare(b.key))
@@ -3892,7 +4192,24 @@ function estimateGoalCompletion(goal, state, currentCalc) {
     })
     .filter(row => row.value !== null && Number.isFinite(row.value));
 
+  const cashSurplus = Math.max(0,
+    (state.transactions || []).filter(t => t.type === "income").reduce((s, t) => s + monthlyEquivalent(t), 0) -
+    (state.transactions || []).filter(t => t.type === "expense").reduce((s, t) => s + monthlyEquivalent(t), 0)
+  );
+
   if (rows.length < 2) {
+    if (cashSurplus > 0 && currentCalc.remaining > 0) {
+      const effectiveRate = cashSurplus * 0.6;
+      const monthsToFinish = Math.ceil(currentCalc.remaining / effectiveRate);
+      const completionKey = addMonths(state.selectedMonth || currentMonthKey(), monthsToFinish);
+      return {
+        label: monthLabel(completionKey),
+        detail: `Based on cash surplus · ${money(effectiveRate)}/mo`,
+        monthlyRate: effectiveRate,
+        monthsToFinish,
+        kind: "active"
+      };
+    }
     return {
       label: "Need more history",
       detail: "Save at least 2 monthly snapshots for a forecast.",
@@ -3901,9 +4218,6 @@ function estimateGoalCompletion(goal, state, currentCalc) {
     };
   }
 
-  // Use up to 12 historical points for a more stable estimate.
-  // This fixes debt payoff goals where the last few months may be flat
-  // but the broader trend clearly shows debt reduction.
   const recent = rows.slice(-12);
   const first = recent[0];
   const last = recent[recent.length - 1];
@@ -3914,10 +4228,8 @@ function estimateGoalCompletion(goal, state, currentCalc) {
   let remaining = Number(currentCalc.remaining || 0);
 
   if (goalType === "debtPayoff") {
-    // Debt payoff improves when debt balance drops.
     monthlyRate = (Number(first.value || 0) - Number(last.value || 0)) / monthSpan;
 
-    // If broad trend is flat, try the strongest older-to-current drop.
     if (monthlyRate <= 0) {
       const bestOlder = recent
         .slice(0, -1)
@@ -3947,31 +4259,40 @@ function estimateGoalCompletion(goal, state, currentCalc) {
     remaining = Number(currentCalc.remaining || 0);
   }
 
+  // Task 8: blend with cash surplus
+  const surplusSignal = cashSurplus * 0.6;
+  const blendedRate = monthlyRate > 0 && cashSurplus > 0
+    ? (monthlyRate * 0.65) + (surplusSignal * 0.35)
+    : monthlyRate <= 0 && cashSurplus > 0
+      ? surplusSignal
+      : monthlyRate;
+  const basisLabel = cashSurplus > 0 ? "pace + surplus" : "historical pace";
+
   if (currentCalc.progress >= 100 || remaining <= 0) {
     return {
       label: "Already complete",
       detail: "Goal has been reached.",
-      monthlyRate,
+      monthlyRate: blendedRate,
       kind: "complete"
     };
   }
 
-  if (monthlyRate <= 0) {
+  if (blendedRate <= 0) {
     return {
       label: "No clear ETA",
-      detail: "Past data is flat or moving away from the goal.",
-      monthlyRate,
+      detail: `Past data is flat or moving away from the goal. · based on ${basisLabel}`,
+      monthlyRate: blendedRate,
       kind: "warning"
     };
   }
 
-  const monthsToFinish = Math.ceil(remaining / monthlyRate);
+  const monthsToFinish = Math.ceil(remaining / blendedRate);
   const completionKey = addMonths(state.selectedMonth || currentMonthKey(), monthsToFinish);
 
   return {
     label: monthLabel(completionKey),
-    detail: `Based on recent pace of ${money(monthlyRate)}/mo.`,
-    monthlyRate,
+    detail: `Based on ${money(blendedRate)}/mo · ${basisLabel}`,
+    monthlyRate: blendedRate,
     monthsToFinish,
     kind: "active"
   };
@@ -4029,7 +4350,9 @@ function goalTypeLabel(type) {
   return {
     netWorth: "Net Worth Goal",
     accountGrowth: "Account Growth Goal",
-    debtPayoff: "Debt Payoff Goal"
+    debtPayoff: "Debt Payoff Goal",
+    savings: "Savings Goal",
+    fire: "FIRE"
   }[type || "accountGrowth"] || "Goal";
 }
 
@@ -4037,7 +4360,9 @@ function goalIconForType(type) {
   return {
     netWorth: "🎯",
     accountGrowth: "💼",
-    debtPayoff: "⚡"
+    debtPayoff: "⚡",
+    savings: "🏦",
+    fire: "🔥"
   }[type || "accountGrowth"] || "🎯";
 }
 
@@ -4045,7 +4370,9 @@ function goalColorForType(type) {
   return {
     netWorth: "purple",
     accountGrowth: "green",
-    debtPayoff: "red"
+    debtPayoff: "red",
+    savings: "blue",
+    fire: "gold"
   }[type || "accountGrowth"] || "green";
 }
 
@@ -4056,6 +4383,8 @@ function normalizeFrequency(frequency) {
 
 function monthlyEquivalent(transaction) {
   const amount = Number(transaction.amount || 0);
+  // Task 9: ended transactions contribute nothing to monthly totals
+  if (transaction.endsOn && new Date(transaction.endsOn) <= new Date()) return 0;
   const frequency = normalizeFrequency(transaction.frequency || (transaction.recurring ? "monthly" : "oneOff"));
 
   switch (frequency) {
@@ -4176,6 +4505,8 @@ function upcomingTransactions(transactions, days) {
 
     // Include all occurrences inside the selected window.
     while (occurrenceDate <= end && safety < 600) {
+      // Task 9: stop if past endsOn date
+      if (transaction.endsOn && occurrenceDate > new Date(transaction.endsOn)) break;
       out.push({
         ...transaction,
         occurrenceDate: occurrenceDate.toISOString(),
