@@ -982,14 +982,32 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   const debts = accounts.filter(a=>a.kind==="debt" && Number(a.balance||0)>0);
   const totalDebt = debts.reduce((s,a)=>s+Number(a.balance||0),0);
   if (totalDebt > 0) {
-    const currentReduction = debts.reduce((s,a)=>s+Math.max(0, Number(a.previous||0)-Number(a.balance||0)),0);
-    const monthlyDebtPaydown = Math.max(1, currentReduction, cashSurplus > 0 ? cashSurplus * .25 : 0) * scenarioConfig.multiplier;
-    const d = futureDate(Math.ceil(totalDebt / monthlyDebtPaydown));
+    // Use historical monthly debt reduction averaged across all snapshots.
+    // For each snapshot pair (oldest→newest), sum the drop in total debt balance,
+    // then divide by the number of months spanned. Falls back to null (no ETA)
+    // if fewer than 2 snapshots exist — never uses surplus as a substitute.
+    const snapKeys = Object.keys(state.monthSnapshots || {}).sort();
+    let historicalMonthlyPaydown = null;
+    if (snapKeys.length >= 2) {
+      const oldest = state.monthSnapshots[snapKeys[0]];
+      const newest = state.monthSnapshots[snapKeys[snapKeys.length - 1]];
+      const oldestDebt = (oldest.accounts || []).filter(a=>a.kind==="debt").reduce((s,a)=>s+Number(a.balance||0),0);
+      const newestDebt = (newest.accounts || []).filter(a=>a.kind==="debt").reduce((s,a)=>s+Number(a.balance||0),0);
+      const totalReduction = oldestDebt - newestDebt;
+      const monthsSpanned = Math.max(1, snapKeys.length - 1);
+      const avgMonthly = totalReduction / monthsSpanned;
+      if (avgMonthly > 0) historicalMonthlyPaydown = avgMonthly * scenarioConfig.multiplier;
+    }
+    const d = historicalMonthlyPaydown
+      ? futureDate(Math.ceil(totalDebt / historicalMonthlyPaydown))
+      : null;
     rows.push({
       icon:"⚡",
       title:"Debt Free",
-      label:dateLabel(d),
-      detail:`${money(totalDebt)} remaining · projected payoff`,
+      label: historicalMonthlyPaydown ? dateLabel(d) : "Need more history",
+      detail: historicalMonthlyPaydown
+        ? `${money(totalDebt)} remaining · ${money(historicalMonthlyPaydown)}/mo avg paydown`
+        : `${money(totalDebt)} remaining · save 2+ snapshots for a forecast`,
       tone:"risk",
       category:"Freedom",
       sort:d ? d.getTime() : Number.MAX_SAFE_INTEGER - 6
@@ -3800,8 +3818,118 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
   );
 }
 
+// ── Quick-add presets ────────────────────────────────────────────────────────
+const ACCOUNT_PRESETS = {
+  asset: [
+    { name:"Savings Account",    icon:"🏦", subtype:"savings" },
+    { name:"Everyday Account",   icon:"💳", subtype:"savings" },
+    { name:"Investment Account", icon:"📈", subtype:"investment" },
+    { name:"Super / 401k",       icon:"🏛️", subtype:"super" },
+    { name:"Property",           icon:"🏠", subtype:"property" },
+    { name:"Emergency Fund",     icon:"🛡️", subtype:"emergency" },
+    { name:"Crypto",             icon:"₿",  subtype:"investment" },
+    { name:"Term Deposit",       icon:"🔒", subtype:"savings" },
+  ],
+  debt: [
+    { name:"Credit Card",        icon:"💳", subtype:"credit_card" },
+    { name:"Home Loan",          icon:"🏠", subtype:"loan" },
+    { name:"Car Loan",           icon:"🚗", subtype:"loan" },
+    { name:"Personal Loan",      icon:"📋", subtype:"loan" },
+    { name:"Student Loan",       icon:"🎓", subtype:"loan" },
+    { name:"Buy Now Pay Later",  icon:"🛍️", subtype:"credit_card" },
+    { name:"Tax Debt",           icon:"🏛️", subtype:"other" },
+    { name:"Medical Debt",       icon:"🏥", subtype:"other" },
+  ]
+};
+
+const TRANSACTION_PRESETS = {
+  income: [
+    { name:"Salary",           icon:"💵", frequency:"monthly" },
+    { name:"Freelance",        icon:"💻", frequency:"monthly" },
+    { name:"Rental Income",    icon:"🏠", frequency:"monthly" },
+    { name:"Dividends",        icon:"📈", frequency:"quarterly" },
+    { name:"Side Business",    icon:"🏪", frequency:"monthly" },
+    { name:"Government Benefit",icon:"🏛️",frequency:"fortnightly" },
+    { name:"Child Support",    icon:"👨‍👩‍👧", frequency:"monthly" },
+    { name:"Interest",         icon:"🏦", frequency:"monthly" },
+  ],
+  expense: [
+    { name:"Rent / Mortgage",  icon:"🏠", frequency:"monthly" },
+    { name:"Groceries",        icon:"🛒", frequency:"weekly" },
+    { name:"Car Insurance",    icon:"🚗", frequency:"monthly" },
+    { name:"Health Insurance", icon:"🏥", frequency:"monthly" },
+    { name:"Phone Plan",       icon:"📱", frequency:"monthly" },
+    { name:"Internet",         icon:"🌐", frequency:"monthly" },
+    { name:"Electricity",      icon:"⚡", frequency:"monthly" },
+    { name:"Streaming",        icon:"📺", frequency:"monthly" },
+    { name:"Gym",              icon:"🏋️", frequency:"monthly" },
+    { name:"Fuel",             icon:"⛽", frequency:"weekly" },
+    { name:"Subscriptions",    icon:"🔄", frequency:"monthly" },
+    { name:"Childcare",        icon:"👶", frequency:"weekly" },
+  ]
+};
+
+const GOAL_PRESETS = [
+  { name:"Pay off credit card",     icon:"💳", goalType:"debtPayoff",    color:"red" },
+  { name:"Buy a home",              icon:"🏠", goalType:"accountGrowth", color:"green" },
+  { name:"Emergency fund",          icon:"🛡️", goalType:"savings",       color:"blue" },
+  { name:"Reach $100k",             icon:"💎", goalType:"netWorth",      color:"green" },
+  { name:"Pay off car loan",        icon:"🚗", goalType:"debtPayoff",    color:"red" },
+  { name:"Investment portfolio",    icon:"📈", goalType:"accountGrowth", color:"purple" },
+  { name:"Holiday fund",            icon:"✈️", goalType:"savings",       color:"blue" },
+  { name:"Financial independence",  icon:"🔥", goalType:"fire",          color:"gold" },
+];
+
+const COMMON_EMOJIS = [
+  "💵","💳","🏦","🏠","🚗","📈","🏛️","🛡️","💻","🎓","🏥","📱",
+  "⚡","🌐","🛒","⛽","📺","🏋️","✈️","🔒","₿","🏪","👶","🔄",
+  "💎","🚀","🎯","⚡","🌱","🧾","📋","🎁","🏆","💼","🏗️","🛍️",
+];
+
+function QuickAddPicker({ presets, onSelect }) {
+  return (
+    <div className="quickadd-grid">
+      {presets.map(p => (
+        <button key={p.name} type="button" className="quickadd-chip" onClick={() => onSelect(p)}>
+          <span>{p.icon}</span>
+          <span>{p.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function EmojiPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="emoji-picker-wrap">
+      <div className="emoji-input-row">
+        <input
+          className="emoji-text-input"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder="Emoji or text"
+          maxLength={4}
+        />
+        <button type="button" className="emoji-grid-toggle" onClick={() => setOpen(v => !v)}>
+          {open ? "Close" : "Pick"}
+        </button>
+      </div>
+      {open && (
+        <div className="emoji-grid">
+          {COMMON_EMOJIS.map(e => (
+            <button key={e} type="button" onClick={() => { onChange(e); setOpen(false); }}>{e}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot }) {
   const item = editor.item || {};
+  const isNew = !item.id;
+  const [presetPicked, setPresetPicked] = useState(!isNew); // skip preset screen when editing
   const [form, setForm] = useState({
     name:item.name || "",
     icon:item.icon || "",
@@ -3826,6 +3954,19 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
   });
 
   const change = (k,v) => setForm(f => ({ ...f, [k]:v }));
+
+  const applyPreset = (p) => {
+    setForm(f => ({
+      ...f,
+      name: p.name || f.name,
+      icon: p.icon || f.icon,
+      ...(p.subtype   && { subtype:   p.subtype }),
+      ...(p.frequency && { frequency: p.frequency, recurring: p.frequency !== "oneOff" }),
+      ...(p.goalType  && { goalType:  p.goalType }),
+      ...(p.color     && { color:     p.color }),
+    }));
+    setPresetPicked(true);
+  };
 
   const save = async () => {
     let nextStateForAutoSave = null;
@@ -3915,12 +4056,53 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
     setEditor(null);
   };
 
+  // ── Preset picker screen ───────────────────────────────────────────────────
+  if (!presetPicked) {
+    const presets =
+      editor.type === "account"     ? ACCOUNT_PRESETS[form.kind === "debt" ? "debt" : "asset"] :
+      editor.type === "transaction" ? TRANSACTION_PRESETS[form.type === "income" ? "income" : "expense"] :
+      editor.type === "goal"        ? GOAL_PRESETS : [];
+    return (
+      <div className="modal-backdrop">
+        <div className="editor-modal">
+          <div className="modal-head">
+            <h2>Add {editor.type}</h2>
+            <button onClick={() => setEditor(null)}><X/></button>
+          </div>
+          {editor.type === "account" && (
+            <div className="preset-kind-toggle">
+              <button type="button" className={form.kind === "asset" ? "active" : ""} onClick={() => change("kind","asset")}>Asset</button>
+              <button type="button" className={form.kind === "debt"  ? "active" : ""} onClick={() => change("kind","debt")}>Debt</button>
+            </div>
+          )}
+          {editor.type === "transaction" && (
+            <div className="preset-kind-toggle">
+              <button type="button" className={form.type === "income"  ? "active" : ""} onClick={() => change("type","income")}>Income</button>
+              <button type="button" className={form.type === "expense" ? "active" : ""} onClick={() => change("type","expense")}>Expense</button>
+            </div>
+          )}
+          <p className="quickadd-label">Choose a common one to get started:</p>
+          <QuickAddPicker presets={presets} onSelect={applyPreset} />
+          <button type="button" className="quickadd-custom" onClick={() => setPresetPicked(true)}>
+            + Enter custom name instead
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ── Detail form ────────────────────────────────────────────────────────────
   return (
     <div className="modal-backdrop">
       <div className="editor-modal">
         <div className="modal-head"><h2>{item.id ? "Edit" : "Add"} {editor.type}</h2><button onClick={()=>setEditor(null)}><X/></button></div>
+        {isNew && (
+          <button type="button" className="quickadd-back" onClick={() => setPresetPicked(false)}>
+            ← Back to suggestions
+          </button>
+        )}
         <label>Name<input value={form.name} onChange={e=>change("name", e.target.value)} /></label>
-        <label>Icon / Emoji<input value={form.icon} onChange={e=>change("icon", e.target.value)} /></label>
+        <label>Icon / Emoji<EmojiPicker value={form.icon} onChange={v => change("icon", v)} /></label>
 
         {editor.type === "account" && <>
           <label>Kind<select value={form.kind} onChange={e=>change("kind", e.target.value)}><option value="asset">Asset</option><option value="debt">Debt</option></select></label>
@@ -3963,7 +4145,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <option value="fire">FIRE / Financial Independence</option>
             </select>
           </label>
-
           {form.goalType === "netWorth" || form.goalType === "fire" ? (
             <label>Metric<input value={form.goalType === "fire" ? "Financial Independence (25× expenses)" : "Net Worth"} disabled /></label>
           ) : (
@@ -3976,7 +4157,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               </select>
             </label>
           )}
-
           {form.goalType === "debtPayoff" ? (
             <>
               <label>Starting Debt<input type="number" value={form.start} onChange={e=>change("start", e.target.value)} placeholder="Original debt amount" /></label>
@@ -3988,7 +4168,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <label>Target<input type="number" value={form.target} onChange={e=>change("target", e.target.value)} /></label>
             </>
           )}
-
           <label>Deadline<input type="date" value={form.deadline} onChange={e=>change("deadline", e.target.value)} /></label>
           <label>Color<select value={form.color} onChange={e=>change("color", e.target.value)}><option value="green">Green</option><option value="purple">Purple</option><option value="red">Red</option><option value="blue">Blue</option><option value="gold">Gold</option></select></label>
         </>}
