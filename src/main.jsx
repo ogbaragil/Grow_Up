@@ -439,6 +439,8 @@ function buildDemoState() {
   return {
     ...DEMO_STATE,
     selectedMonth,
+    profileComplete: true,
+    profile: { age: 34, retirementAge: 65, income: 6392, expenses: [], primaryGoal: "invest", roughDebt: 47323 },
     accounts: latest?.accounts || DEMO_STATE.accounts,
     monthSnapshots: snapshots
   };
@@ -2101,7 +2103,7 @@ function App() {
           <OnboardingWizard
             state={state}
             setState={setState}
-            onComplete={() => setState(s => ({ ...s, profileComplete: true }))}
+            onComplete={() => {}} // finish() inside wizard already sets profileComplete
           />
         </main>
       </div>
