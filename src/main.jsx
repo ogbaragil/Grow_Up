@@ -1,5 +1,5 @@
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
   Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
@@ -11,6 +11,7 @@ import { supabase } from "./supabaseClient";
 import "./styles.css";
 
 const STORAGE_KEY = "growup_history_monthbar_v1";
+const SUPPORT_EMAIL = "support@lgds.com.au";
 
 const CURRENCY_OPTIONS = [
   ["USD", "US Dollar", "$"],
@@ -31,20 +32,97 @@ const CURRENCY_OPTIONS = [
   ["AED", "UAE Dirham", "د.إ"]
 ];
 
-const isSupportedCurrency = (currency) => CURRENCY_OPTIONS.some(([code]) => code === currency);
-const getActiveCurrency = () => {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : null;
-    return isSupportedCurrency(parsed?.currency) ? parsed.currency : "USD";
-  } catch {
-    return "USD";
-  }
-};
+const ACCOUNT_SUBTYPE_OPTIONS = [
+  ["super", "Super / retirement"],
+  ["investment", "Investment"],
+  ["savings", "Savings"],
+  ["property", "Property"],
+  ["emergency", "Emergency fund"],
+  ["loan", "Loan"],
+  ["credit_card", "Credit card"],
+  ["other", "Other"]
+];
+const ACCOUNT_SUBTYPE_VALUES = ACCOUNT_SUBTYPE_OPTIONS.map(([value]) => value);
 
-const money = (n, currency = getActiveCurrency()) => new Intl.NumberFormat("en-US", {
+const isSupportedCurrency = (currency) => CURRENCY_OPTIONS.some(([code]) => code === currency);
+const money = (n, currency = window.__GROWUP_ACTIVE_CURRENCY || "USD") => new Intl.NumberFormat("en-US", {
   style: "currency", currency: isSupportedCurrency(currency) ? currency : "USD", maximumFractionDigits: 0
 }).format(Number(n || 0));
+
+function useMoney(currency) {
+  return useCallback((n) => money(n, currency), [currency]);
+}
+
+const ToastContext = createContext(null);
+
+function ToastProvider({ children }) {
+  const [toasts, setToasts] = useState([]);
+  const [confirmRequest, setConfirmRequest] = useState(null);
+  const confirmResolver = useRef(null);
+
+  const addToast = useCallback((message, type = "info") => {
+    const id = safeId();
+    setToasts(list => [...list, { id, message:String(message || ""), type }]);
+    window.setTimeout(() => setToasts(list => list.filter(t => t.id !== id)), 3500);
+  }, []);
+
+  useEffect(() => {
+    const handler = (event) => addToast(event.detail?.message, event.detail?.type || "info");
+    window.addEventListener("growup-toast", handler);
+    return () => window.removeEventListener("growup-toast", handler);
+  }, [addToast]);
+
+  const showConfirm = useCallback((message) => new Promise(resolve => {
+    confirmResolver.current = resolve;
+    setConfirmRequest({ message:String(message || "Are you sure?") });
+  }), []);
+
+  const resolveConfirm = useCallback((value) => {
+    const resolve = confirmResolver.current;
+    confirmResolver.current = null;
+    setConfirmRequest(null);
+    resolve?.(value);
+  }, []);
+
+  const value = useMemo(() => ({ addToast, showConfirm }), [addToast, showConfirm]);
+
+  return (
+    <ToastContext.Provider value={value}>
+      {children}
+      <ToastContainer toasts={toasts} />
+      {confirmRequest && <ConfirmModal message={confirmRequest.message} onCancel={()=>resolveConfirm(false)} onConfirm={()=>resolveConfirm(true)} />}
+    </ToastContext.Provider>
+  );
+}
+
+function useToast() {
+  return useContext(ToastContext)?.addToast || (() => {});
+}
+
+function useConfirm() {
+  return useContext(ToastContext)?.showConfirm || (async () => false);
+}
+
+function ToastContainer({ toasts }) {
+  return <div className="toast-container" role="status" aria-live="polite">
+    {toasts.map(t => <div key={t.id} className={`toast toast-${t.type}`}>{t.message}</div>)}
+  </div>;
+}
+
+function ConfirmModal({ message, onCancel, onConfirm }) {
+  return (
+    <div className="modal-backdrop confirm-backdrop">
+      <div className="confirm-modal" role="dialog" aria-modal="true">
+        <h2>Confirm action</h2>
+        <p>{message}</p>
+        <div className="confirm-actions">
+          <button onClick={onCancel}>Cancel</button>
+          <button className="primary" onClick={onConfirm}>Continue</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const monthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
 const monthLabel = (key) => {
@@ -86,6 +164,19 @@ const EMPTY_STATE = {
 };
 
 
+function inferAccountSubtype(account = {}) {
+  if (ACCOUNT_SUBTYPE_VALUES.includes(account.subtype)) return account.subtype;
+  const normalized = normalizeAccountName(account.name || "");
+  if (/super|retirement/.test(normalized)) return "super";
+  if (/invest|portfolio|stock|fire/.test(normalized)) return "investment";
+  if (/property|house|home/.test(normalized)) return "property";
+  if (/emergency|cash reserve/.test(normalized)) return "emergency";
+  if (/credit card|card/.test(normalized)) return "credit_card";
+  if (/loan|debt|tax/.test(normalized)) return "loan";
+  if (/saving|hisa|cash/.test(normalized)) return "savings";
+  return "other";
+}
+
 function normalizeAccounts(accounts = []) {
   const list = Array.isArray(accounts) ? accounts : [];
   const hasCurrentModel = list.some(a => a?.kind === "asset" || a?.kind === "debt");
@@ -111,6 +202,7 @@ function normalizeAccounts(accounts = []) {
       name: account.name || "Account",
       icon: account.icon || (kind === "asset" ? "🏦" : "💳"),
       kind,
+      subtype: inferAccountSubtype(account),
       balance: Number(account.balance || 0),
       previous: Number(account.previous || 0)
     });
@@ -192,12 +284,12 @@ const DEMO_STATE = {
   dashboardStyle: "minimal",
   selectedMonth: currentMonthKey(),
   accounts: [
-    { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", balance:75000, previous:72726 },
-    { id:"demo-fire", name:"Investment Portfolio", icon:"🔥", kind:"asset", balance:34400, previous:28000 },
-    { id:"demo-car", name:"Vehicle Savings", icon:"🚙", kind:"asset", balance:28000, previous:28000 },
-    { id:"demo-business", name:"Emergency Fund", icon:"👔", kind:"asset", balance:1500, previous:0 },
-    { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", balance:41274, previous:41474 },
-    { id:"demo-tax", name:"Credit Card Balance", icon:"🏦", kind:"debt", balance:6049, previous:6049 }
+    { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", subtype:"super", balance:75000, previous:72726 },
+    { id:"demo-fire", name:"Investment Portfolio", icon:"🔥", kind:"asset", subtype:"investment", balance:34400, previous:28000 },
+    { id:"demo-car", name:"Vehicle Savings", icon:"🚙", kind:"asset", subtype:"savings", balance:28000, previous:28000 },
+    { id:"demo-business", name:"Emergency Fund", icon:"👔", kind:"asset", subtype:"emergency", balance:1500, previous:0 },
+    { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", subtype:"loan", balance:41274, previous:41474 },
+    { id:"demo-tax", name:"Credit Card Balance", icon:"🏦", kind:"debt", subtype:"credit_card", balance:6049, previous:6049 }
   ],
   transactions: [
     { id:"demo-salary", type:"income", name:"Salary", icon:"💵", amount:6392, category:"Income", date:new Date(new Date().getFullYear(), new Date().getMonth(), 27).toISOString(), frequency:"monthly", recurring:true },
@@ -292,12 +384,12 @@ function buildDemoState() {
     const debtsTotal = baseDebts[idx] || 47323;
 
     const accounts = [
-      { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", balance:Math.round(assetsTotal * .54), previous:0 },
-      { id:"demo-fire", name:"Investment Portfolio", icon:"🔥", kind:"asset", balance:Math.round(assetsTotal * .25), previous:0 },
-      { id:"demo-car", name:"Vehicle Savings", icon:"🚙", kind:"asset", balance:28000, previous:0 },
-      { id:"demo-business", name:"Emergency Fund", icon:"👔", kind:"asset", balance:Math.max(0, assetsTotal - Math.round(assetsTotal * .54) - Math.round(assetsTotal * .25) - 28000), previous:0 },
-      { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", balance:Math.round(debtsTotal * .87), previous:0 },
-      { id:"demo-tax", name:"Credit Card Balance", icon:"🏦", kind:"debt", balance:debtsTotal - Math.round(debtsTotal * .87), previous:0 }
+      { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", subtype:"super", balance:Math.round(assetsTotal * .54), previous:0 },
+      { id:"demo-fire", name:"Investment Portfolio", icon:"🔥", kind:"asset", subtype:"investment", balance:Math.round(assetsTotal * .25), previous:0 },
+      { id:"demo-car", name:"Vehicle Savings", icon:"🚙", kind:"asset", subtype:"savings", balance:28000, previous:0 },
+      { id:"demo-business", name:"Emergency Fund", icon:"👔", kind:"asset", subtype:"emergency", balance:Math.max(0, assetsTotal - Math.round(assetsTotal * .54) - Math.round(assetsTotal * .25) - 28000), previous:0 },
+      { id:"demo-loan", name:"Personal Loan", icon:"💳", kind:"debt", subtype:"loan", balance:Math.round(debtsTotal * .87), previous:0 },
+      { id:"demo-tax", name:"Credit Card Balance", icon:"🏦", kind:"debt", subtype:"credit_card", balance:debtsTotal - Math.round(debtsTotal * .87), previous:0 }
     ];
 
     snapshots[key] = {
@@ -320,7 +412,9 @@ function buildDemoState() {
 }
 
 function readOnlyDemoAlert() {
-  alert("Demo Mode is read-only. Exit Demo Mode to edit, save, or restore your real data.");
+  window.dispatchEvent(new CustomEvent("growup-toast", {
+    detail: { message:"Demo Mode is read-only. Exit Demo Mode to edit, save, or restore your real data.", type:"info" }
+  }));
 }
 
 function getUserDisplayName(session, state) {
@@ -397,7 +491,7 @@ function PrivacyPolicyContent() {
       <p>Grow UP operators may technically access stored data when reasonably necessary for maintenance, troubleshooting, abuse prevention, security, support requests, or system reliability. Access is limited to operational purposes only.</p>
 
       <h2>6. Data Retention and Deletion</h2>
-      <p>We retain user data while accounts remain active or as reasonably necessary to provide the service. Users may request deletion of their account and associated data by contacting ogbaragil@gmail.com.</p>
+      <p>We retain user data while accounts remain active or as reasonably necessary to provide the service. Users may request deletion of their account and associated data by contacting {SUPPORT_EMAIL}.</p>
 
       <h2>7. Security</h2>
       <p>Grow UP uses commercially reasonable safeguards to protect stored information. However, no method of electronic storage is completely secure, and no online platform can guarantee absolute security.</p>
@@ -415,7 +509,7 @@ function PrivacyPolicyContent() {
       <p>We may update this Privacy Policy periodically. Updated versions will be posted at https://growupapp.app/privacy.</p>
 
       <h2>12. Contact</h2>
-      <p>For questions, support requests, or data deletion requests, contact Gilbert Ogbara at ogbaragil@gmail.com.</p>
+      <p>For questions, support requests, or data deletion requests, contact Gilbert Ogbara at {SUPPORT_EMAIL}.</p>
     </article>
   );
 }
@@ -450,7 +544,7 @@ function TermsContent() {
       <p>Grow UP may integrate with or rely on third-party services such as Supabase, Cloudflare, and Google Authentication. Their terms and policies may also apply.</p>
 
       <h2>9. Termination</h2>
-      <p>We may suspend or terminate access if you violate these Terms or misuse the service. You may stop using Grow UP at any time and may request data deletion by contacting ogbaragil@gmail.com.</p>
+      <p>We may suspend or terminate access if you violate these Terms or misuse the service. You may stop using Grow UP at any time and may request data deletion by contacting {SUPPORT_EMAIL}.</p>
 
       <h2>10. Limitation of Liability</h2>
       <p>To the maximum extent permitted by law, Grow UP is provided “as is” and “as available”. We are not liable for financial losses, lost data, lost profits, indirect damages, or decisions made based on information in the app.</p>
@@ -462,7 +556,7 @@ function TermsContent() {
       <p>These Terms are governed by the laws of Victoria, Australia, unless otherwise required by applicable law.</p>
 
       <h2>13. Contact</h2>
-      <p>For questions about these Terms, contact Gilbert Ogbara at ogbaragil@gmail.com.</p>
+      <p>For questions about these Terms, contact Gilbert Ogbara at {SUPPORT_EMAIL}.</p>
     </article>
   );
 }
@@ -709,7 +803,7 @@ function LandingPage() {
         <div>
           <a href="/privacy">Privacy Policy</a>
           <a href="/terms">Terms</a>
-          <a href="mailto:ogbaragil@gmail.com">Contact</a>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
         </div>
       </footer>
     </div>
@@ -1107,9 +1201,9 @@ function notificationPermissionStatus() {
   return Notification.permission;
 }
 
-async function requestGrowUpNotifications(setState) {
+async function requestGrowUpNotifications(setState, notify = () => {}) {
   if (!("Notification" in window)) {
-    alert("Notifications are not supported by this browser.");
+    notify("Notifications are not supported by this browser.", "error");
     return false;
   }
 
@@ -1124,7 +1218,7 @@ async function requestGrowUpNotifications(setState) {
   }
 
   setState(s => ({ ...s, notificationsEnabled: false }));
-  alert("Notifications were not enabled. You can turn them on later in your browser settings.");
+  notify("Notifications were not enabled. You can turn them on later in your browser settings.", "info");
   return false;
 }
 
@@ -1160,7 +1254,7 @@ function runGrowUpNotificationChecks(state) {
     const first = recurring[0];
     showGrowUpNotification(
       `${first.txn.name} is due ${first.days === 0 ? "today" : first.days === 1 ? "tomorrow" : "soon"}`,
-      `${first.txn.type === "income" ? "Expected income" : "Expected expense"}: ${money(first.txn.amount)}`
+      `${first.txn.type === "income" ? "Expected income" : "Expected expense"}: ${money(first.txn.amount, state.currency)}`
     );
   }
 
@@ -1180,18 +1274,18 @@ function runGrowUpNotificationChecks(state) {
 }
 
 
-async function saveEmailReminderPreferences({ session, state, update, overrides = {} }) {
+async function saveEmailReminderPreferences({ session, state, update, overrides = {}, notify = () => {} }) {
   const client = window.supabaseClient || window.supabase || (typeof supabase !== "undefined" ? supabase : null);
 
   if (!client) {
-    alert("Supabase is not connected yet.");
+    notify("Supabase is not connected yet.", "error");
     return false;
   }
 
   const user = session?.user;
 
   if (!user?.id || !user?.email) {
-    alert("Please sign in to enable email reminders.");
+    notify("Please sign in to enable email reminders.", "error");
     return false;
   }
 
@@ -1220,7 +1314,7 @@ async function saveEmailReminderPreferences({ session, state, update, overrides 
 
   if (error) {
     console.error(error);
-    alert("Could not save email reminder preferences. Please check Supabase setup.");
+    notify("Could not save email reminder preferences. Please check Supabase setup.", "error");
     return false;
   }
 
@@ -1428,11 +1522,16 @@ function App() {
   const [authLoading, setAuthLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
   const [dashboardStyle, setDashboardStyle] = useState(() => localStorage.getItem("growup_dashboard_style") || "minimal");
+  const notify = useToast();
+  const showConfirm = useConfirm();
+  const fmt = useMoney(state.currency);
+
 
   useEffect(() => {
+    window.__GROWUP_ACTIVE_CURRENCY = state.currency;
     document.documentElement.dataset.theme = state.theme;
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
-  }, [state.theme]);
+  }, [state.theme, state.currency]);
 
   useEffect(() => {
     if (!supabase) {
@@ -1459,7 +1558,8 @@ function App() {
     }
   }, [state.selectedMonth, setState]);
 
-  const activeState = useMemo(() => demoMode ? buildDemoState() : state, [demoMode, state]);
+  const demoState = useMemo(() => buildDemoState(), []);
+  const activeState = demoMode ? demoState : state;
   const activeSetState = demoMode ? (() => readOnlyDemoAlert()) : setState;
   const totals = useMemo(() => computeTotals(activeState), [activeState]);
   const displayName = demoMode ? "Demo" : getUserDisplayName(session, state);
@@ -1497,17 +1597,17 @@ function App() {
 
   const uploadSnapshotState = async (snapshotState, selectedMonthForMessage, { requireSession = true } = {}) => {
     if (requireSession && !session?.user?.id) {
-      alert("Please sign in before backing up your data.");
+      notify("Please sign in before backing up your data.", "error");
       return false;
     }
 
     if (!snapshotState) {
-      alert("Could not save snapshot. Please try again.");
+      notify("Could not save snapshot. Please try again.", "error");
       return false;
     }
 
     if (!supabase) {
-      alert("Data backed up locally. Supabase env vars are missing.");
+      notify("Data backed up locally. Supabase env vars are missing.", "info");
       return false;
     }
 
@@ -1518,11 +1618,11 @@ function App() {
       .insert({ user_id:session.user.id, app_state:snapshotState });
 
     if (error) {
-      alert(`Local data saved, but cloud backup failed: ${error.message}`);
+      notify(`Local data saved, but cloud backup failed: ${error.message}`, "error");
       return false;
     }
 
-    alert(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`);
+    notify(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`, "success");
     return true;
   };
 
@@ -1541,30 +1641,22 @@ function App() {
   const saveSnapshot = async () => {
     if (demoMode) return readOnlyDemoAlert();
 
-    let nextStateForSupabase = null;
-    let selectedMonthForMessage = state.selectedMonth;
-
-    setState(currentState => {
-      selectedMonthForMessage = currentState.selectedMonth;
-      const enrichedNext = createMonthlySnapshotState(currentState);
-      nextStateForSupabase = enrichedNext;
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(enrichedNext));
-      return enrichedNext;
-    });
-
-    await new Promise(resolve => setTimeout(resolve, 0));
-    await uploadSnapshotState(nextStateForSupabase, selectedMonthForMessage, { requireSession: true });
+    const selectedMonthForMessage = state.selectedMonth;
+    const nextState = createMonthlySnapshotState(state);
+    setState(nextState);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+    await uploadSnapshotState(nextState, selectedMonthForMessage, { requireSession: true });
   };
 
   const restoreSnapshot = async () => {
     if (demoMode) return readOnlyDemoAlert();
     if (!session?.user?.id) {
-      alert("Please sign in before restoring your saved data.");
+      notify("Please sign in before restoring your saved data.", "error");
       return;
     }
 
-    if (!supabase) return alert("Supabase env vars are missing.");
-    if (!confirm("Restore your latest saved Grow UP data? This replaces local app data.")) return;
+    if (!supabase) { notify("Supabase env vars are missing.", "error"); return; }
+    if (!(await showConfirm("Restore your latest saved Grow UP data? This replaces local app data."))) return;
 
     const { data, error } = await supabase
       .from("growup_snapshots")
@@ -1573,14 +1665,14 @@ function App() {
       .order("created_at", { ascending:false })
       .limit(1);
 
-    if (error) return alert(`Restore failed: ${error.message}`);
+    if (error) { notify(`Restore failed: ${error.message}`, "error"); return; }
     const restored = data?.[0]?.app_state || data?.[0]?.state;
-    if (!restored) return alert("No saved backup found for this account.");
+    if (!restored) { notify("No saved backup found for this account.", "info"); return; }
 
     const normalizedRestored = normalizeGrowState(restored);
     setState(normalizedRestored);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedRestored));
-    alert("Latest saved data restored.");
+    notify("Latest saved data restored.", "success");
   };
 
   const changeDashboardStyle = (style) => {
@@ -1589,7 +1681,7 @@ function App() {
     setState(s => ({ ...s, dashboardStyle: style }));
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, autoSaveMonthSnapshot, displayName, isDemo: demoMode};
+  const common = { state: activeState, setState: activeSetState, totals, setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, autoSaveMonthSnapshot, displayName, isDemo: demoMode, notify, showConfirm};
 
   if (authLoading) {
     return (
@@ -2451,7 +2543,7 @@ function Kpi({ title, value, sub, icon, dot, onClick, animated=false }) {
   );
 }
 
-function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, autoSaveMonthSnapshot, isDemo=false }) {
+function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, autoSaveMonthSnapshot, isDemo=false, showConfirm }) {
   const [editingBalances, setEditingBalances] = useState(false);
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
@@ -2564,6 +2656,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             editingBalances={editingBalances}
             setEditor={setEditor}
             setState={setState}
+            showConfirm={showConfirm}
           />
           <AccountGroup
             title={`Debts (${debts.length})`}
@@ -2574,6 +2667,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
             editingBalances={editingBalances}
             setEditor={setEditor}
             setState={setState}
+            showConfirm={showConfirm}
           />
           <Card className="summary-list">
             <div onClick={()=>setHistoryMetric("assets")}><span>Assets (this month)</span><strong>{money(totals.assets)}</strong></div>
@@ -2615,13 +2709,13 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   );
 }
 
-function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBalances=false, setEditor, setState }) {
+function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBalances=false, setEditor, setState, showConfirm }) {
   const editAccount = (account) => {
     setEditor?.({ type:"account", item:account, defaultKind:account.kind });
   };
 
-  const deleteAccount = (account) => {
-    if (!confirm(`Delete ${account.name}? This removes it from your account list and future live balances.`)) return;
+  const deleteAccount = async (account) => {
+    if (!(await showConfirm?.(`Delete ${account.name}? This removes it from your account list and future live balances.`))) return;
 
     setState?.(s => {
       const nextAccounts = s.accounts.filter(a => a.id !== account.id);
@@ -3139,7 +3233,7 @@ function compactMoney(value) {
 }
 
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle}) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle, notify, showConfirm}) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
@@ -3181,9 +3275,10 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
                   session,
                   state,
                   update,
-                  overrides: { emailRemindersEnabled: nextEnabled }
+                  overrides: { emailRemindersEnabled: nextEnabled },
+                  notify
                 });
-                if (saved && nextEnabled) alert("Email reminders are now enabled.");
+                if (saved && nextEnabled) notify("Email reminders are now enabled.", "success");
               }}
             >
               {state.emailRemindersEnabled ? "Turn off" : "Enable"}
@@ -3200,7 +3295,8 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
                     session,
                     state,
                     update,
-                    overrides: { emailRemindersEnabled: true, emailReminderDays: Number(e.target.value) }
+                    overrides: { emailRemindersEnabled: true, emailReminderDays: Number(e.target.value) },
+                    notify
                   });
                 }}
               >
@@ -3220,7 +3316,8 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
                     session,
                     state,
                     update,
-                    overrides: { emailRemindersEnabled: true, monthlyBalanceReminderDay: Number(e.target.value) }
+                    overrides: { emailRemindersEnabled: true, monthlyBalanceReminderDay: Number(e.target.value) },
+                    notify
                   });
                 }}
               >
@@ -3336,7 +3433,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
 
       <Card>
         <h2>Danger zone</h2>
-        <button className="danger-btn" disabled={isDemo} onClick={()=>{ if(confirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
+        <button className="danger-btn" disabled={isDemo} onClick={async ()=>{ if(await showConfirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
       </Card>
     </div>
   );
@@ -3345,7 +3442,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
 function BottomNav({ tab, setTab }) {
   const items = [
     ["overview", Home, "Overview"],
-    ["assets", CreditCard, "Assets & De..."],
+    ["assets", CreditCard, "Assets"],
     ["cash", Repeat2, "Cash Flow"],
     ["goals", Target, "Wealth Goals"],
   ];
@@ -3390,6 +3487,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
     name:item.name || "",
     icon:item.icon || "",
     kind:item.kind || editor.defaultKind || "asset",
+    subtype:item.subtype || inferAccountSubtype(item),
     balance:item.balance || "",
     previous:item.previous || "",
     type:item.type || "expense",
@@ -3418,35 +3516,34 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         name:form.name || "Account",
         icon:form.icon || (form.kind === "debt" ? "💳" : "💼"),
         kind:form.kind,
+        subtype:form.subtype || "other",
         balance:Number(form.balance || 0),
         previous:Number(item.previous || 0)
       };
-      setState(s => {
-        const accounts = item.id ? s.accounts.map(a => a.id === item.id ? { ...a, ...acct } : a) : [...s.accounts, acct];
-        const currentSnapshot = s.monthSnapshots?.[s.selectedMonth];
-        let monthSnapshots = s.monthSnapshots;
-        if (currentSnapshot) {
-          const snapshotSourceAccounts = currentSnapshot.accounts || s.accounts;
-          const snapshotAccounts = item.id
-            ? snapshotSourceAccounts.map(a => a.id === item.id ? { ...a, ...acct } : a)
-            : [...snapshotSourceAccounts, acct];
-          const assets = snapshotAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
-          const debts = snapshotAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
-          monthSnapshots = {
-            ...(s.monthSnapshots || {}),
-            [s.selectedMonth]: {
-              ...currentSnapshot,
-              accounts: snapshotAccounts,
-              assets,
-              debts,
-              net: assets - debts,
-              updatedAt: new Date().toISOString()
-            }
-          };
-        }
-        nextStateForAutoSave = { ...s, accounts, monthSnapshots };
-        return nextStateForAutoSave;
-      });
+      const accounts = item.id ? state.accounts.map(a => a.id === item.id ? { ...a, ...acct } : a) : [...state.accounts, acct];
+      const currentSnapshot = state.monthSnapshots?.[state.selectedMonth];
+      let monthSnapshots = state.monthSnapshots;
+      if (currentSnapshot) {
+        const snapshotSourceAccounts = currentSnapshot.accounts || state.accounts;
+        const snapshotAccounts = item.id
+          ? snapshotSourceAccounts.map(a => a.id === item.id ? { ...a, ...acct } : a)
+          : [...snapshotSourceAccounts, acct];
+        const assets = snapshotAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        const debts = snapshotAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        monthSnapshots = {
+          ...(state.monthSnapshots || {}),
+          [state.selectedMonth]: {
+            ...currentSnapshot,
+            accounts: snapshotAccounts,
+            assets,
+            debts,
+            net: assets - debts,
+            updatedAt: new Date().toISOString()
+          }
+        };
+      }
+      nextStateForAutoSave = { ...state, accounts, monthSnapshots };
+      setState(nextStateForAutoSave);
     }
 
     if (editor.type === "transaction") {
@@ -3493,7 +3590,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
     }
 
     if (editor.type === "account" && autoSaveMonthSnapshot && nextStateForAutoSave) {
-      await new Promise(resolve => setTimeout(resolve, 0));
       await autoSaveMonthSnapshot(nextStateForAutoSave);
     }
 
@@ -3509,6 +3605,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
 
         {editor.type === "account" && <>
           <label>Kind<select value={form.kind} onChange={e=>change("kind", e.target.value)}><option value="asset">Asset</option><option value="debt">Debt</option></select></label>
+          <label>Subtype<select value={form.subtype} onChange={e=>change("subtype", e.target.value)}>{ACCOUNT_SUBTYPE_OPTIONS.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
           <label>Current balance<input type="number" value={form.balance} onChange={e=>change("balance", e.target.value)} /></label>
         </>}
 
@@ -3722,6 +3819,11 @@ function findGoalAccountInSnapshot(accounts, goal) {
     if (byId) return byId;
   }
 
+  const normalizedGoalAccount = normalizeAccountName(goal.account);
+  const byExactName = accounts.find(a => normalizeAccountName(a.name) === normalizedGoalAccount);
+  if (byExactName) return byExactName;
+
+  // Migration fallback for older saved goals/accounts that predate explicit account.subtype.
   const aliases = accountNameAliases(goal.account);
   return accounts.find(a => aliases.has(normalizeAccountName(a.name))) || null;
 }
@@ -4094,4 +4196,4 @@ function signedMoney(n) {
   return `${v >= 0 ? "+" : "-"}${money(Math.abs(v))}`;
 }
 
-createRoot(document.getElementById("root")).render(<App />);
+createRoot(document.getElementById("root")).render(<ToastProvider><App /></ToastProvider>);

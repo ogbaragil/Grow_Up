@@ -5406,3 +5406,43 @@ button:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+.toast-container {
+  position: fixed;
+  left: 50%;
+  bottom: calc(86px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  z-index: 3000;
+  display: grid;
+  gap: 10px;
+  width: min(92vw, 420px);
+  pointer-events: none;
+}
+
+.toast {
+  padding: 13px 16px;
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  font-weight: 700;
+}
+
+.toast-success { border-color: rgba(63, 164, 99, .45); }
+.toast-error { border-color: rgba(230, 76, 76, .45); }
+.toast-info { border-color: rgba(80, 133, 255, .35); }
+
+.confirm-backdrop { z-index: 2500; }
+.confirm-modal {
+  width: min(92vw, 420px);
+  background: var(--card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: var(--shadow);
+}
+.confirm-modal h2 { margin: 0 0 8px; }
+.confirm-modal p { color: var(--muted); margin: 0 0 18px; line-height: 1.45; }
+.confirm-actions { display: flex; justify-content: flex-end; gap: 10px; }
