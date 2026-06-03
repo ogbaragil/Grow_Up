@@ -5501,3 +5501,66 @@ button:focus-visible {
   background: rgba(251, 242, 216, 0.7) !important;
   border-color: rgba(201, 154, 46, .18) !important;
 }
+
+/* Feature usefulness additions */
+.snapshot-note {
+  width: 100%;
+  min-height: 92px;
+  resize: vertical;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--card);
+  color: var(--text);
+  padding: 14px;
+  font: inherit;
+}
+.segmented-control {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 18px;
+  background: var(--green2);
+  margin: 12px 0;
+}
+.segmented-control button {
+  flex: 1;
+  border: 0;
+  border-radius: 14px;
+  padding: 9px 10px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 900;
+}
+.segmented-control button.active {
+  background: var(--card);
+  color: var(--green);
+  box-shadow: var(--shadow-soft);
+}
+.category-total,
+.mini-history-list > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.category-total:last-child,
+.mini-history-list > div:last-child { border-bottom: 0; }
+.small-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--green2);
+  color: var(--green);
+  font-weight: 900;
+  padding: 8px 12px;
+}
+.goal-sparkline {
+  color: var(--green);
+  opacity: .85;
+  margin-top: 10px;
+  padding: 4px 0 0;
+}
