@@ -12,8 +12,38 @@ import "./styles.css";
 
 const STORAGE_KEY = "growup_history_monthbar_v1";
 
-const money = (n) => new Intl.NumberFormat("en-US", {
-  style: "currency", currency: "USD", maximumFractionDigits: 0
+const CURRENCY_OPTIONS = [
+  ["USD", "US Dollar", "$"],
+  ["AUD", "Australian Dollar", "$"],
+  ["GBP", "British Pound", "£"],
+  ["EUR", "Euro", "€"],
+  ["NGN", "Nigerian Naira", "₦"],
+  ["CAD", "Canadian Dollar", "$"],
+  ["NZD", "New Zealand Dollar", "$"],
+  ["JPY", "Japanese Yen", "¥"],
+  ["CNY", "Chinese Yuan", "¥"],
+  ["INR", "Indian Rupee", "₹"],
+  ["ZAR", "South African Rand", "R"],
+  ["GHS", "Ghanaian Cedi", "₵"],
+  ["KES", "Kenyan Shilling", "KSh"],
+  ["CHF", "Swiss Franc", "CHF"],
+  ["SGD", "Singapore Dollar", "$"],
+  ["AED", "UAE Dirham", "د.إ"]
+];
+
+const isSupportedCurrency = (currency) => CURRENCY_OPTIONS.some(([code]) => code === currency);
+const getActiveCurrency = () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : null;
+    return isSupportedCurrency(parsed?.currency) ? parsed.currency : "USD";
+  } catch {
+    return "USD";
+  }
+};
+
+const money = (n, currency = getActiveCurrency()) => new Intl.NumberFormat("en-US", {
+  style: "currency", currency: isSupportedCurrency(currency) ? currency : "USD", maximumFractionDigits: 0
 }).format(Number(n || 0));
 
 const monthKey = (d = new Date()) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
@@ -47,6 +77,7 @@ const EMPTY_STATE = {
   emailMilestoneEmails: true,
   onboardingDismissed: false,
   mode: "Real Mode",
+  currency: "USD",
   selectedMonth: monthKey(),
   accounts: [],
   transactions: [],
@@ -114,6 +145,7 @@ function normalizeSnapshot(snapshot = {}) {
 
 function normalizeGrowState(rawState = {}) {
   const base = { ...EMPTY_STATE, ...rawState };
+  base.currency = isSupportedCurrency(base.currency) ? base.currency : "USD";
 
   const monthSnapshots = Object.fromEntries(
     Object.entries(base.monthSnapshots || {}).map(([key, snapshot]) => [
@@ -1349,6 +1381,35 @@ function enrichStateWithGoalSnapshotProgress(rawState) {
 }
 
 
+function createMonthlySnapshotState(currentState = {}) {
+  const existingSnapshot = currentState.monthSnapshots?.[currentState.selectedMonth];
+  const sourceAccounts = existingSnapshot?.accounts || currentState.accounts;
+  const cleanAccounts = normalizeAccounts(sourceAccounts);
+
+  const assets = cleanAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+  const debts = cleanAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+
+  const snapshot = {
+    ...(existingSnapshot || {}),
+    assets,
+    debts,
+    net: assets - debts,
+    accounts: cleanAccounts,
+    createdAt: existingSnapshot?.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  return enrichStateWithGoalSnapshotProgress({
+    ...currentState,
+    accounts: cleanAccounts,
+    monthSnapshots: {
+      ...(currentState.monthSnapshots || {}),
+      [currentState.selectedMonth]: snapshot
+    }
+  });
+}
+
+
 function App() {
   const path = window.location.pathname;
   if (path === "/landingpage") return <LandingPage />;
@@ -1434,70 +1495,65 @@ function App() {
     }
   };
 
+  const uploadSnapshotState = async (snapshotState, selectedMonthForMessage, { requireSession = true } = {}) => {
+    if (requireSession && !session?.user?.id) {
+      alert("Please sign in before backing up your data.");
+      return false;
+    }
+
+    if (!snapshotState) {
+      alert("Could not save snapshot. Please try again.");
+      return false;
+    }
+
+    if (!supabase) {
+      alert("Data backed up locally. Supabase env vars are missing.");
+      return false;
+    }
+
+    if (!session?.user?.id) return false;
+
+    const { error } = await supabase
+      .from("growup_snapshots")
+      .insert({ user_id:session.user.id, app_state:snapshotState });
+
+    if (error) {
+      alert(`Local data saved, but cloud backup failed: ${error.message}`);
+      return false;
+    }
+
+    alert(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`);
+    return true;
+  };
+
+  const autoSaveMonthSnapshot = async (sourceState) => {
+    if (demoMode) return readOnlyDemoAlert();
+
+    const selectedMonthForMessage = sourceState?.selectedMonth || state.selectedMonth;
+    const nextStateForSupabase = createMonthlySnapshotState(sourceState || state);
+
+    setState(nextStateForSupabase);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStateForSupabase));
+
+    await uploadSnapshotState(nextStateForSupabase, selectedMonthForMessage, { requireSession: true });
+  };
+
   const saveSnapshot = async () => {
     if (demoMode) return readOnlyDemoAlert();
-    if (!session?.user?.id) {
-      alert("Please sign in before backing up your data.");
-      return;
-    }
 
     let nextStateForSupabase = null;
     let selectedMonthForMessage = state.selectedMonth;
 
     setState(currentState => {
       selectedMonthForMessage = currentState.selectedMonth;
-      const existingSnapshot = currentState.monthSnapshots?.[currentState.selectedMonth];
-      const sourceAccounts = existingSnapshot?.accounts || currentState.accounts;
-
-      const cleanAccounts = normalizeAccounts(sourceAccounts);
-
-      const assets = cleanAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
-      const debts = cleanAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
-
-      const snapshot = {
-        ...(existingSnapshot || {}),
-        assets,
-        debts,
-        net: assets - debts,
-        accounts: cleanAccounts,
-        createdAt: existingSnapshot?.createdAt || new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      const next = {
-        ...currentState,
-        accounts: cleanAccounts,
-        monthSnapshots: {
-          ...(currentState.monthSnapshots || {}),
-          [currentState.selectedMonth]: snapshot
-        }
-      };
-
-      const enrichedNext = enrichStateWithGoalSnapshotProgress(next);
-
+      const enrichedNext = createMonthlySnapshotState(currentState);
       nextStateForSupabase = enrichedNext;
       localStorage.setItem(STORAGE_KEY, JSON.stringify(enrichedNext));
       return enrichedNext;
     });
 
     await new Promise(resolve => setTimeout(resolve, 0));
-
-    if (!nextStateForSupabase) {
-      alert("Could not save snapshot. Please try again.");
-      return;
-    }
-
-    if (!supabase) {
-      alert("Data backed up locally. Supabase env vars are missing.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from("growup_snapshots")
-      .insert({ user_id:session.user.id, app_state:nextStateForSupabase });
-
-    if (error) return alert(`Local data saved, but cloud backup failed: ${error.message}`);
-    alert(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`);
+    await uploadSnapshotState(nextStateForSupabase, selectedMonthForMessage, { requireSession: true });
   };
 
   const restoreSnapshot = async () => {
@@ -1533,7 +1589,7 @@ function App() {
     setState(s => ({ ...s, dashboardStyle: style }));
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, displayName, isDemo: demoMode};
+  const common = { state: activeState, setState: activeSetState, totals, setEditor: demoMode ? (() => readOnlyDemoAlert()) : setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, autoSaveMonthSnapshot, displayName, isDemo: demoMode};
 
   if (authLoading) {
     return (
@@ -1619,7 +1675,7 @@ function App() {
         />
       )}
 
-      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} />}
+      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} />}
     </div>
   );
 }
@@ -2395,7 +2451,7 @@ function Kpi({ title, value, sub, icon, dot, onClick, animated=false }) {
   );
 }
 
-function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, isDemo=false }) {
+function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, autoSaveMonthSnapshot, isDemo=false }) {
   const [editingBalances, setEditingBalances] = useState(false);
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
@@ -2477,10 +2533,11 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     setEditingBalances(value => !value);
   };
 
-  const saveAndClose = () => {
+  const saveAndClose = async () => {
     if (isDemo) return readOnlyDemoAlert();
     setAssetMenuOpen(false);
-    saveSnapshot();
+    setEditingBalances(false);
+    await (autoSaveMonthSnapshot ? autoSaveMonthSnapshot(state) : saveSnapshot());
   };
 
   return (
@@ -2531,7 +2588,6 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
           <button onClick={()=>openAddAccount("asset")}><span className="menu-icon green">+</span><b>Add Asset</b></button>
           <button onClick={()=>openAddAccount("debt")}><span className="menu-icon red">+</span><b>Add Debt</b></button>
           <button onClick={toggleBalanceEdit}><span className="menu-icon gray">✎</span><b>{editingBalances ? "Done Editing" : "Edit Balances"}</b></button>
-          <button onClick={saveAndClose}><span className="menu-icon gray">💾</span><b>Save Month Snapshot</b></button>
         </div>
       )}
 
@@ -2539,7 +2595,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
         className={editingBalances || assetMenuOpen ? "fab edit-active" : "fab"}
         onClick={() => {
           if (editingBalances) {
-            setEditingBalances(false);
+            saveAndClose();
             return;
           }
           if (isDemo) return readOnlyDemoAlert();
@@ -2601,7 +2657,7 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBa
             <div className="row-main">
               <strong>{a.name}</strong>
               <span>
-                Prev: {money(a.previous)} {delta < 0 ? "↓" : delta > 0 ? "↑" : "—"} {money(Math.abs(delta))}
+                {delta < 0 ? "Down" : delta > 0 ? "Up" : "No change"} {money(Math.abs(delta))} from last month
               </span>
             </div>
 
@@ -3234,6 +3290,27 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         </div>
       </Card>
 
+
+      <Card>
+        <h2>Currency</h2>
+        <p>Choose the currency used across balances, goals, cash flow, and reports.</p>
+        <label>Display currency
+          <select
+            value={state.currency || "USD"}
+            onChange={e=>{
+              const currency = e.target.value;
+              const nextState = { ...state, currency };
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
+              update({ currency });
+            }}
+          >
+            {CURRENCY_OPTIONS.map(([code, name, symbol]) => (
+              <option key={code} value={code}>{symbol} {name} ({code})</option>
+            ))}
+          </select>
+        </label>
+      </Card>
+
       <Card>
         <h2>Appearance</h2>
         <p>Theme: {state.theme}</p>
@@ -3307,7 +3384,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
   );
 }
 
-function EditorModal({ editor, setEditor, state, setState }) {
+function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot }) {
   const item = editor.item || {};
   const [form, setForm] = useState({
     name:item.name || "",
@@ -3333,7 +3410,8 @@ function EditorModal({ editor, setEditor, state, setState }) {
 
   const change = (k,v) => setForm(f => ({ ...f, [k]:v }));
 
-  const save = () => {
+  const save = async () => {
+    let nextStateForAutoSave = null;
     if (editor.type === "account") {
       const acct = {
         id:item.id || safeId(),
@@ -3341,9 +3419,34 @@ function EditorModal({ editor, setEditor, state, setState }) {
         icon:form.icon || (form.kind === "debt" ? "💳" : "💼"),
         kind:form.kind,
         balance:Number(form.balance || 0),
-        previous:Number(form.previous || 0)
+        previous:Number(item.previous || 0)
       };
-      setState(s => ({ ...s, accounts:item.id ? s.accounts.map(a => a.id === item.id ? acct : a) : [...s.accounts, acct] }));
+      setState(s => {
+        const accounts = item.id ? s.accounts.map(a => a.id === item.id ? { ...a, ...acct } : a) : [...s.accounts, acct];
+        const currentSnapshot = s.monthSnapshots?.[s.selectedMonth];
+        let monthSnapshots = s.monthSnapshots;
+        if (currentSnapshot) {
+          const snapshotSourceAccounts = currentSnapshot.accounts || s.accounts;
+          const snapshotAccounts = item.id
+            ? snapshotSourceAccounts.map(a => a.id === item.id ? { ...a, ...acct } : a)
+            : [...snapshotSourceAccounts, acct];
+          const assets = snapshotAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+          const debts = snapshotAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+          monthSnapshots = {
+            ...(s.monthSnapshots || {}),
+            [s.selectedMonth]: {
+              ...currentSnapshot,
+              accounts: snapshotAccounts,
+              assets,
+              debts,
+              net: assets - debts,
+              updatedAt: new Date().toISOString()
+            }
+          };
+        }
+        nextStateForAutoSave = { ...s, accounts, monthSnapshots };
+        return nextStateForAutoSave;
+      });
     }
 
     if (editor.type === "transaction") {
@@ -3378,7 +3481,20 @@ function EditorModal({ editor, setEditor, state, setState }) {
         deadline:form.deadline,
         open:item.open ?? true
       };
-      setState(s => ({ ...s, goals:item.id ? s.activeGoals.map(g => g.id === item.id ? goal : g) : [...s.goals, goal] }));
+      setState(s => {
+        nextStateForAutoSave = {
+          ...s,
+          goals:item.id
+            ? (s.goals || []).map(g => g.id === item.id ? { ...g, ...goal, archived:g.archived, archivedAt:g.archivedAt } : g)
+            : [...(s.goals || []), goal]
+        };
+        return nextStateForAutoSave;
+      });
+    }
+
+    if (editor.type === "account" && autoSaveMonthSnapshot && nextStateForAutoSave) {
+      await new Promise(resolve => setTimeout(resolve, 0));
+      await autoSaveMonthSnapshot(nextStateForAutoSave);
     }
 
     setEditor(null);
@@ -3394,7 +3510,6 @@ function EditorModal({ editor, setEditor, state, setState }) {
         {editor.type === "account" && <>
           <label>Kind<select value={form.kind} onChange={e=>change("kind", e.target.value)}><option value="asset">Asset</option><option value="debt">Debt</option></select></label>
           <label>Current balance<input type="number" value={form.balance} onChange={e=>change("balance", e.target.value)} /></label>
-          <label>Previous balance<input type="number" value={form.previous} onChange={e=>change("previous", e.target.value)} /></label>
         </>}
 
         {editor.type === "transaction" && <>
