@@ -250,8 +250,8 @@ function normalizeGrowState(rawState = {}) {
   const base = { ...EMPTY_STATE, ...rawState };
   base.currency = isSupportedCurrency(base.currency) ? base.currency : "USD";
 
-  // Migration: existing users who have data but no profileComplete flag
-  // are treated as already set up — don't force them through the wizard.
+  // Migration: existing users have no profileComplete in saved state.
+  // Treat anyone with existing data as already set up so they skip the wizard.
   if (!rawState.profileComplete && (
     (rawState.accounts && rawState.accounts.length > 0) ||
     (rawState.monthSnapshots && Object.keys(rawState.monthSnapshots).length > 0) ||
@@ -261,14 +261,10 @@ function normalizeGrowState(rawState = {}) {
     base.profileComplete = true;
   }
 
-  // Ensure profile object always exists with defaults
+  // Ensure profile always exists with safe defaults
   base.profile = {
-    age: null,
-    retirementAge: 65,
-    income: null,
-    expenses: [],
-    primaryGoal: null,
-    roughDebt: null,
+    age: null, retirementAge: 65, income: null,
+    expenses: [], primaryGoal: null, roughDebt: null,
     ...(rawState.profile || {})
   };
 
@@ -931,17 +927,6 @@ function buildGrowUpInsights(state, totals) {
 }
 
 
-function getProfileMonthlyExpenses(state, totals) {
-  if (totals && totals.expenses > 0) return totals.expenses;
-  const profileExpenses = (state.profile?.expenses || []);
-  return profileExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-}
-
-function getProfileMonthlyIncome(state, totals) {
-  if (totals && totals.income > 0) return totals.income;
-  return Number(state.profile?.income || 0);
-}
-
 function buildWealthTimelineItems(state, scenario = "balanced") {
   const latest = latestDashboardState(state);
   const totals = computeTotals(latest);
@@ -967,10 +952,11 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
   const out = getProfileMonthlyExpenses(state, totals);
   const cashSurplus = income - out;
 
-  // Only project from real historical growth — no surplus assumptions
+  // Only project from real historical data — no surplus assumptions
+  const hasHistory = growths.length >= 2;
   const monthlyAdd = hasHistory
     ? avgGrowth * scenarioConfig.multiplier
-    : null; // not enough data — show honest message
+    : null;
 
   const monthlyReturn = Math.pow(1 + scenarioConfig.annualReturn, 1/12) - 1;
 
@@ -985,7 +971,7 @@ function buildWealthTimelineItems(state, scenario = "balanced") {
     return null;
   };
   const futureDate = (months) => months === null || months === undefined ? null : new Date(now.getFullYear(), now.getMonth() + months, 1);
-  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : monthlyAdd === null ? "Save 2+ snapshots for a forecast" : "Beyond 60 years";
+  const dateLabel = (date) => date ? date.toLocaleDateString("en-US", { month:"long", year:"numeric" }) : monthlyAdd === null ? "Add income & expenses for a forecast" : "Beyond 60 years";
 
   const rows = [{
     icon:"●",
@@ -1425,6 +1411,17 @@ async function loadEmailReminderPreferences({ session, update }) {
 
 // Returns monthly expenses from profile if no transactions set up yet,
 // otherwise uses real transaction data. Callers get a consistent number either way.
+function getProfileMonthlyExpenses(state, totals) {
+  if (totals && totals.expenses > 0) return totals.expenses;
+  const profileExpenses = (state.profile?.expenses || []);
+  return profileExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+}
+
+function getProfileMonthlyIncome(state, totals) {
+  if (totals && totals.income > 0) return totals.income;
+  return Number(state.profile?.income || 0);
+}
+
 // ── Onboarding Wizard ────────────────────────────────────────────────────────
 const PRIMARY_GOAL_OPTIONS = [
   { value: "debt",    icon: "⚡", label: "Pay off debt",              sub: "Get out of debt faster" },
@@ -2103,7 +2100,7 @@ function App() {
           <OnboardingWizard
             state={state}
             setState={setState}
-            onComplete={() => {}} // finish() inside wizard already sets profileComplete
+            onComplete={() => {}}
           />
         </main>
       </div>
@@ -4845,6 +4842,7 @@ function estimateGoalCompletion(goal, state, currentCalc, totals) {
     remaining = Number(currentCalc.remaining || 0);
   }
 
+  // Historical pace only — no surplus blending
   if (currentCalc.progress >= 100 || remaining <= 0) {
     return {
       label: "Already complete",
