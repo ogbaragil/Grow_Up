@@ -3084,6 +3084,12 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
       <MonthBar state={state} setState={setState} thin hasUnsaved={hasUnsavedBalances} />
 
+      {isPastMonth && !selectedSnapshot && !editingBalances && (
+        <div className="snapshot-banner info">
+          No saved data for {monthLabel(state.selectedMonth)} — balances shown are your current values, not historical. Tap + to log this month's actual balances.
+        </div>
+      )}
+
       {isPastMonth && editingBalances && (
         <div className="snapshot-banner info">
           You're editing a past month — enter the balances as they were then and tap ✓ to save.
@@ -3095,7 +3101,9 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
           ? "Unsaved balance changes · tap the green check to save and back up"
           : selectedSnapshot
             ? `Snapshot saved for ${monthLabel(state.selectedMonth)} · ${editingBalances ? "editing enabled" : "locked"}`
-            : "Current month · changes save when you tap the green check"}
+            : isPastMonth
+              ? `No snapshot saved for ${monthLabel(state.selectedMonth)}`
+              : "Current month · changes save when you tap the green check"}
       </div>
 
       {selectedSnapshot && (
