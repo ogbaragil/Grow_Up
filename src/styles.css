@@ -5481,3 +5481,23 @@ button:focus-visible {
 .goal-card.yellow { background: var(--goal-yellow-bg); }
 :root[data-theme="dark"] .snapshot-banner.unsaved, [data-theme="dark"] .snapshot-banner.unsaved { background: rgba(214,122,0,.16); color:#ffd48a; border-color:rgba(243,207,120,.28); }
 :root[data-theme="dark"] .month-save-state.unsaved, [data-theme="dark"] .month-save-state.unsaved { background: rgba(214,122,0,.18); color:#ffd48a; border-color:rgba(243,207,120,.28); }
+
+/* Menu drawer grouping and action states */
+.menu-sheet .drawer-section-label {
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: .08em;
+  color: var(--muted);
+  padding: 14px 14px 6px;
+  text-transform: uppercase;
+}
+
+.menu-sheet > button.active {
+  background: var(--green2);
+  color: var(--green);
+}
+
+.menu-sheet .drawer-caution {
+  background: rgba(251, 242, 216, 0.7) !important;
+  border-color: rgba(201, 154, 46, .18) !important;
+}

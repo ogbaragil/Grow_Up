@@ -4,7 +4,8 @@ import { createRoot } from "react-dom/client";
 import {
   Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Sun, Moon, TrendingUp,
-  X, Save, Check, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft
+  X, Save, Check, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft,
+  Shield, FileText, FlaskConical, LogOut, Lightbulb
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
@@ -1755,6 +1756,7 @@ function App() {
           setTab={setTab}
           setTimelineOpen={setTimelineOpen}
           setInsightsOpen={setInsightsOpen}
+          tab={tab}
           update={update}
           saveSnapshot={saveSnapshot}
           restoreSnapshot={restoreSnapshot}
@@ -3481,24 +3483,32 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen}) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, tab }) {
+  const navClass = (name) => tab === name ? "active" : undefined;
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
       <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
         <div className="sheet-head"><div className="app-icon drawer-logo"><img src="/icons/growup-logo.png" alt="Grow UP" /></div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
-        <button onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
-        <button onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
-        <button onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
-        <button onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
-        <button onClick={isDemo ? exitDemoMode : enterDemoMode}><SlidersHorizontal/> {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}</button>
-        <hr/>
+
+        <div className="drawer-section-label">Navigate</div>
+        <button className={navClass("overview")} onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
+        <button className={navClass("assets")} onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
+        <button className={navClass("cash")} onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
+        <button className={navClass("goals")} onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
+
+        <div className="drawer-section-label">Tools</div>
+        <button onClick={()=>{setInsightsOpen(true); setMenuOpen(false)}}><Lightbulb/> Insights</button>
+        <button onClick={()=>{setTimelineOpen(true); setMenuOpen(false)}}><TrendingUp/> Wealth Timeline</button>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
-        <button disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
-        <button disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud</button>
+        <button onClick={isDemo ? exitDemoMode : enterDemoMode}><FlaskConical/> {isDemo ? "Exit preview" : "Preview with sample data"}</button>
+
+        <div className="drawer-section-label">Account</div>
+        <button className="drawer-caution" disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
+        <button className="drawer-caution" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud</button>
         <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
-        <button onClick={()=>{ window.location.href = "/privacy"; }}><SlidersHorizontal/> Privacy Policy</button>
-        <button onClick={()=>{ window.location.href = "/terms"; }}><SlidersHorizontal/> Terms</button>
-        {session && !isDemo && <button className="menu-danger" onClick={signOut}><X/> Sign out</button>}
+        <button onClick={()=>{ window.location.href = "/privacy"; }}><Shield/> Privacy Policy</button>
+        <button onClick={()=>{ window.location.href = "/terms"; }}><FileText/> Terms</button>
+        {session && !isDemo && <button className="menu-danger" onClick={signOut}><LogOut/> Sign out</button>}
       </div>
     </div>
   );
