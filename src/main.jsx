@@ -1970,7 +1970,7 @@ function ScreenTitle({ title, sub, setMenuOpen, back }) {
   );
 }
 
-function MonthBar({ state, setState, thin=false }) {
+function MonthBar({ state, setState, thin=false, hasUnsaved=false }) {
   const nextMonth = addMonths(state.selectedMonth, 1);
   const nextBlocked = !canMoveToMonth(nextMonth);
 
@@ -1984,6 +1984,7 @@ function MonthBar({ state, setState, thin=false }) {
     <div className={thin ? "month-bar thin" : "month-bar"}>
       <button onClick={()=>move(-1)} aria-label="Previous month"><ChevronLeft size={24}/></button>
       <strong>{monthLabel(state.selectedMonth)}</strong>
+      <span className={hasUnsaved ? "month-save-state unsaved" : "month-save-state saved"}>{hasUnsaved ? "Unsaved" : "Saved"}</span>
       <button
         className={nextBlocked ? "blocked" : ""}
         disabled={nextBlocked}
@@ -2546,6 +2547,7 @@ function Kpi({ title, value, sub, icon, dot, onClick, animated=false }) {
 function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHistoryMetric, saveSnapshot, autoSaveMonthSnapshot, isDemo=false, showConfirm }) {
   const [editingBalances, setEditingBalances] = useState(false);
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
+  const [hasUnsavedBalances, setHasUnsavedBalances] = useState(false);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
   const prevSnapshot = state.monthSnapshots?.[addMonths(state.selectedMonth, -1)];
 
@@ -2562,6 +2564,7 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
 
   const updateBalance = (id, value) => {
     const numericValue = Number(value || 0);
+    setHasUnsavedBalances(true);
 
     setState(s => {
       const existingSnapshot = s.monthSnapshots?.[s.selectedMonth];
@@ -2629,19 +2632,22 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     if (isDemo) return readOnlyDemoAlert();
     setAssetMenuOpen(false);
     setEditingBalances(false);
+    setHasUnsavedBalances(false);
     await (autoSaveMonthSnapshot ? autoSaveMonthSnapshot(state) : saveSnapshot());
   };
 
   return (
     <div className="screen">
       <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
-      <MonthBar state={state} setState={setState} thin />
+      <MonthBar state={state} setState={setState} thin hasUnsaved={hasUnsavedBalances} />
 
-      {selectedSnapshot && (
-        <div className="snapshot-banner">
-          Historical snapshot · {editingBalances ? "editing enabled" : "locked"}
-        </div>
-      )}
+      <div className={`snapshot-banner ${hasUnsavedBalances ? "unsaved" : "saved"}`}>
+        {hasUnsavedBalances
+          ? "Unsaved balance changes · tap the green check to save and back up"
+          : selectedSnapshot
+            ? `Snapshot saved for ${monthLabel(state.selectedMonth)} · ${editingBalances ? "editing enabled" : "locked"}`
+            : "Current month · changes save when you tap the green check"}
+      </div>
 
       {state.accounts.length === 0 ? (
         <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>openAddAccount("asset")}/>
@@ -2759,7 +2765,7 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBa
               {readOnly ? (
                 <div className="balance-display">{money(a.balance)}</div>
               ) : (
-                <input value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
+                <input className={editingBalances ? "balance-input editing" : "balance-input"} value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
               )}
 
               {editingBalances && (
@@ -2865,13 +2871,24 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
         <div className="net-line"><span>Net</span><strong className={totals.income - totals.expenses >= 0 ? "success" : "danger"}>{money(totals.income - totals.expenses)}</strong></div>
       </Card>
 
-      <Card>
-        <div className="section-title"><h2>Next 7 Days <ChevronDown size={20}/></h2><b>{next7.length} upcoming</b></div>
-        {next7.length ? next7.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor}/>) : <p className="muted">No upcoming transactions yet.</p>}
-      </Card>
+      {state.transactions.length === 0 ? (
+        <EmptyState
+          title="Start your cash flow"
+          text="Add an income or expense to see upcoming bills, monthly surplus, and recurring patterns here."
+          action="Add your first transaction"
+          onClick={()=>setEditor({ type:"transaction" })}
+        />
+      ) : (
+        <>
+          <Card>
+            <div className="section-title"><h2>Next 7 Days <ChevronDown size={20}/></h2><b>{next7.length} upcoming</b></div>
+            {next7.length ? next7.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor}/>) : <p className="muted">No upcoming transactions yet.</p>}
+          </Card>
 
-      <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
-      <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+          <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
+          <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+        </>
+      )}
       <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
     </div>
   );
@@ -3082,7 +3099,10 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
           <h2>{g.name}</h2>
           <span>{goalTypeLabel(g.goalType)} · {calc.sourceLabel}</span>
         </div>
-        <b>{pct}%</b>
+        <div className="goal-quick-status">
+          <b>{pct}%</b>
+          <small className={`goal-status-chip ${status.kind}`}>{status.label}</small>
+        </div>
         {reorderMode ? (
           <div className="reorder-controls" onClick={(e)=>e.stopPropagation()}>
             <button disabled={!canMoveUp} onClick={()=>moveGoal(g.id, -1)}>↑</button>
@@ -3238,6 +3258,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
     <div className="screen">
       <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
 
+      <div className="settings-section-title">Profile</div>
       <Card>
         <h2>Account</h2>
         <p>Signed in as</p>
@@ -3255,6 +3276,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
           {isDemo ? "Exit Demo Mode" : "Enter Demo Mode"}
         </button>
       </Card>
+      <div className="settings-section-title">Preferences</div>
       <Card>
         <h2>Email Reminders</h2>
         <p>Send reliable email reminders for recurring transactions, monthly balance updates, goal deadlines, and milestone moments.</p>
@@ -3414,6 +3436,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <button className="primary" onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon size={18}/> : <Sun size={18}/>} Toggle theme</button>
       </Card>
 
+      <div className="settings-section-title">Data & Privacy</div>
       <Card>
         <h2>Backup & Restore</h2>
         <p>Keep a secure cloud backup of your Grow UP data and restore your latest saved version when needed.</p>
@@ -3605,7 +3628,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
 
         {editor.type === "account" && <>
           <label>Kind<select value={form.kind} onChange={e=>change("kind", e.target.value)}><option value="asset">Asset</option><option value="debt">Debt</option></select></label>
-          <label>Subtype<select value={form.subtype} onChange={e=>change("subtype", e.target.value)}>{ACCOUNT_SUBTYPE_OPTIONS.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select></label>
+          <label>Subtype<select value={form.subtype} onChange={e=>change("subtype", e.target.value)}>{ACCOUNT_SUBTYPE_OPTIONS.map(([value,label]) => <option key={value} value={value}>{label}</option>)}</select><small className="field-caption">Helps with goal matching and insights.</small></label>
           <label>Current balance<input type="number" value={form.balance} onChange={e=>change("balance", e.target.value)} /></label>
         </>}
 
