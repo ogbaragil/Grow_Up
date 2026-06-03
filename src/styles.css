@@ -6000,3 +6000,33 @@ button:focus-visible {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Note save indicator */
+.note-wrap {
+  position: relative;
+  margin-top: 12px;
+}
+.note-wrap .snapshot-note-textarea {
+  margin-top: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+.note-save-status {
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  font-size: 12px;
+  font-weight: 900;
+  border-radius: 999px;
+  padding: 3px 10px;
+  pointer-events: none;
+  transition: opacity .3s;
+}
+.note-save-status.saving {
+  background: var(--bg);
+  color: var(--muted);
+}
+.note-save-status.saved {
+  background: var(--green2);
+  color: var(--green);
+}

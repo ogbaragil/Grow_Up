@@ -2956,7 +2956,9 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   const [editingBalances, setEditingBalances] = useState(false);
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const [hasUnsavedBalances, setHasUnsavedBalances] = useState(false);
+  const [noteStatus, setNoteStatus] = useState(null); // null | "saving" | "saved"
   const noteDebounceRef = useRef(null);
+  const noteSavedTimerRef = useRef(null);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
   const prevSnapshot = state.monthSnapshots?.[addMonths(state.selectedMonth, -1)];
 
@@ -3019,7 +3021,9 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   };
 
   const updateNote = (value) => {
+    setNoteStatus("saving");
     if (noteDebounceRef.current) clearTimeout(noteDebounceRef.current);
+    if (noteSavedTimerRef.current) clearTimeout(noteSavedTimerRef.current);
     noteDebounceRef.current = setTimeout(() => {
       setState(s => {
         const snap = s.monthSnapshots?.[s.selectedMonth];
@@ -3032,6 +3036,8 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
           }
         };
       });
+      setNoteStatus("saved");
+      noteSavedTimerRef.current = setTimeout(() => setNoteStatus(null), 2000);
     }, 600);
   };
 
@@ -3060,6 +3066,11 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
 
   const saveAndClose = async () => {
     if (isDemo) return readOnlyDemoAlert();
+    // Flush any pending note debounce before saving so the note isn't lost
+    if (noteDebounceRef.current) {
+      clearTimeout(noteDebounceRef.current);
+      noteDebounceRef.current = null;
+    }
     setAssetMenuOpen(false);
     setEditingBalances(false);
     setHasUnsavedBalances(false);
@@ -3088,12 +3099,20 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       </div>
 
       {selectedSnapshot && (
-        <textarea
-          className="snapshot-note-textarea"
-          placeholder="Add a note about this month — a bonus, a big purchase, a market event…"
-          defaultValue={selectedSnapshot.note || ""}
-          onChange={e => updateNote(e.target.value)}
-        />
+        <div className="note-wrap">
+          <textarea
+            key={state.selectedMonth}
+            className="snapshot-note-textarea"
+            placeholder="Add a note about this month — a bonus, a big purchase, a market event…"
+            defaultValue={selectedSnapshot.note || ""}
+            onChange={e => updateNote(e.target.value)}
+          />
+          {noteStatus && (
+            <span className={`note-save-status ${noteStatus}`}>
+              {noteStatus === "saving" ? "Saving…" : "✓ Saved"}
+            </span>
+          )}
+        </div>
       )}
 
       {state.accounts.length === 0 ? (
