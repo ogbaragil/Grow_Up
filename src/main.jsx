@@ -2957,10 +2957,24 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
   const [assetMenuOpen, setAssetMenuOpen] = useState(false);
   const [hasUnsavedBalances, setHasUnsavedBalances] = useState(false);
   const [noteStatus, setNoteStatus] = useState(null); // null | "saving" | "saved"
+  const [showNoDataPopup, setShowNoDataPopup] = useState(false);
   const noteDebounceRef = useRef(null);
   const noteSavedTimerRef = useRef(null);
   const selectedSnapshot = state.monthSnapshots?.[state.selectedMonth];
   const prevSnapshot = state.monthSnapshots?.[addMonths(state.selectedMonth, -1)];
+
+  const isPastMonth = !isFutureMonth(state.selectedMonth) && state.selectedMonth !== currentMonthKey();
+
+  useEffect(() => {
+    const snap = state.monthSnapshots?.[state.selectedMonth];
+    const past = !isFutureMonth(state.selectedMonth) && state.selectedMonth !== currentMonthKey();
+    if (past && !snap && !isDemo) {
+      setShowNoDataPopup(true);
+      setEditingBalances(false);
+    } else {
+      setShowNoDataPopup(false);
+    }
+  }, [state.selectedMonth]);
 
   const displayedAccounts = selectedSnapshot?.accounts || state.accounts;
   const accountsWithPrev = displayedAccounts.map(account => {
@@ -3077,12 +3091,33 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
     await (autoSaveMonthSnapshot ? autoSaveMonthSnapshot(state) : saveSnapshot());
   };
 
-  const isPastMonth = !isFutureMonth(state.selectedMonth) && state.selectedMonth !== currentMonthKey();
-
   return (
     <div className="screen">
       <ScreenTitle title="Assets & Debts" sub="Update balances month-to-month. Changes feed your Overview." setMenuOpen={setMenuOpen} />
       <MonthBar state={state} setState={setState} thin hasUnsaved={hasUnsavedBalances} />
+
+      {showNoDataPopup && (
+        <div className="no-data-popup-backdrop" onClick={() => setShowNoDataPopup(false)}>
+          <div className="no-data-popup" onClick={e => e.stopPropagation()}>
+            <div className="no-data-popup-icon">📅</div>
+            <h3>No saved data for<br />{monthLabel(state.selectedMonth)}</h3>
+            <p>Do you want to log what your balances were this month?</p>
+            <div className="no-data-popup-actions">
+              <button
+                className="primary"
+                onClick={() => {
+                  setShowNoDataPopup(false);
+                  setEditingBalances(true);
+                }}
+              >Log entry</button>
+              <button
+                className="ghost"
+                onClick={() => setShowNoDataPopup(false)}
+              >Skip</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isPastMonth && !selectedSnapshot && !editingBalances && (
         <div className="snapshot-banner info">
