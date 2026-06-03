@@ -2997,17 +2997,14 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   const recurringIncome = recurringCashflowTransactions(state.transactions, "income");
   const recurringExpenses = recurringCashflowTransactions(state.transactions, "expense");
 
-  // Category breakdown
-  const categoryMap = new Map();
-  recurringExpenses.forEach(t => {
-    const cat = (t.category || "").trim();
-    if (!cat) return;
-    categoryMap.set(cat, (categoryMap.get(cat) || 0) + monthlyEquivalent(t));
-  });
-  const categoryRows = Array.from(categoryMap.entries())
-    .map(([cat, total]) => ({ cat, total }))
-    .sort((a, b) => b.total - a.total);
-  const categoryTotal = categoryRows.reduce((s, r) => s + r.total, 0);
+  // Income vs expenses donut data
+  const income = Number(totals.income || 0);
+  const expenses = Number(totals.expenses || 0);
+  const surplus = Math.max(0, income - expenses);
+  const donutData = income > 0 || expenses > 0 ? [
+    expenses > 0 && { name: "Expenses", value: expenses, color: "var(--red)" },
+    surplus > 0  && { name: "Surplus",  value: surplus,  color: "var(--green)" },
+  ].filter(Boolean) : [];
 
   if (state.transactions.length === 0) {
     return (
@@ -3015,7 +3012,7 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
         <ScreenTitle title="Cash Flow" sub="See what's coming in and what's going out." setMenuOpen={setMenuOpen} />
         <Card>
           <h2>Your cash flow, at a glance</h2>
-          <p className="muted">Add recurring income and expenses to see your monthly surplus, upcoming bills, and spending by category.</p>
+          <p className="muted">Add recurring income and expenses to see your monthly surplus, upcoming bills, and a breakdown of where your money goes.</p>
           <div style={{margin:"18px 0 6px"}}>
             {[
               { icon:"💵", name:"Salary", sub:"monthly · income", amount:"+$5,000", income:true },
@@ -3042,14 +3039,37 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   return (
     <div className="screen">
       <ScreenTitle title="Cash Flow" sub="See what's coming in and what's going out." setMenuOpen={setMenuOpen} />
-      <Card>
-        <h2>Money In vs Out</h2>
-        <div className="cash-totals">
-          <div><span>Monthly Income</span><strong className="success">{money(totals.income)}</strong></div>
-          <div><span>Monthly Expenses</span><strong className="danger">{money(totals.expenses)}</strong></div>
-        </div>
-        <div className="net-line"><span>Net</span><strong className={totals.income - totals.expenses >= 0 ? "success" : "danger"}>{money(totals.income - totals.expenses)}</strong></div>
-      </Card>
+
+      {donutData.length > 0 && (
+        <Card>
+          <h2>Income vs Expenses</h2>
+          <div className="donut-layout">
+            <div className="donut-wrap">
+              <ResponsiveContainer width="100%" height={170}>
+                <PieChart>
+                  <Pie data={donutData} dataKey="value" innerRadius={48} outerRadius={78} paddingAngle={2}>
+                    {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => money(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="donut-center">
+                <b className={income > 0 ? "" : "danger"}>{money(income)}</b>
+                <span>income</span>
+              </div>
+            </div>
+            <div className="donut-legend">
+              <div><i style={{background:"var(--green)"}}></i><span>Income</span><b className="success">{money(income)}</b></div>
+              <div><i style={{background:"var(--red)"}}></i><span>Expenses</span><b className="danger">-{money(expenses)}</b></div>
+              <div style={{marginTop:"8px",paddingTop:"8px",borderTop:"1px solid var(--line)"}}>
+                <i style={{background: surplus >= 0 ? "var(--green)" : "var(--red)", borderRadius:"3px"}}></i>
+                <span>Net</span>
+                <b className={income - expenses >= 0 ? "success" : "danger"}>{signedMoney(income - expenses)}</b>
+              </div>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card>
         <div className="lookahead-pills">
@@ -3068,34 +3088,27 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
       <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
       <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
 
-      {categoryRows.length >= 2 && (
-        <Card>
-          <h2>Spending by Category</h2>
-          {categoryRows.map((row, i) => (
-            <div key={row.cat} className="category-breakdown-row" style={{borderBottom: i < categoryRows.length - 1 ? "1px solid var(--line)" : "none"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:"15px"}}>{row.cat}</span>
-                <span style={{fontSize:"15px",fontWeight:900,color:"var(--muted)"}}>{money(row.total)}</span>
-              </div>
-              <div style={{height:"6px",borderRadius:"999px",background:"var(--line)",marginTop:"6px",overflow:"hidden"}}>
-                <div style={{height:"100%",borderRadius:"999px",background:"var(--green)",width:`${categoryTotal > 0 ? (row.total/categoryTotal)*100 : 0}%`}}></div>
-              </div>
-            </div>
-          ))}
-        </Card>
-      )}
-
       <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
     </div>
   );
 }
 
 function TransactionGroup({ title, total, color, txns, setEditor }) {
+  const [open, setOpen] = useState(false);
   return (
     <Card>
-      <h2>{title}</h2>
-      <p className={color}>Total Monthly: {money(total)}</p>
-      {txns.length ? txns.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor} controls />) : <p className="muted">None yet.</p>}
+      <div className="section-title" style={{cursor:"pointer"}} onClick={() => setOpen(v => !v)}>
+        <div>
+          <h2>{title}</h2>
+          <p className={color} style={{margin:"2px 0 0",fontSize:"14px"}}>Total Monthly: {money(total)}</p>
+        </div>
+        {open ? <ChevronUp size={20}/> : <ChevronDown size={20}/>}
+      </div>
+      {open && (
+        <div style={{marginTop:"12px"}}>
+          {txns.length ? txns.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor} controls />) : <p className="muted">None yet.</p>}
+        </div>
+      )}
     </Card>
   );
 }
@@ -3798,7 +3811,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
     previous:item.previous || "",
     type:item.type || "expense",
     amount:item.amount || "",
-    category:item.category || "",
     date:item.date ? item.date.slice(0,10) : new Date().toISOString().slice(0,10),
     recurring:item.recurring || false,
     frequency:item.frequency || (item.recurring ? "monthly" : "oneOff"),
@@ -3861,7 +3873,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         name:form.name || "Transaction",
         icon:form.icon || (form.type === "income" ? "💵" : "💳"),
         amount:Number(form.amount || 0),
-        category:form.category,
         date:new Date(form.date).toISOString(),
         frequency,
         recurring:frequency !== "oneOff",
@@ -3920,7 +3931,6 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         {editor.type === "transaction" && <>
           <label>Type<select value={form.type} onChange={e=>change("type", e.target.value)}><option value="income">Income</option><option value="expense">Expense</option></select></label>
           <label>Amount<input type="number" value={form.amount} onChange={e=>change("amount", e.target.value)} /></label>
-          <label>Category<input value={form.category} onChange={e=>change("category", e.target.value)} /></label>
           <label>Start / Next Date<input type="date" value={form.date} onChange={e=>change("date", e.target.value)} /></label>
           <label>Frequency
             <select value={form.frequency} onChange={e=>{
