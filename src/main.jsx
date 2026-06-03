@@ -250,6 +250,28 @@ function normalizeGrowState(rawState = {}) {
   const base = { ...EMPTY_STATE, ...rawState };
   base.currency = isSupportedCurrency(base.currency) ? base.currency : "USD";
 
+  // Migration: existing users who have data but no profileComplete flag
+  // are treated as already set up — don't force them through the wizard.
+  if (!rawState.profileComplete && (
+    (rawState.accounts && rawState.accounts.length > 0) ||
+    (rawState.monthSnapshots && Object.keys(rawState.monthSnapshots).length > 0) ||
+    (rawState.goals && rawState.goals.length > 0) ||
+    (rawState.transactions && rawState.transactions.length > 0)
+  )) {
+    base.profileComplete = true;
+  }
+
+  // Ensure profile object always exists with defaults
+  base.profile = {
+    age: null,
+    retirementAge: 65,
+    income: null,
+    expenses: [],
+    primaryGoal: null,
+    roughDebt: null,
+    ...(rawState.profile || {})
+  };
+
   const monthSnapshots = Object.fromEntries(
     Object.entries(base.monthSnapshots || {}).map(([key, snapshot]) => [
       key,
@@ -907,6 +929,17 @@ function buildGrowUpInsights(state, totals) {
 }
 
 
+function getProfileMonthlyExpenses(state, totals) {
+  if (totals && totals.expenses > 0) return totals.expenses;
+  const profileExpenses = (state.profile?.expenses || []);
+  return profileExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
+}
+
+function getProfileMonthlyIncome(state, totals) {
+  if (totals && totals.income > 0) return totals.income;
+  return Number(state.profile?.income || 0);
+}
+
 function buildWealthTimelineItems(state, scenario = "balanced") {
   const latest = latestDashboardState(state);
   const totals = computeTotals(latest);
@@ -1390,17 +1423,6 @@ async function loadEmailReminderPreferences({ session, update }) {
 
 // Returns monthly expenses from profile if no transactions set up yet,
 // otherwise uses real transaction data. Callers get a consistent number either way.
-function getProfileMonthlyExpenses(state, totals) {
-  if (totals && totals.expenses > 0) return totals.expenses;
-  const profileExpenses = (state.profile?.expenses || []);
-  return profileExpenses.reduce((s, e) => s + Number(e.amount || 0), 0);
-}
-
-function getProfileMonthlyIncome(state, totals) {
-  if (totals && totals.income > 0) return totals.income;
-  return Number(state.profile?.income || 0);
-}
-
 // ── Onboarding Wizard ────────────────────────────────────────────────────────
 const PRIMARY_GOAL_OPTIONS = [
   { value: "debt",    icon: "⚡", label: "Pay off debt",              sub: "Get out of debt faster" },
