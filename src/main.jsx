@@ -5,7 +5,7 @@ import {
   Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Sun, Moon, TrendingUp,
   X, Save, Check, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft,
-  Shield, FileText, FlaskConical, LogOut, Lightbulb
+  Shield, FileText, FlaskConical, LogOut, Lightbulb, BarChart3, CalendarDays, FileDown
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
@@ -823,6 +823,51 @@ function buildGrowUpInsights(state, totals) {
   const topAsset = assetAccounts.slice().sort((a,b)=>Number(b.balance||0)-Number(a.balance||0))[0];
 
   const insights = [];
+  const savingsRate = latestTotals.income > 0 ? Math.round(((latestTotals.income - latestTotals.expenses) / latestTotals.income) * 100) : 0;
+  const debtRatioBase = latestTotals.assets ? Math.round((latestTotals.debts / Math.max(1, latestTotals.assets)) * 100) : 0;
+  const emergencyMonths = latestTotals.expenses > 0 ? Math.round(((assetAccounts.find(a => a.subtype === "emergency")?.balance || 0) / latestTotals.expenses) * 10) / 10 : 0;
+  const healthScore = clamp(
+    Math.min(30, Math.max(0, savingsRate)) +
+    Math.min(25, Math.max(0, 25 - debtRatioBase / 2)) +
+    Math.min(20, emergencyMonths * 5) +
+    Math.min(15, Math.max(0, netChange > 0 ? 15 : 6)) + 10
+  );
+  insights.push({
+    icon: "★",
+    label: "Financial Health",
+    title: `${Math.round(healthScore)}/100 score`,
+    body: healthScore >= 75 ? "Strong position. Keep compounding the habits." : "Biggest lift: improve savings rate, emergency buffer, or debt pressure.",
+    tone: healthScore >= 75 ? "gain" : "forecast"
+  });
+
+  if (latestTotals.net || latestTotals.prevNet) {
+    insights.push({
+      icon: "🗓",
+      label: "Monthly Review",
+      title: `${monthLabel(latest.selectedMonth)} summary`,
+      body: `Net worth ${latestTotals.net - latestTotals.prevNet >= 0 ? "rose" : "fell"} by ${money(Math.abs(latestTotals.net - latestTotals.prevNet), latest.currency)}. Savings rate: ${savingsRate}%.`,
+      tone: latestTotals.net - latestTotals.prevNet >= 0 ? "gain" : "risk"
+    });
+  }
+
+  const surplus = latestTotals.income - latestTotals.expenses;
+  if (surplus > 0) {
+    const topDebt = debtAccounts.slice().sort((a,b)=>Number(b.balance||0)-Number(a.balance||0))[0];
+    const targetText = topDebt ? `Send extra cash to ${topDebt.name} first.` : activeGoals?.[0] ? `Put extra cash toward ${activeGoals[0].name}.` : "Build your emergency fund or next goal.";
+    insights.push({ icon:"➜", label:"Next $1,000", title:"Smart allocation", body:targetText, tone:"forecast" });
+  }
+
+  if (latestTotals.net > 0 && surplus > 0) {
+    const retirementTarget = Math.max(1000000, latestTotals.expenses * 12 * 25);
+    const months = Math.ceil(Math.max(0, retirementTarget - latestTotals.net) / Math.max(1, surplus));
+    insights.push({
+      icon:"🏝",
+      label:"Retirement Forecast",
+      title:`${money(retirementTarget, latest.currency)} target`,
+      body:`At current surplus, simple target timing is about ${Math.ceil(months/12)} years before investment growth.`,
+      tone:"gold"
+    });
+  }
 
   const netChange = latestTotals.net - latestTotals.prevNet;
   if (latestTotals.prevNet) {
@@ -1490,6 +1535,7 @@ function createMonthlySnapshotState(currentState = {}) {
     debts,
     net: assets - debts,
     accounts: cleanAccounts,
+    note: existingSnapshot?.note || currentState.snapshotDraftNote || "",
     createdAt: existingSnapshot?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -1710,7 +1756,7 @@ function App() {
         ) : insightsOpen ? (
           <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
         ) : compoundOpen ? (
-          <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} />
+          <CompoundWealthPage state={activeState} totals={totals} setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} />
         ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
@@ -2786,8 +2832,39 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBa
 
 function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMenuOpen }) {
   const rows = historyRows(state);
-  const current = state.monthSnapshots?.[state.selectedMonth] || { assets:totals.assets, debts:totals.debts, net:totals.net, accounts:state.accounts };
+  const current = state.monthSnapshots?.[state.selectedMonth] || { assets:totals.assets, debts:totals.debts, net:totals.net, accounts:state.accounts, note:"" };
   const titleMap = { net:"Net Worth", assets:"Total Assets", debts:"Total Debts" };
+  const fmt = useMoney(state.currency);
+  const [accountHistoryId, setAccountHistoryId] = useState("");
+  const accountHistoryRows = useMemo(() => accountHistoryFor(state, accountHistoryId), [state, accountHistoryId]);
+  const exportHistoryCsv = () => {
+    const csv = ["Month,Assets,Debts,Net Worth,Note", ...rows.slice().reverse().map(r => {
+      const snap = state.monthSnapshots?.[r.key] || {};
+      const note = String(snap.note || "").replace(/"/g, '""');
+      return `${r.key},${r.assets},${r.debts},${r.net},"${note}"`;
+    })].join("\n");
+    const blob = new Blob([csv], { type:"text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "growup-history.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const saveNote = (value) => {
+    setState(s => ({
+      ...s,
+      monthSnapshots: {
+        ...(s.monthSnapshots || {}),
+        [s.selectedMonth]: {
+          ...(s.monthSnapshots?.[s.selectedMonth] || { assets:totals.assets, debts:totals.debts, net:totals.net, accounts:s.accounts }),
+          note:value,
+          updatedAt:new Date().toISOString()
+        }
+      }
+    }));
+  };
 
   return (
     <div className="screen">
@@ -2796,14 +2873,33 @@ function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMen
 
       <Card className="center-card">
         <p>{titleMap[metric]}</p>
-        <h2 className={metric === "debts" ? "danger" : "success"}>{metric === "debts" ? "-" : ""}{money(current[metric] || 0)}</h2>
+        <h2 className={metric === "debts" ? "danger" : "success"}>{metric === "debts" ? "-" : ""}{fmt(current[metric] || 0)}</h2>
         <p>{titleMap[metric]} for {monthLabel(state.selectedMonth)}</p>
       </Card>
 
-      <DonutCard title="What I Own" kind="asset" accounts={(current.accounts || []).filter(a=>a.kind==="asset")} />
-      <DonutCard title="What I Owe" kind="debt" accounts={(current.accounts || []).filter(a=>a.kind==="debt")} />
+      <Card>
+        <div className="section-title"><h2>Monthly note</h2><span>Financial journal</span></div>
+        <textarea className="snapshot-note" value={current.note || ""} onChange={e=>saveNote(e.target.value)} placeholder="What happened this month? Bonus, market dip, big purchase, debt payoff…" />
+      </Card>
+
+      <DonutCard title="What I Own" kind="asset" accounts={(current.accounts || []).filter(a=>a.kind==="asset")} currency={state.currency} />
+      <DonutCard title="What I Owe" kind="debt" accounts={(current.accounts || []).filter(a=>a.kind==="debt")} currency={state.currency} />
+
+      <Card>
+        <div className="section-title"><h2>Account history</h2><span>Drill into one account</span></div>
+        <select value={accountHistoryId} onChange={e=>setAccountHistoryId(e.target.value)}>
+          <option value="">Choose an account</option>
+          {(current.accounts || state.accounts || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+        {accountHistoryId && accountHistoryRows.length ? (
+          <div className="mini-history-list">
+            {accountHistoryRows.map(row => <div key={row.key}><span>{shortMonthLabel(row.key)}</span><b>{fmt(row.balance)}</b></div>)}
+          </div>
+        ) : accountHistoryId ? <p className="muted">No history found for this account yet.</p> : null}
+      </Card>
 
       <Card className="history-table">
+        <div className="section-title"><h2>Monthly history</h2><button className="small-action" onClick={exportHistoryCsv}><FileDown size={16}/>Export CSV</button></div>
         <div className="table-head"><span>Month</span><span>Assets</span><span>Debts</span><span>Net · MoM</span></div>
         {rows.length ? rows.map((r, i) => {
           const prev = rows[i+1];
@@ -2811,11 +2907,11 @@ function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMen
           return (
             <div className="history-row" key={r.key} onClick={()=>setState(s=>({...s, selectedMonth:r.key}))}>
               <span>{shortMonthLabel(r.key)}</span>
-              <span>{money(r.assets)}</span>
-              <span className="danger">-{money(r.debts)}</span>
+              <span>{fmt(r.assets)}</span>
+              <span className="danger">-{fmt(r.debts)}</span>
               <span>
-                <b className={r.net >= 0 ? "success":"danger"}>{money(r.net)}</b>
-                <em className={mom >= 0 ? "mom good":"mom bad"}>{signedMoney(mom)} MoM</em>
+                <b className={r.net >= 0 ? "success":"danger"}>{fmt(r.net)}</b>
+                <em className={mom >= 0 ? "mom good":"mom bad"}>{signedMoney(mom, state.currency)} MoM</em>
               </span>
             </div>
           );
@@ -2825,7 +2921,8 @@ function HistoryPage({ state, setState, totals, metric, setHistoryMetric, setMen
   );
 }
 
-function DonutCard({ title, kind, accounts }) {
+function DonutCard({ title, kind, accounts, currency }) {
+  const fmt = useMoney(currency);
   const total = accounts.reduce((s,a)=>s+Number(a.balance||0),0);
   const colors = kind === "asset" ? ["#3fa463","#63b77c","#91cda3","#c0e2ca"] : ["#e5292f","#ea5358","#f07d82","#f6a6a9"];
   const data = accounts.map((a, i)=>({ name:a.name, value:Number(a.balance||0), color:colors[i%colors.length] })).filter(d=>d.value>0);
@@ -2843,11 +2940,11 @@ function DonutCard({ title, kind, accounts }) {
                 </Pie>
               </PieChart>
             </ResponsiveContainer>
-            <div className="donut-center"><b className={kind==="debt"?"danger":""}>{kind==="debt" ? "-" : ""}{money(total)}</b><span>total</span></div>
+            <div className="donut-center"><b className={kind==="debt"?"danger":""}>{kind==="debt" ? "-" : ""}{fmt(total)}</b><span>total</span></div>
           </div>
           <div className="donut-legend">
             {data.map(d=>(
-              <div key={d.name}><i style={{background:d.color}}></i><span>{d.name}</span><b className={kind==="debt"?"danger":""}>{kind==="debt" ? "-" : ""}{money(d.value)}</b></div>
+              <div key={d.name}><i style={{background:d.color}}></i><span>{d.name}</span><b className={kind==="debt"?"danger":""}>{kind==="debt" ? "-" : ""}{fmt(d.value)}</b></div>
             ))}
           </div>
         </div>
@@ -2857,9 +2954,13 @@ function DonutCard({ title, kind, accounts }) {
 }
 
 function CashFlow({ state, totals, setEditor, setMenuOpen }) {
-  const next7 = upcomingTransactions(state.transactions, 7);
+  const [lookaheadDays, setLookaheadDays] = useState(30);
+  const upcoming = upcomingTransactions(state.transactions, lookaheadDays);
   const recurringIncome = recurringCashflowTransactions(state.transactions, "income");
   const recurringExpenses = recurringCashflowTransactions(state.transactions, "expense");
+  const categoryTotals = useMemo(() => categoryTotalsFor(state.transactions || []), [state.transactions]);
+  const debtPlan = useMemo(() => debtPayoffPlan(state.accounts || []), [state.accounts]);
+  const fmt = useMoney(state.currency);
 
   return (
     <div className="screen">
@@ -2867,10 +2968,10 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
       <Card>
         <h2>Money In vs Out</h2>
         <div className="cash-totals">
-          <div><span>Monthly Income</span><strong className="success">{money(totals.income)}</strong></div>
-          <div><span>Monthly Expenses</span><strong className="danger">{money(totals.expenses)}</strong></div>
+          <div><span>Monthly Income</span><strong className="success">{fmt(totals.income)}</strong></div>
+          <div><span>Monthly Expenses</span><strong className="danger">{fmt(totals.expenses)}</strong></div>
         </div>
-        <div className="net-line"><span>Net</span><strong className={totals.income - totals.expenses >= 0 ? "success" : "danger"}>{money(totals.income - totals.expenses)}</strong></div>
+        <div className="net-line"><span>Net</span><strong className={totals.income - totals.expenses >= 0 ? "success" : "danger"}>{fmt(totals.income - totals.expenses)}</strong></div>
       </Card>
 
       {state.transactions.length === 0 ? (
@@ -2883,12 +2984,25 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
       ) : (
         <>
           <Card>
-            <div className="section-title"><h2>Next 7 Days <ChevronDown size={20}/></h2><b>{next7.length} upcoming</b></div>
-            {next7.length ? next7.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor}/>) : <p className="muted">No upcoming transactions yet.</p>}
+            <div className="section-title"><h2>Next {lookaheadDays} Days <ChevronDown size={20}/></h2><b>{upcoming.length} upcoming</b></div>
+            <div className="segmented-control">
+              {[7,14,30].map(days => <button key={days} className={lookaheadDays===days ? "active" : ""} onClick={()=>setLookaheadDays(days)}>{days} days</button>)}
+            </div>
+            {upcoming.length ? upcoming.map(t => <TransactionRow key={`${t.id}-${t.occurrenceDate}`} t={t} setEditor={setEditor} currency={state.currency}/>) : <p className="muted">No upcoming transactions in this window.</p>}
           </Card>
 
-          <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
-          <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+          <Card>
+            <div className="section-title"><h2>Spending by category</h2><span>Monthly estimate</span></div>
+            {categoryTotals.length ? categoryTotals.map(c => <div className="category-total" key={c.category}><span>{c.category}</span><b className="danger">-{fmt(c.total)}</b></div>) : <p className="muted">Add categories to expenses to unlock breakdowns.</p>}
+          </Card>
+
+          <Card>
+            <div className="section-title"><h2>Debt payoff order</h2><span>Snowball view</span></div>
+            {debtPlan.length ? debtPlan.map((d, i) => <div className="category-total" key={d.id}><span>{i+1}. {d.name}</span><b className="danger">-{fmt(d.balance)}</b></div>) : <p className="muted">No debts to prioritise.</p>}
+          </Card>
+
+          <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor} currency={state.currency}/>
+          <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor} currency={state.currency}/>
         </>
       )}
       <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
@@ -2896,17 +3010,19 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   );
 }
 
-function TransactionGroup({ title, total, color, txns, setEditor }) {
+function TransactionGroup({ title, total, color, txns, setEditor, currency }) {
+  const fmt = useMoney(currency);
   return (
     <Card>
       <h2>{title}</h2>
-      <p className={color}>Total Monthly: {money(total)}</p>
-      {txns.length ? txns.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor} controls />) : <p className="muted">None yet.</p>}
+      <p className={color}>Total Monthly: {fmt(total)}</p>
+      {txns.length ? txns.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor} controls currency={currency} />) : <p className="muted">None yet.</p>}
     </Card>
   );
 }
 
-function TransactionRow({ t, setEditor, controls=false }) {
+function TransactionRow({ t, setEditor, controls=false, currency }) {
+  const fmt = useMoney(currency);
   return (
     <div className="transaction-row">
       <div className={`round-icon ${t.type === "income" ? "asset" : "debt"}`}>{t.icon || (t.type==="income" ? "💵" : "💳")}</div>
@@ -2914,7 +3030,7 @@ function TransactionRow({ t, setEditor, controls=false }) {
         <strong>{t.name}</strong>
         <span>{formatDate(t.occurrenceDate || t.date)} · {relativeDate(t.occurrenceDate || t.date)} · {frequencyLabel(t.frequency || (t.recurring ? "monthly" : "oneOff"))}</span>
       </div>
-      <strong className={t.type === "income" ? "success" : "danger"}>{t.type === "income" ? "+" : "-"}{money(t.amount)}</strong>
+      <strong className={t.type === "income" ? "success" : "danger"}>{t.type === "income" ? "+" : "-"}{fmt(t.amount)}</strong>
       {controls && <button className="icon-btn" onClick={()=>setEditor({ type:"transaction", item:t })}><Pencil size={20}/></button>}
     </div>
   );
@@ -3156,10 +3272,12 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
   );
 }
 
-function CompoundWealthPage({ setCompoundOpen, setMenuOpen }) {
+function CompoundWealthPage({ state, totals, setCompoundOpen, setMenuOpen }) {
+  const defaultStart = Math.max(0, Number(totals?.net || 20000));
+  const defaultMonthly = Math.max(0, Number((totals?.income || 0) - (totals?.expenses || 0)) || 2100);
   const [inputs, setInputs] = useState({
-    start: 20000,
-    monthly: 2100,
+    start: defaultStart,
+    monthly: defaultMonthly,
     years: 16,
     rate: 10,
     startYear: new Date().getFullYear(),
@@ -3198,7 +3316,7 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen }) {
   const totalContributions = Number(inputs.start || 0) + (Number(inputs.monthly || 0) * 12 * Number(inputs.years || 0));
   const totalGrowth = Math.max(0, futureValue - totalContributions);
 
-  const reset = () => setInputs({ start:20000, monthly:2100, years:16, rate:10, startYear:new Date().getFullYear(), age:35 });
+  const reset = () => setInputs({ start:defaultStart, monthly:defaultMonthly, years:16, rate:10, startYear:new Date().getFullYear(), age:35 });
 
   return (
     <div className="screen compound-screen">
@@ -3589,6 +3707,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         amount:Number(form.amount || 0),
         category:form.category,
         date:new Date(form.date).toISOString(),
+        endDate: form.endDate ? new Date(form.endDate).toISOString() : "",
         frequency,
         recurring:frequency !== "oneOff"
       };
@@ -3647,6 +3766,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
           <label>Amount<input type="number" value={form.amount} onChange={e=>change("amount", e.target.value)} /></label>
           <label>Category<input value={form.category} onChange={e=>change("category", e.target.value)} /></label>
           <label>Start / Next Date<input type="date" value={form.date} onChange={e=>change("date", e.target.value)} /></label>
+          <label>Recurring ends on<input type="date" value={form.endDate || ""} onChange={e=>change("endDate", e.target.value)} /></label>
           <label>Frequency
             <select value={form.frequency} onChange={e=>{
               change("frequency", e.target.value);
@@ -3667,6 +3787,10 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
             <select value={form.goalType} onChange={e=>change("goalType", e.target.value)}>
               <option value="netWorth">Net Worth Goal</option>
               <option value="accountGrowth">Account Growth Goal</option>
+              <option value="savings">Savings Goal</option>
+              <option value="emergencyFund">Emergency Fund Goal</option>
+              <option value="fire">FIRE Goal</option>
+              <option value="income">Income Goal</option>
               <option value="debtPayoff">Debt Payoff Goal</option>
             </select>
           </label>
@@ -3740,9 +3864,14 @@ function calculateGoalProgress(goal, totals, accounts) {
     sourceLabel = "Net Worth";
   }
 
-  if (goalType === "accountGrowth") {
+  if (["accountGrowth", "savings", "emergencyFund", "fire"].includes(goalType)) {
     current = linkedAccount ? Number(linkedAccount.balance || 0) : Number(goal.current || 0);
     sourceLabel = linkedAccount?.name || goal.account || "Manual account";
+  }
+
+  if (goalType === "income") {
+    current = Number(totals.income || goal.current || 0);
+    sourceLabel = "Monthly income";
   }
 
   if (goalType === "debtPayoff") {
@@ -3879,6 +4008,50 @@ function goalValueForSnapshot(goal, snapshot) {
   return Number(account.balance || 0);
 }
 
+function accountHistoryFor(state, accountId) {
+  if (!accountId) return [];
+  return historyRows(state).slice().reverse().map(row => {
+    const account = (row.accounts || []).find(a => a.id === accountId);
+    return account ? { key: row.key, balance: Number(account.balance || 0) } : null;
+  }).filter(Boolean);
+}
+
+function categoryTotalsFor(transactions) {
+  const map = new Map();
+  for (const tx of transactions || []) {
+    if (tx.type !== "expense") continue;
+    const category = tx.category || "Uncategorised";
+    map.set(category, (map.get(category) || 0) + monthlyEquivalent(tx));
+  }
+  return Array.from(map.entries()).map(([category,total]) => ({ category, total })).sort((a,b)=>b.total-a.total);
+}
+
+function debtPayoffPlan(accounts) {
+  return (accounts || []).filter(a => a.kind === "debt" && Number(a.balance || 0) > 0).slice().sort((a,b)=>Number(a.balance || 0)-Number(b.balance || 0));
+}
+
+function goalHistorySeries(goal, state) {
+  return historyRows(state).slice().reverse().map(row => {
+    const snapshot = state.monthSnapshots?.[row.key];
+    const value = goalValueForSnapshot(goal, snapshot);
+    return value === null ? null : { key: row.key, value:Number(value || 0) };
+  }).filter(Boolean);
+}
+
+function GoalSparkline({ goal, state }) {
+  const data = goalHistorySeries(goal, state);
+  if (data.length < 2) return null;
+  return (
+    <div className="goal-sparkline" aria-label="Goal progress trend">
+      <ResponsiveContainer width="100%" height={34}>
+        <LineChart data={data}>
+          <Line type="monotone" dataKey="value" stroke="currentColor" strokeWidth={2} dot={false} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 function estimateGoalCompletion(goal, state, currentCalc) {
   const rows = historyRows(state)
     .slice()
@@ -3947,6 +4120,9 @@ function estimateGoalCompletion(goal, state, currentCalc) {
     remaining = Number(currentCalc.remaining || 0);
   }
 
+  const cashSurplus = Math.max(0, Number(state.transactions ? computeTotals(state).income - computeTotals(state).expenses : 0));
+  if (monthlyRate <= 0 && goalType !== "debtPayoff" && cashSurplus > 0) monthlyRate = cashSurplus;
+
   if (currentCalc.progress >= 100 || remaining <= 0) {
     return {
       label: "Already complete",
@@ -3970,7 +4146,7 @@ function estimateGoalCompletion(goal, state, currentCalc) {
 
   return {
     label: monthLabel(completionKey),
-    detail: `Based on recent pace of ${money(monthlyRate)}/mo.`,
+    detail: `Based on recent pace or cash surplus of ${money(monthlyRate, state.currency)}/mo.`,
     monthlyRate,
     monthsToFinish,
     kind: "active"
@@ -4029,6 +4205,10 @@ function goalTypeLabel(type) {
   return {
     netWorth: "Net Worth Goal",
     accountGrowth: "Account Growth Goal",
+    savings: "Savings Goal",
+    emergencyFund: "Emergency Fund Goal",
+    fire: "FIRE Goal",
+    income: "Income Goal",
     debtPayoff: "Debt Payoff Goal"
   }[type || "accountGrowth"] || "Goal";
 }
@@ -4037,6 +4217,10 @@ function goalIconForType(type) {
   return {
     netWorth: "🎯",
     accountGrowth: "💼",
+    savings: "🏦",
+    emergencyFund: "🛟",
+    fire: "🔥",
+    income: "💵",
     debtPayoff: "⚡"
   }[type || "accountGrowth"] || "🎯";
 }
@@ -4045,6 +4229,10 @@ function goalColorForType(type) {
   return {
     netWorth: "purple",
     accountGrowth: "green",
+    savings: "green",
+    emergencyFund: "purple",
+    fire: "purple",
+    income: "green",
     debtPayoff: "red"
   }[type || "accountGrowth"] || "green";
 }
@@ -4167,6 +4355,9 @@ function upcomingTransactions(transactions, days) {
       continue;
     }
 
+    const endDateLimit = transaction.endDate ? new Date(transaction.endDate) : null;
+    if (endDateLimit && endDateLimit < start) continue;
+
     // Advance recurring item until it reaches the current window.
     let safety = 0;
     while (occurrenceDate < start && safety < 500) {
@@ -4176,6 +4367,7 @@ function upcomingTransactions(transactions, days) {
 
     // Include all occurrences inside the selected window.
     while (occurrenceDate <= end && safety < 600) {
+      if (endDateLimit && occurrenceDate > endDateLimit) break;
       out.push({
         ...transaction,
         occurrenceDate: occurrenceDate.toISOString(),
