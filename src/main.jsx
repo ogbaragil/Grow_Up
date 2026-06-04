@@ -4160,23 +4160,40 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
               let calc = calculateGoalProgress(g, totals, accountsForMonth);
               calc = refineDebtPayoffCalcWithHistory(g, state, calc);
               const pct = Math.round(calc.progress || 0);
+              const colorMap = {
+                green:  "linear-gradient(135deg,#1a7a40 0%,#236b4a 100%)",
+                red:    "linear-gradient(135deg,#b91c1c 0%,#9f1239 100%)",
+                purple: "linear-gradient(135deg,#6d28d9 0%,#4c1d95 100%)",
+                blue:   "linear-gradient(135deg,#1d4ed8 0%,#1e3a8a 100%)",
+                gold:   "linear-gradient(135deg,#b45309 0%,#92400e 100%)",
+              };
+              const bg = colorMap[g.color || goalColorForType(g.goalType)] || colorMap.green;
               return (
-                <article key={g.id} className={`goal-card slim archived-goal-card ${g.color || goalColorForType(g.goalType)}`}>
-                  <div className="goal-top compact">
-                    <div className="goal-icon">{g.icon || goalIconForType(g.goalType)}</div>
-                    <div className="row-main">
-                      <h2>{g.name}</h2>
-                      <span>{goalTypeLabel(g.goalType)} · archived</span>
+                <article key={g.id} className="goal-card-v2 archived-v2" style={{background: bg, opacity: 0.7, filter: "saturate(0.5)"}}>
+                  <div className="goal-v2-top" style={{cursor:"default", paddingBottom:12}}>
+                    <div className="goal-v2-icon-wrap">
+                      <span className="goal-v2-emoji">{g.icon || goalIconForType(g.goalType)}</span>
+                      <GoalRing pct={pct} size={64}/>
                     </div>
-                    <b>{pct}%</b>
+                    <div className="goal-v2-main">
+                      <h2 className="goal-v2-name">{g.name}</h2>
+                      <span style={{fontSize:12,color:"rgba(255,255,255,.6)",fontWeight:800}}>{goalTypeLabel(g.goalType)} · archived</span>
+                      <div className="goal-v2-bar" style={{marginTop:6}}>
+                        <div className="goal-v2-bar-fill" style={{width:`${pct}%`}}/>
+                      </div>
+                    </div>
+                    <div className="goal-v2-pct"><b>{pct}%</b></div>
                   </div>
-                  <div className="archived-goal-meta">
-                    <span>Archived</span>
-                    <strong>{g.archivedAt ? new Date(g.archivedAt).toLocaleDateString() : "Saved"}</strong>
-                  </div>
-                  <div className="archived-goal-actions">
-                    <button type="button" className="ghost" onClick={()=>restore(g.id)}>Restore from Cloud</button>
-                    <button type="button" className="danger-mini" onClick={()=>del(g.id)}>Delete</button>
+                  <div style={{padding:"0 16px 14px",borderTop:"1px solid rgba(255,255,255,.12)"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",paddingTop:12,marginBottom:12}}>
+                      <span style={{fontSize:12,color:"rgba(255,255,255,.5)",fontWeight:800}}>
+                        Archived {g.archivedAt ? new Date(g.archivedAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}) : ""}
+                      </span>
+                    </div>
+                    <div className="goal-v2-actions">
+                      <button type="button" className="goal-v2-btn edit" onClick={()=>restore(g.id)}>Restore</button>
+                      <button type="button" className="goal-v2-btn delete" onClick={()=>del(g.id)}><Trash2 size={16}/></button>
+                    </div>
                   </div>
                 </article>
               );
