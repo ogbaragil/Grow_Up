@@ -2421,46 +2421,44 @@ function App() {
     refreshSubscription();
   }, [session?.user?.id]);
 
-  // Handle Stripe checkout return — write subscription directly to Supabase
+  // Activate Pro on return from Stripe checkout
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkoutStatus = params.get("checkout");
     const plan = params.get("plan") || "monthly";
 
-    if (checkoutStatus === "success") {
-      window.history.replaceState({}, "", window.location.pathname);
-
-      const activate = async () => {
-        if (!supabase || !session?.user?.id) {
-          setTimeout(activate, 500);
-          return;
-        }
-        notify("Activating Pro…", "info");
-        // Write directly to Supabase — bypasses edge function entirely
-        const { error } = await supabase
-          .from("growup_subscriptions")
-          .upsert({
-            user_id: session.user.id,
-            status: "trialing",
-            plan,
-            updated_at: new Date().toISOString(),
-          }, { onConflict: "user_id" });
-
-        if (!error) {
-          await refreshSubscription();
-          notify("✦ You're now on Grow UP Pro! Enjoy.", "success");
-        } else {
-          console.error("Upsert error:", error);
-          notify("Error activating Pro: " + error.message, "error");
-        }
-      };
-      setTimeout(activate, 800);
-
-    } else if (checkoutStatus === "cancel") {
+    if (checkoutStatus === "cancel") {
       notify("Checkout cancelled — you can upgrade any time.", "info");
       window.history.replaceState({}, "", window.location.pathname);
+      return;
     }
-  }, []); // Run once on mount — session loaded via retry loop inside activate()
+
+    if (checkoutStatus !== "success") return;
+    if (!supabase || !session?.user?.id) return;
+
+    const activate = async () => {
+      notify("Activating Pro…", "info");
+      const { error } = await supabase
+        .from("growup_subscriptions")
+        .upsert({
+          user_id: session.user.id,
+          status: "trialing",
+          plan,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: "user_id" });
+
+      if (!error) {
+        await refreshSubscription();
+        notify("✦ You're now on Grow UP Pro! Enjoy.", "success");
+        window.history.replaceState({}, "", window.location.pathname);
+      } else {
+        console.error("Upsert error:", JSON.stringify(error));
+        notify("Error activating Pro: " + error.message, "error");
+      }
+    };
+
+    activate();
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!supabase) {
