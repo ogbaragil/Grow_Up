@@ -1198,8 +1198,8 @@ function TimelineDrawer({ item, state, scenario, onClose, onEditGoal, onOpenComp
 
   // ── Today card ──────────────────────────────────────────────────────────
   if (item.category === "Today") {
-    const rows = historyRows(state).slice().reverse();
-    const chartData = rows.map(r => ({ m: shortMonthLabel(r.key), net: r.net }));
+    const rows = historyRows(state); // newest first — do NOT reverse
+    const chartData = rows.slice().reverse().map(r => ({ m: shortMonthLabel(r.key), net: r.net })); // chart needs oldest-first
     return (
       <TimelineDrawerShell title="Net Worth History" icon="●" tone={item.tone} onClose={onClose}>
         {chartData.length >= 2 ? (
@@ -1216,7 +1216,7 @@ function TimelineDrawer({ item, state, scenario, onClose, onEditGoal, onOpenComp
         ) : <p className="muted tl-drawer-empty">Save 2+ monthly snapshots to see your trend.</p>}
         <div className="tl-drawer-stats tl-mom-scroll">
           {rows.map((r,i,arr) => {
-            const prev = arr[i+1];
+            const prev = arr[i+1]; // arr[i+1] is older since rows is newest-first
             const mom = prev ? r.net - prev.net : null;
             return (
               <div key={r.key} className="tl-drawer-stat-row">
