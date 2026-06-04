@@ -2274,29 +2274,38 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
       }
 
       const priceId = STRIPE_PRICES[plan];
-      console.log("Invoking checkout:", { plan, priceId });
 
-      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
-        body: { priceId, plan },
-        headers: { Authorization: `Bearer ${freshSession.access_token}` },
+      // Call edge function directly via fetch so we can read non-2xx bodies
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+      const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${freshSession.access_token}`,
+          "apikey": supabaseAnonKey,
+        },
+        body: JSON.stringify({ priceId, plan }),
       });
 
-      console.log("Checkout response:", { data, error });
+      const responseText = await res.text();
+      console.log("Edge function status:", res.status);
+      console.log("Edge function response:", responseText);
 
-      if (error) {
-        notify(`Checkout error: ${error.message || JSON.stringify(error)}`, "error");
+      if (!res.ok) {
+        let detail = responseText;
+        try { detail = JSON.parse(responseText)?.detail || JSON.parse(responseText)?.error || responseText; } catch {}
+        notify(`Checkout failed (${res.status}): ${detail}`, "error");
         setLoading(false);
         return;
       }
-      if (data?.error) {
-        notify(`Stripe error: ${data.detail || data.error}`, "error");
-        setLoading(false);
-        return;
-      }
+
+      const data = JSON.parse(responseText);
       if (data?.url) {
         window.location.href = data.url;
       } else {
-        notify("No checkout URL returned — check console for details.", "error");
+        notify(`No URL returned: ${JSON.stringify(data)}`, "error");
         setLoading(false);
       }
     } catch (err) {
