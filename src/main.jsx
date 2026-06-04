@@ -1214,8 +1214,8 @@ function TimelineDrawer({ item, state, scenario, onClose, onEditGoal, onOpenComp
             </ResponsiveContainer>
           </div>
         ) : <p className="muted tl-drawer-empty">Save 2+ monthly snapshots to see your trend.</p>}
-        <div className="tl-drawer-stats">
-          {rows.slice(-6).reverse().map((r,i,arr) => {
+        <div className="tl-drawer-stats tl-mom-scroll">
+          {rows.map((r,i,arr) => {
             const prev = arr[i+1];
             const mom = prev ? r.net - prev.net : null;
             return (
@@ -1283,7 +1283,7 @@ function TimelineDrawer({ item, state, scenario, onClose, onEditGoal, onOpenComp
           {forecast.detail && <p className="muted" style={{fontSize:12,marginTop:6}}>{forecast.detail}</p>}
         </div>
         <div className="tl-drawer-actions">
-          <button className="primary" onClick={() => { onEditGoal(goal); onClose(); }}>Edit goal</button>
+          <button className="primary" onClick={() => { onEditGoal(goal); onClose(); }}>Go to Goals →</button>
         </div>
       </TimelineDrawerShell>
     );
@@ -1333,7 +1333,7 @@ function TimelineDrawer({ item, state, scenario, onClose, onEditGoal, onOpenComp
           ))}
         </div>
         <div className="tl-drawer-actions">
-          <button className="primary" onClick={() => { onOpenCompound(target); onClose(); }}>Model in calculator</button>
+          <button className="primary" onClick={() => { onOpenCompound(target); onClose(); }}>Open Compound Calculator →</button>
         </div>
       </TimelineDrawerShell>
     );
@@ -1432,11 +1432,11 @@ function TimelineDrawer({ item, state, scenario, onClose, onEditGoal, onOpenComp
         <div className="tl-drawer-actions">
           {!fireGoalExists && (
             <button className="primary" onClick={() => { onEditGoal({ goalType:"fire", target: fireTarget }); onClose(); }}>
-              Create FIRE goal
+              Go to Goals — create FIRE goal →
             </button>
           )}
           <button className={fireGoalExists ? "primary" : "ghost"} onClick={() => { onOpenCompound(target); onClose(); }}>
-            Model in calculator
+            Open Compound Calculator →
           </button>
         </div>
       </TimelineDrawerShell>
@@ -1461,19 +1461,22 @@ function TimelineDrawerShell({ children, title, icon, tone, onClose }) {
   );
 }
 
-function WealthTimelinePage({ state, setState, setMenuOpen, setTimelineOpen, setCompoundOpen }) {
+function WealthTimelinePage({ state, setState, setMenuOpen, setTimelineOpen, setCompoundOpen, setTab }) {
   const [scenario, setScenario] = useState("balanced");
   const [activeItem, setActiveItem] = useState(null);
   const items = useMemo(() => buildWealthTimelineItems(state, scenario), [state, scenario]);
   const summary = useMemo(() => timelineScenarioSummary(state, scenario), [state, scenario]);
   const scenarioLabel = scenario === "conservative" ? "Conservative" : scenario === "aggressive" ? "Aggressive" : "Balanced";
 
-  const handleEditGoal = (goal) => {
-    // If it's a new goal stub (from FIRE CTA), open editor pre-filled
-    // Otherwise just navigate — user can open from Goals tab
+  const handleEditGoal = () => {
+    setActiveItem(null);
+    setTimelineOpen(false);
+    if (setTab) setTab("goals");
   };
 
-  const handleOpenCompound = (target) => {
+  const handleOpenCompound = () => {
+    setActiveItem(null);
+    setTimelineOpen(false);
     if (setCompoundOpen) setCompoundOpen(true);
   };
 
@@ -2408,7 +2411,7 @@ function App() {
     <div className="app-shell">
       <main className="phone">
         {timelineOpen ? (
-          <WealthTimelinePage state={activeState} setState={setState} setMenuOpen={setMenuOpen} setTimelineOpen={setTimelineOpen} setCompoundOpen={setCompoundOpen} />
+          <WealthTimelinePage state={activeState} setState={setState} setMenuOpen={setMenuOpen} setTimelineOpen={setTimelineOpen} setCompoundOpen={setCompoundOpen} setTab={setTab} />
         ) : insightsOpen ? (
           <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
         ) : compoundOpen ? (
