@@ -2404,34 +2404,49 @@ function App() {
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, [state.theme, state.currency]);
 
-  // Load subscription status from Supabase
+  const refreshSubscription = async () => {
+    if (!supabase || !session?.user?.id) return;
+    const { data } = await supabase
+      .from("growup_subscriptions")
+      .select("*")
+      .eq("user_id", session.user.id)
+      .maybeSingle();
+    setSubscription(data || null);
+    return data;
+  };
+
+  // Load subscription on session change
   useEffect(() => {
-    if (!supabase || !session?.user?.id) { setSubscription(null); return; }
-    supabase.from("growup_subscriptions")
-      .select("*").eq("user_id", session.user.id).single()
-      .then(({ data }) => setSubscription(data || null));
+    refreshSubscription();
   }, [session?.user?.id]);
 
-  // Handle Stripe checkout return
+  // Handle Stripe checkout return — poll until subscription is active
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkoutStatus = params.get("checkout");
     if (checkoutStatus === "success") {
-      notify("🎉 Welcome to Grow UP Pro! Your 14-day trial has started.", "success");
-      // Refresh subscription after short delay for webhook processing
-      setTimeout(() => {
-        if (supabase && session?.user?.id) {
-          supabase.from("growup_subscriptions")
-            .select("*").eq("user_id", session.user.id).single()
-            .then(({ data }) => setSubscription(data || null));
+      window.history.replaceState({}, "", window.location.pathname);
+      notify("🎉 Welcome to Grow UP Pro! Setting up your account…", "success");
+
+      // Poll every 2 seconds up to 30 seconds waiting for webhook to write subscription
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        attempts++;
+        const data = await refreshSubscription();
+        if (data?.status === "active" || data?.status === "trialing") {
+          clearInterval(poll);
+          notify("✦ You're now on Grow UP Pro!", "success");
+        } else if (attempts >= 15) {
+          clearInterval(poll);
+          notify("Subscription processing — if Pro features aren't unlocked in a minute, please refresh.", "info");
         }
       }, 2000);
-      window.history.replaceState({}, "", window.location.pathname);
+
     } else if (checkoutStatus === "cancel") {
       notify("Checkout cancelled — you can upgrade any time.", "info");
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [session?.user?.id]);
+  }, []);
 
   useEffect(() => {
     if (!supabase) {
