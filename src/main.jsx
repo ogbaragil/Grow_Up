@@ -4202,14 +4202,35 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
   );
 }
 
+function GoalRing({ pct, color, size = 56 }) {
+  const r = (size - 6) / 2;
+  const circ = 2 * Math.PI * r;
+  const filled = circ * Math.min(1, pct / 100);
+  return (
+    <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="goal-ring-svg">
+      <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="rgba(255,255,255,.22)" strokeWidth={5}/>
+      <circle
+        cx={size/2} cy={size/2} r={r} fill="none"
+        stroke="rgba(255,255,255,.85)" strokeWidth={5}
+        strokeDasharray={`${filled} ${circ}`}
+        strokeLinecap="round"
+        transform={`rotate(-90 ${size/2} ${size/2})`}
+        style={{transition:"stroke-dasharray .5s ease"}}
+      />
+    </svg>
+  );
+}
+
 function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor, reorderMode, moveGoal, canMoveUp, canMoveDown }) {
   let calc = calculateGoalProgress(g, totals, accounts);
   calc = refineDebtPayoffCalcWithHistory(g, state, calc);
   const pct = Math.round(calc.progress);
   const status = goalStatus(calc, g);
   const forecast = estimateGoalCompletion(g, state, calc, totals);
+  const isNearlyDone = pct >= 80 && pct < 100;
+  const isComplete = pct >= 100;
 
-  // Build sparkline from historical snapshots (Task 7)
+  // Sparkline
   const sparkData = Object.entries(state.monthSnapshots || {})
     .sort(([a], [b]) => a.localeCompare(b))
     .map(([, snap]) => {
@@ -4222,93 +4243,131 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
         return start > 0 ? clamp(((start - val) / start) * 100) : 0;
       }
       return target > 0 ? clamp((val / target) * 100) : 0;
-    })
-    .filter(v => v !== null);
+    }).filter(v => v !== null);
 
   const sparkPoints = sparkData.length >= 2 ? (() => {
-    const min = Math.min(...sparkData);
-    const max = Math.max(...sparkData);
+    const min = Math.min(...sparkData), max = Math.max(...sparkData);
     const range = Math.max(1, max - min);
     return sparkData.map((v, i) => {
       const x = (i / (sparkData.length - 1)) * 200;
-      const y = 38 - ((v - min) / range) * 34;
+      const y = 30 - ((v - min) / range) * 26;
       return `${x},${y}`;
     }).join(" ");
   })() : null;
 
+  const colorMap = {
+    green:  { bg: "linear-gradient(135deg,#1a7a40 0%,#236b4a 100%)", border: "rgba(255,255,255,.12)" },
+    red:    { bg: "linear-gradient(135deg,#b91c1c 0%,#9f1239 100%)", border: "rgba(255,255,255,.12)" },
+    purple: { bg: "linear-gradient(135deg,#6d28d9 0%,#4c1d95 100%)", border: "rgba(255,255,255,.12)" },
+    blue:   { bg: "linear-gradient(135deg,#1d4ed8 0%,#1e3a8a 100%)", border: "rgba(255,255,255,.12)" },
+    gold:   { bg: "linear-gradient(135deg,#b45309 0%,#92400e 100%)", border: "rgba(255,255,255,.12)" },
+  };
+  const theme = colorMap[g.color || goalColorForType(g.goalType)] || colorMap.green;
+
   return (
-    <div className={`goal-card slim ${g.color || goalColorForType(g.goalType)} ${g.open ? "open":""}`}>
-      <div className="goal-top compact" onClick={()=>!reorderMode && toggle(g.id)}>
-        <div className="goal-icon">{g.icon || goalIconForType(g.goalType)}</div>
-        <div className="row-main">
-          <h2>{g.name}</h2>
-          <span>{goalTypeLabel(g.goalType)} · {calc.sourceLabel}</span>
+    <div
+      className={`goal-card-v2 ${g.open ? "open" : ""} ${isNearlyDone ? "nearly-done" : ""} ${isComplete ? "complete" : ""}`}
+      style={{ background: theme.bg, borderColor: theme.border }}
+    >
+      {/* Closed header — always visible */}
+      <div className="goal-v2-top" onClick={() => !reorderMode && toggle(g.id)}>
+        <div className="goal-v2-icon-wrap">
+          <span className="goal-v2-emoji">{g.icon || goalIconForType(g.goalType)}</span>
+          {!reorderMode && <GoalRing pct={pct} size={64}/>}
         </div>
-        <div className="goal-quick-status">
-          <b>{pct}%</b>
-          <small className={`goal-status-chip ${status.kind}`}>{status.label}</small>
+
+        <div className="goal-v2-main">
+          <h2 className="goal-v2-name">{g.name}</h2>
+          <div className="goal-v2-status-row">
+            <span className={`goal-v2-status ${status.kind}`}>{status.icon} {status.label}</span>
+            {forecast.label !== "Need more history" && (
+              <span className="goal-v2-eta">→ {forecast.label}</span>
+            )}
+          </div>
+          {/* Inline progress bar always visible */}
+          <div className="goal-v2-bar">
+            <div className="goal-v2-bar-fill" style={{width: `${calc.noTarget ? 0 : pct}%`}}/>
+          </div>
         </div>
+
+        <div className="goal-v2-pct">
+          <b>{calc.noTarget ? "—" : `${pct}%`}</b>
+        </div>
+
         {reorderMode ? (
-          <div className="reorder-controls" onClick={(e)=>e.stopPropagation()}>
-            <button disabled={!canMoveUp} onClick={()=>moveGoal(g.id, -1)}>↑</button>
-            <button disabled={!canMoveDown} onClick={()=>moveGoal(g.id, 1)}>↓</button>
+          <div className="reorder-controls" onClick={e => e.stopPropagation()}>
+            <button disabled={!canMoveUp} onClick={() => moveGoal(g.id, -1)}>↑</button>
+            <button disabled={!canMoveDown} onClick={() => moveGoal(g.id, 1)}>↓</button>
           </div>
         ) : (
-          g.open ? <ChevronUp size={22}/> : <ChevronDown size={22}/>
+          <div className="goal-v2-chevron">
+            {g.open ? <ChevronUp size={18}/> : <ChevronDown size={18}/>}
+          </div>
         )}
       </div>
+
+      {/* Expanded detail */}
       {g.open && !reorderMode && (
-        <div className="goal-details">
-          <div className="progress-line">
-            <span>
-              {calc.noTarget
-                ? "No target set"
-                : (calc.goalType || g.goalType) === "debtPayoff"
-                  ? `${money(Math.max(0, Number(calc.start || 0) - Number(calc.current || 0)))} / ${money(calc.start)} paid`
-                  : `${money(calc.current)} / ${money(calc.target)}`}
-            </span>
-            <b>{calc.noTarget ? "—" : pct + "%"}</b>
+        <div className="goal-v2-detail">
+          {/* Progress figures */}
+          <div className="goal-v2-figures">
+            {calc.noTarget ? (
+              <p className="goal-v2-notarget">Edit this goal and enter a target to start tracking.</p>
+            ) : (calc.goalType || g.goalType) === "debtPayoff" ? (
+              <>
+                <div><span>Paid off</span><strong>{money(Math.max(0, Number(calc.start||0) - Number(calc.current||0)))}</strong></div>
+                <div><span>Remaining</span><strong>{money(calc.remaining)}</strong></div>
+                <div><span>Started at</span><strong>{money(calc.start)}</strong></div>
+              </>
+            ) : (
+              <>
+                <div><span>Current</span><strong>{money(calc.current)}</strong></div>
+                <div><span>Target</span><strong>{money(calc.target)}</strong></div>
+                <div><span>Remaining</span><strong>{money(calc.remaining)}</strong></div>
+              </>
+            )}
+            {g.deadline && (
+              <div><span>Deadline</span><strong>{new Date(g.deadline).toLocaleDateString("en-US",{month:"short",year:"numeric"})}</strong></div>
+            )}
           </div>
-          <div className="bar"><i style={{width: calc.noTarget ? "0%" : `${pct}%`}}></i></div>
-          {calc.noTarget && (
-            <p className="muted" style={{fontSize:"13px",marginTop:"8px"}}>
-              Edit this goal and enter your FIRE number to start tracking progress.
-            </p>
+
+          {/* Forecast */}
+          {forecast.kind !== "neutral" && (
+            <div className={`goal-v2-forecast ${forecast.kind}`}>
+              <div className="goal-v2-forecast-main">
+                <span>Forecast</span>
+                <strong>{forecast.label}</strong>
+              </div>
+              {forecast.detail && <small>{forecast.detail}</small>}
+            </div>
           )}
 
+          {/* Sparkline */}
           {sparkPoints && (
-            <div style={{margin:"10px 0 0"}}>
-              <svg viewBox="0 0 200 40" style={{width:"100%",height:"40px",display:"block"}}>
-                <polyline points={sparkPoints} fill="none" stroke="rgba(255,255,255,0.6)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+            <div className="goal-v2-spark">
+              <svg viewBox="0 0 200 32" style={{width:"100%",height:32,display:"block"}}>
+                <polyline points={sparkPoints} fill="none" stroke="rgba(255,255,255,.55)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
               </svg>
-              <p style={{fontSize:"11px",opacity:0.7,margin:"2px 0 0",color:"inherit"}}>Progress over time</p>
+              <span>Progress over time</span>
             </div>
           )}
 
-          <dl>
-            <dt>Goal type</dt><dd>{goalTypeLabel(g.goalType)}</dd>
-            <dt>Target</dt><dd>{money(calc.target)}</dd>
-            <dt>Current</dt><dd>{money(calc.current)}</dd>
-            <dt>Remaining</dt><dd>{money(calc.remaining)}</dd>
-            <dt>Deadline</dt><dd>{g.deadline ? new Date(g.deadline).toLocaleDateString("en-US", {month:"short", year:"numeric"}) : "—"}</dd>
-          </dl>
+          {/* Monthly pace if deadline set */}
+          {calc.monthlyNeeded > 0 && (
+            <p className="goal-v2-pace">{money(calc.monthlyNeeded)}/mo needed to hit deadline</p>
+          )}
 
-          <div className={`pace-card ${status.kind}`}>
-            <h3>{status.icon} {status.label}</h3>
-            <span>{status.detail}</span>
-            <p>{calc.monthlyNeeded > 0 ? `Required: ${money(calc.monthlyNeeded)}/mo until deadline` : "No monthly pace required."}</p>
-
-            <div className={`forecast-pill ${forecast.kind}`}>
-              <strong>Forecast finish</strong>
-              <b>{forecast.label}</b>
-              <small>{forecast.detail}</small>
-            </div>
-          </div>
-
-          <div className="goal-actions">
-            <button onClick={()=>setEditor({ type:"goal", item:g })}><Pencil size={20}/>Edit</button>
-            <button className="archive" onClick={()=>archive(g.id)}><Archive size={20}/>Archive</button>
-            <button className="delete" onClick={()=>del(g.id)}><Trash2 size={20}/>Delete</button>
+          {/* Actions */}
+          <div className="goal-v2-actions">
+            <button className="goal-v2-btn edit" onClick={() => setEditor({ type:"goal", item:g })}>
+              <Pencil size={16}/> Edit
+            </button>
+            <button className="goal-v2-btn archive" onClick={() => archive(g.id)}>
+              <Archive size={16}/> Archive
+            </button>
+            <button className="goal-v2-btn delete" onClick={() => del(g.id)}>
+              <Trash2 size={16}/>
+            </button>
           </div>
         </div>
       )}
