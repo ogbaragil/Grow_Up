@@ -2265,11 +2265,43 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
   const handleUpgrade = async () => {
     if (!session) { notify("Please sign in first.", "error"); return; }
     setLoading(true);
-    const url = await createCheckoutSession(plan, session);
-    if (url) {
-      window.location.href = url;
-    } else {
-      notify("Could not start checkout. Please try again.", "error");
+    try {
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      if (!freshSession?.access_token) {
+        notify("Session expired — please sign out and sign in again.", "error");
+        setLoading(false);
+        return;
+      }
+
+      const priceId = STRIPE_PRICES[plan];
+      console.log("Invoking checkout:", { plan, priceId });
+
+      const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+        body: { priceId, plan },
+        headers: { Authorization: `Bearer ${freshSession.access_token}` },
+      });
+
+      console.log("Checkout response:", { data, error });
+
+      if (error) {
+        notify(`Checkout error: ${error.message || JSON.stringify(error)}`, "error");
+        setLoading(false);
+        return;
+      }
+      if (data?.error) {
+        notify(`Stripe error: ${data.detail || data.error}`, "error");
+        setLoading(false);
+        return;
+      }
+      if (data?.url) {
+        window.location.href = data.url;
+      } else {
+        notify("No checkout URL returned — check console for details.", "error");
+        setLoading(false);
+      }
+    } catch (err) {
+      console.error("Checkout exception:", err);
+      notify(`Exception: ${err?.message || String(err)}`, "error");
       setLoading(false);
     }
   };
