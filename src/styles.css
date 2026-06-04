@@ -7352,3 +7352,211 @@ button:focus-visible {
 :root[data-theme="dark"] .upcoming-empty { background: rgba(255,255,255,.05) !important; color: var(--muted) !important; }
 :root[data-theme="dark"] .feature-dots button { background: rgba(255,255,255,.2); }
 :root[data-theme="dark"] .feature-dots button.active { background: white; }
+
+/* ═══════════════════════════════════════════════════════
+   CASHFLOW BAR CHART — replaces confusing donut
+   ═══════════════════════════════════════════════════════ */
+.cashflow-summary-card {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cashflow-row {
+  display: grid;
+  grid-template-columns: 88px 1fr 80px;
+  align-items: center;
+  gap: 10px;
+}
+.cashflow-row-label {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+}
+.cashflow-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+.cashflow-dot.income  { background: var(--green); }
+.cashflow-dot.expense { background: var(--red); }
+.cashflow-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: var(--line);
+  overflow: hidden;
+}
+.cashflow-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .6s ease;
+}
+.cashflow-bar-fill.income  { background: var(--green); }
+.cashflow-bar-fill.expense { background: var(--red); }
+.cashflow-row b {
+  font-size: 14px;
+  font-weight: 900;
+  text-align: right;
+}
+.cashflow-net-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+  font-size: 15px;
+}
+.cashflow-net-row span {
+  font-weight: 800;
+  color: var(--muted);
+}
+.cashflow-net-row strong {
+  font-size: 18px;
+  font-weight: 1000;
+  letter-spacing: -.03em;
+}
+
+/* Transaction row delete button */
+.txn-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.icon-btn.danger {
+  color: var(--red);
+}
+.icon-btn.danger:hover {
+  background: var(--red2);
+}
+
+/* Delete button in EditorModal */
+.danger-full {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px;
+  border-radius: 14px;
+  border: 1.5px solid rgba(229,41,47,.25);
+  background: var(--red2);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+  margin-top: 8px;
+}
+.danger-full:hover { background: var(--red); color: white; }
+
+/* ═══════════════════════════════════════════════════════
+   CASHFLOW DONUT — redesigned (teal surplus, red expenses)
+   ═══════════════════════════════════════════════════════ */
+.cf-donut-income-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+.cf-donut-income-header span {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.cf-donut-income-header strong {
+  font-size: 22px;
+  font-weight: 1000;
+  color: var(--text);
+  letter-spacing: -.04em;
+}
+.cf-donut-layout {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.cf-donut-wrap {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  flex: 0 0 150px;
+}
+.cf-donut-svg {
+  width: 150px;
+  height: 150px;
+  transform: rotate(-90deg);
+  display: block;
+}
+.cf-donut-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+.cf-donut-center strong {
+  font-size: 15px;
+  font-weight: 1000;
+  color: var(--text);
+  letter-spacing: -.03em;
+  line-height: 1;
+}
+.cf-donut-center span {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--muted);
+}
+.cf-donut-legend {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cf-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.cf-legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 12px;
+}
+.cf-legend-row > div p {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0 0 2px;
+  font-weight: 800;
+}
+.cf-legend-row > div strong {
+  font-size: 16px;
+  font-weight: 1000;
+  letter-spacing: -.03em;
+}
+.cf-savings-rate {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+.cf-savings-rate span {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 800;
+}
+.cf-savings-rate strong {
+  font-size: 15px;
+  font-weight: 1000;
+}
+:root[data-theme="dark"] .cf-donut-center strong { color: white; }
+:root[data-theme="dark"] .cf-legend-row > div strong { color: white; }

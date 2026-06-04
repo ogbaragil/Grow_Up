@@ -3975,20 +3975,15 @@ function SpendingEnvelopeCard({ recurringExpenses, totalExpenses, totalIncome })
   );
 }
 
-function CashFlow({ state, totals, setEditor, setMenuOpen }) {
+function CashFlow({ state, setState, totals, setEditor, setMenuOpen }) {
   const [lookAhead, setLookAhead] = useState(7);
   const next = upcomingTransactions(state.transactions, lookAhead);
   const recurringIncome = recurringCashflowTransactions(state.transactions, "income");
   const recurringExpenses = recurringCashflowTransactions(state.transactions, "expense");
 
-  // Income vs expenses donut data
+  // Income vs expenses summary
   const income = Number(totals.income || 0);
   const expenses = Number(totals.expenses || 0);
-  const surplus = Math.max(0, income - expenses);
-  const donutData = income > 0 || expenses > 0 ? [
-    expenses > 0 && { name: "Expenses", value: expenses, color: "var(--red)" },
-    surplus > 0  && { name: "Surplus",  value: surplus,  color: "var(--green)" },
-  ].filter(Boolean) : [];
 
   if (state.transactions.length === 0) {
     return (
@@ -4024,31 +4019,63 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
     <div className="screen">
       <ScreenTitle title="Cash Flow" sub="See what's coming in and what's going out." setMenuOpen={setMenuOpen} />
 
-      {donutData.length > 0 && (
+      {(income > 0 || expenses > 0) && (
         <Card>
-          <h2>Income vs Expenses</h2>
-          <div className="donut-layout">
-            <div className="donut-wrap">
-              <ResponsiveContainer width="100%" height={170}>
-                <PieChart>
-                  <Pie data={donutData} dataKey="value" innerRadius={48} outerRadius={78} paddingAngle={2}>
-                    {donutData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                  </Pie>
-                  <Tooltip formatter={(v) => money(v)} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="donut-center">
-                <b className={income > 0 ? "" : "danger"}>{money(income)}</b>
-                <span>income</span>
+          <div className="cf-donut-income-header">
+            <span>Monthly income</span>
+            <strong>{money(income)}</strong>
+          </div>
+          <div className="cf-donut-layout">
+            <div className="cf-donut-wrap">
+              <svg viewBox="0 0 150 150" className="cf-donut-svg">
+                {(() => {
+                  const r = 55;
+                  const circ = 2 * Math.PI * r;
+                  const expPct = income > 0 ? Math.min(1, expenses / income) : 1;
+                  const surpPct = Math.max(0, 1 - expPct);
+                  const expLen = circ * expPct;
+                  const surpLen = circ * surpPct;
+                  const gap = expLen > 4 && surpLen > 4 ? 2 : 0;
+                  return (
+                    <>
+                      <circle cx={75} cy={75} r={r} fill="none" stroke="#E24B4A" strokeWidth={22}
+                        strokeDasharray={`${expLen - gap} ${circ - expLen + gap}`}
+                        strokeDashoffset={circ / 4}/>
+                      {surpLen > 2 && (
+                        <circle cx={75} cy={75} r={r} fill="none" stroke="#1D9E75" strokeWidth={22}
+                          strokeDasharray={`${surpLen - gap} ${circ - surpLen + gap}`}
+                          strokeDashoffset={circ / 4 - expLen}/>
+                      )}
+                    </>
+                  );
+                })()}
+              </svg>
+              <div className="cf-donut-center">
+                <strong>{money(Math.max(0, income - expenses))}</strong>
+                <span>surplus</span>
               </div>
             </div>
-            <div className="donut-legend">
-              <div><i style={{background:"var(--green)"}}></i><span>Income</span><b className="success">{money(income)}</b></div>
-              <div><i style={{background:"var(--red)"}}></i><span>Expenses</span><b className="danger">-{money(expenses)}</b></div>
-              <div style={{marginTop:"8px",paddingTop:"8px",borderTop:"1px solid var(--line)"}}>
-                <i style={{background: surplus >= 0 ? "var(--green)" : "var(--red)", borderRadius:"3px"}}></i>
-                <span>Net</span>
-                <b className={income - expenses >= 0 ? "success" : "danger"}>{signedMoney(income - expenses)}</b>
+
+            <div className="cf-donut-legend">
+              <div className="cf-legend-row">
+                <span className="cf-legend-dot" style={{background:"#E24B4A"}}/>
+                <div>
+                  <p>Expenses</p>
+                  <strong className="danger">-{money(expenses)}</strong>
+                </div>
+              </div>
+              <div className="cf-legend-row">
+                <span className="cf-legend-dot" style={{background:"#1D9E75"}}/>
+                <div>
+                  <p>Surplus</p>
+                  <strong style={{color:"#0F6E56"}}>{money(Math.max(0, income - expenses))}</strong>
+                </div>
+              </div>
+              <div className="cf-savings-rate">
+                <span>Savings rate</span>
+                <strong style={{color:"#0F6E56"}}>
+                  {income > 0 ? Math.round(Math.max(0, income - expenses) / income * 100) : 0}%
+                </strong>
               </div>
             </div>
           </div>
@@ -4069,8 +4096,8 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
         {next.length ? next.map(t => <TransactionRow key={t.id + (t.occurrenceDate||"")} t={t} setEditor={setEditor}/>) : <p className="muted">No upcoming transactions in this window.</p>}
       </Card>
 
-      <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
-      <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+      <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor} setState={setState}/>
+      <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor} setState={setState}/>
 
       {recurringExpenses.length >= 1 && (
         <SpendingEnvelopeCard
@@ -4085,7 +4112,7 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   );
 }
 
-function TransactionGroup({ title, total, color, txns, setEditor }) {
+function TransactionGroup({ title, total, color, txns, setEditor, setState }) {
   const [open, setOpen] = useState(false);
   return (
     <Card>
@@ -4098,14 +4125,17 @@ function TransactionGroup({ title, total, color, txns, setEditor }) {
       </div>
       {open && (
         <div style={{marginTop:"12px"}}>
-          {txns.length ? txns.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor} controls />) : <p className="muted">None yet.</p>}
+          {txns.length ? txns.map(t => <TransactionRow key={t.id} t={t} setEditor={setEditor} setState={setState} controls />) : <p className="muted">None yet.</p>}
         </div>
       )}
     </Card>
   );
 }
 
-function TransactionRow({ t, setEditor, controls=false }) {
+function TransactionRow({ t, setEditor, setState, controls=false }) {
+  const del = () => {
+    if (setState) setState(s => ({ ...s, transactions: s.transactions.filter(x => x.id !== t.id) }));
+  };
   return (
     <div className="transaction-row">
       <div className={`round-icon ${t.type === "income" ? "asset" : "debt"}`}>{t.icon || (t.type==="income" ? "💵" : "💳")}</div>
@@ -4114,7 +4144,12 @@ function TransactionRow({ t, setEditor, controls=false }) {
         <span>{formatDate(t.occurrenceDate || t.date)} · {relativeDate(t.occurrenceDate || t.date)} · {frequencyLabel(t.frequency || (t.recurring ? "monthly" : "oneOff"))}{t.endsOn ? ` · ends ${formatDate(t.endsOn)}` : ""}</span>
       </div>
       <strong className={t.type === "income" ? "success" : "danger"}>{t.type === "income" ? "+" : "-"}{money(t.amount)}</strong>
-      {controls && <button className="icon-btn" onClick={()=>setEditor({ type:"transaction", item:t })}><Pencil size={20}/></button>}
+      {controls && (
+        <div className="txn-row-actions">
+          <button className="icon-btn" onClick={()=>setEditor({ type:"transaction", item:t })}><Pencil size={18}/></button>
+          <button className="icon-btn danger" onClick={del}><Trash2 size={18}/></button>
+        </div>
+      )}
     </div>
   );
 }
@@ -5274,6 +5309,17 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         </>}
 
         <button className="primary full" onClick={save}>Save</button>
+        {item.id && editor.type === "transaction" && (
+          <button
+            className="danger-full"
+            onClick={() => {
+              setState(s => ({ ...s, transactions: s.transactions.filter(t => t.id !== item.id) }));
+              setEditor(null);
+            }}
+          >
+            <Trash2 size={16}/> Delete transaction
+          </button>
+        )}
       </div>
     </div>
   );
