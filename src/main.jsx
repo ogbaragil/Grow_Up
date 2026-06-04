@@ -3562,23 +3562,25 @@ function AccountGroup({ title, sub, accounts, updateBalance, readOnly, editingBa
       <p>{sub}</p>
       {accounts.map(a => {
         const delta = Number(a.balance || 0) - Number(a.previous || 0);
+        const deltaAbs = Math.abs(delta);
+        const isUp = delta > 0;
+        const isDown = delta < 0;
         return (
-          <div className="account-row" key={a.id}>
+          <div className="account-row-v2" key={a.id}>
             <div className={`round-icon ${a.kind === "debt" ? "debt" : "asset"}`}>{a.icon || (a.kind==="debt" ? "💳" : "💼")}</div>
-            <div className="row-main">
-              <strong>{a.name}</strong>
-              <span>
-                {delta < 0 ? "Down" : delta > 0 ? "Up" : "No change"} {money(Math.abs(delta))} from last month
+            <div className="account-row-v2-main">
+              <strong className="account-row-v2-name">{a.name}</strong>
+              <span className={`account-row-v2-delta ${isUp ? "up" : isDown ? "down" : "flat"}`}>
+                {delta === 0 ? "No change" : isUp ? `↑ ${money(deltaAbs)}` : `↓ ${money(deltaAbs)}`}
+                <span className="account-row-v2-delta-label"> from last month</span>
               </span>
             </div>
-
             <div className="account-actions-wrap">
               {readOnly ? (
-                <div className="balance-display">{money(a.balance)}</div>
+                <div className="balance-display-v2"><strong>{money(a.balance)}</strong></div>
               ) : (
                 <input className={editingBalances ? "balance-input editing" : "balance-input"} value={a.balance} type="number" onChange={(e)=>updateBalance(a.id, e.target.value)} />
               )}
-
               {editingBalances && (
                 <div className="account-row-actions">
                   <button onClick={()=>editAccount(a)} aria-label={`Edit ${a.name}`}><Pencil size={16}/></button>
@@ -4242,8 +4244,9 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
   let calc = calculateGoalProgress(g, totals, accounts);
   calc = refineDebtPayoffCalcWithHistory(g, state, calc);
   const pct = Math.round(calc.progress);
-  const status = goalStatus(calc, g);
   const forecast = estimateGoalCompletion(g, state, calc, totals);
+  const calcWithRate = { ...calc, monthlyRate: forecast.monthlyRate || 0 };
+  const status = goalStatus(calcWithRate, g);
   const isNearlyDone = pct >= 80 && pct < 100;
   const isComplete = pct >= 100;
 
@@ -4452,13 +4455,23 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setState, tot
 
   return (
     <div className="screen compound-screen">
-      <section className="compound-header">
+      <div className="compound-header">
         <button className="round-nav-btn" onClick={()=>setCompoundOpen(false)}><ArrowLeft size={24}/></button>
         <div>
           <h1>Compound Wealth</h1>
           <p>Run your rich-life scenarios and see how time turns habits into wealth.</p>
         </div>
         <button className="reset-btn" onClick={reset}>Reset</button>
+      </div>
+
+      <section className="compound-hero-card">
+        <div className="compound-hero-label">Projected future value</div>
+        <div className="compound-hero-value">{money(futureValue)}</div>
+        <div className="compound-hero-stats">
+          <div><small>Contributions</small><strong>{money(totalContributions)}</strong></div>
+          <div><small>Growth</small><strong className="success">+{money(totalGrowth)}</strong></div>
+          <div><small>Years</small><strong>{inputs.years}</strong></div>
+        </div>
       </section>
 
       <Card>
@@ -4472,10 +4485,6 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setState, tot
           <label>Your age at start year<input type="number" value={inputs.age} onChange={e=>change("age", e.target.value)} /></label>
         </div>
       </Card>
-
-      <div className="future-value"><span>Future value</span><b>{money(futureValue)}</b></div>
-      <div className="simple-row"><span>Your total contributions</span><b>{money(totalContributions)}</b></div>
-      <div className="simple-row"><span>Total growth</span><b>{money(totalGrowth)}</b></div>
 
       <div className="checkpoint-label"><i></i><b>Yearly checkpoints</b></div>
 
@@ -4508,7 +4517,148 @@ function compactMoney(value) {
 function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle, notify, showConfirm}) {
   return (
     <div className="screen">
-      <ScreenTitle title="Settings" sub="Manage your account, theme, local data, and Supabase snapshots." setMenuOpen={setMenuOpen} />
+      <ScreenTitle title="Settings" sub="Your account, preferences, and data." setMenuOpen={setMenuOpen} />
+
+      {/* ── PROFILE ────────────────────────────────────────── */}
+      <div className="settings-section-label">Profile</div>
+
+      <Card className="settings-profile-card">
+        <div className="settings-profile-row">
+          <div className="settings-profile-avatar">{(displayName || "?")[0].toUpperCase()}</div>
+          <div>
+            <strong className="settings-profile-name">{displayName || "there"}</strong>
+            <span className="settings-profile-email">{session?.user?.email || "Not signed in"}</span>
+          </div>
+        </div>
+        <button className="settings-signout-btn" onClick={signOut}><LogOut size={16}/> Sign out</button>
+      </Card>
+
+      {/* ── PREFERENCES ────────────────────────────────────── */}
+      <div className="settings-section-label">Preferences</div>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Dashboard Style</h2>
+            <p>Choose your Overview layout.</p>
+          </div>
+        </div>
+        <div className="dashboard-style-toggle">
+          <button type="button" className={dashboardStyle === "minimal" ? "active" : ""} onClick={()=>setDashboardStyle("minimal")}>Minimal</button>
+          <button type="button" className={dashboardStyle === "detailed" ? "active" : ""} onClick={()=>setDashboardStyle("detailed")}>Detailed</button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Currency</h2>
+            <p>Used across all balances and reports.</p>
+          </div>
+        </div>
+        <label>Display currency
+          <select value={state.currency || "USD"} onChange={e=>{ const currency=e.target.value; const nextState={...state,currency}; localStorage.setItem(STORAGE_KEY,JSON.stringify(nextState)); update({currency}); }}>
+            {CURRENCY_OPTIONS.map(([code, name, symbol]) => (
+              <option key={code} value={code}>{symbol} {name} ({code})</option>
+            ))}
+          </select>
+        </label>
+      </Card>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Appearance</h2>
+            <p>Light or dark — your call.</p>
+          </div>
+          <button className="settings-theme-btn" onClick={()=>update({ theme:state.theme==="light"?"dark":"light" })}>
+            {state.theme === "light" ? <><Moon size={16}/> Dark</> : <><Sun size={16}/> Light</>}
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <h2>Email Reminders</h2>
+        <p>Transaction alerts, monthly balance nudges, goal deadlines, and milestone moments.</p>
+        <div className="email-reminder-card">
+          <div className="email-reminder-main">
+            <div>
+              <strong>{state.emailRemindersEnabled ? "Enabled" : "Off"}</strong>
+              <span>{session?.user?.email || "Sign in to enable"}</span>
+            </div>
+            <button type="button" className={state.emailRemindersEnabled ? "secondary" : "primary"} onClick={async()=>{ const next=!state.emailRemindersEnabled; const saved=await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:next},notify}); if(saved&&next) notify("Email reminders enabled.","success"); }}>
+              {state.emailRemindersEnabled ? "Turn off" : "Enable"}
+            </button>
+          </div>
+          <div className="email-reminder-grid">
+            <label><span>Transaction reminder</span>
+              <select value={state.emailReminderDays??1} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailReminderDays:Number(e.target.value)},notify}); }}>
+                <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
+              </select>
+            </label>
+            <label><span>Monthly balance day</span>
+              <select value={state.monthlyBalanceReminderDay??28} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,monthlyBalanceReminderDay:Number(e.target.value)},notify}); }}>
+                <option value={25}>25th</option><option value={28}>28th</option><option value={30}>30th</option><option value={31}>Last day</option>
+              </select>
+            </label>
+          </div>
+          <div className="email-reminder-toggles">
+            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Goal reminders</button>
+            <button type="button" className={state.emailMilestoneEmails?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailMilestoneEmails:!state.emailMilestoneEmails}}); }}><span>{state.emailMilestoneEmails?"✓":"○"}</span>Milestone emails</button>
+          </div>
+        </div>
+      </Card>
+
+      {/* ── DATA & PRIVACY ─────────────────────────────────── */}
+      <div className="settings-section-label">Data & Privacy</div>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Cloud Backup</h2>
+            <p>Keep your data safe and restore anytime.</p>
+          </div>
+        </div>
+        <div className="settings-action-row">
+          <button className="settings-action-btn primary-tint" disabled={isDemo} onClick={saveSnapshot}><Save size={16}/> Back up now</button>
+          <button className="settings-action-btn" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={16}/> Restore</button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Preview Mode</h2>
+            <p>Explore Grow UP with sample data.</p>
+          </div>
+          <button className={`settings-action-btn ${isDemo ? "danger-tint" : "secondary-tint"}`} onClick={isDemo ? exitDemoMode : enterDemoMode}>
+            {isDemo ? "Exit preview" : "Enter preview"}
+          </button>
+        </div>
+      </Card>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Legal</h2>
+          </div>
+        </div>
+        <div className="settings-legal-row">
+          <a href="/privacy"><Shield size={14}/> Privacy Policy</a>
+          <a href="/terms"><FileText size={14}/> Terms of Service</a>
+        </div>
+      </Card>
+
+      <Card className="settings-danger-card">
+        <h2>Danger Zone</h2>
+        <p>Permanently wipe all local data. This cannot be undone.</p>
+        <button className="settings-danger-btn" disabled={isDemo} onClick={async()=>{ if(await showConfirm("Reset local data? This cannot be undone.")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}>
+          <RotateCcw size={16}/> Reset local data
+        </button>
+      </Card>
+    </div>
+  );
+}
 
       <div className="settings-section-title">Profile</div>
       <Card>
@@ -4682,37 +4832,6 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         </label>
       </Card>
 
-      <Card>
-        <h2>Appearance</h2>
-        <p>Theme: {state.theme}</p>
-        <button className="primary" onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon size={18}/> : <Sun size={18}/>} Toggle theme</button>
-      </Card>
-
-      <div className="settings-section-title">Data & Privacy</div>
-      <Card>
-        <h2>Backup & Restore</h2>
-        <p>Keep a secure cloud backup of your Grow UP data and restore your latest saved version when needed.</p>
-        <div className="button-row">
-          <button className="primary" disabled={isDemo} onClick={saveSnapshot}><Save size={18}/> Back up data</button>
-          <button className="secondary" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={18}/> Restore from Cloud</button>
-        </div>
-      </Card>
-
-      <Card>
-        <h2>Legal</h2>
-        <div className="legal-link-row">
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms of Service</a>
-        </div>
-      </Card>
-
-      <Card>
-        <h2>Danger zone</h2>
-        <button className="danger-btn" disabled={isDemo} onClick={async ()=>{ if(await showConfirm("Reset local data?")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}><RotateCcw size={18}/> Reset local data</button>
-      </Card>
-    </div>
-  );
-}
 
 function BottomNav({ tab, setTab }) {
   const items = [
@@ -5484,19 +5603,45 @@ function refineDebtPayoffCalcWithHistory(goal, state, calc) {
 
 function goalStatus(calc, goal) {
   if (calc.progress >= 100) {
-    return { kind:"complete", icon:"🎉", label:"Complete", detail:"Goal reached" };
+    return { kind:"complete", icon:"🎉", label:"Complete!", detail:"Goal reached" };
+  }
+  if (calc.noTarget) {
+    return { kind:"active", icon:"⚙️", label:"Set a target", detail:"Enter a target to track progress" };
   }
 
-  if (!goal.deadline) {
-    return { kind:"active", icon:"🎯", label:"Active", detail:"No deadline set" };
-  }
-
+  const pct = Math.round(calc.progress || 0);
+  const hasDeadline = !!goal.deadline;
   const need = calc.monthlyNeeded;
-  if (need <= 0) {
-    return { kind:"active", icon:"🎯", label:"Active", detail:"On track" };
+
+  if (!hasDeadline) {
+    if (pct >= 75) return { kind:"complete", icon:"🔥", label:"Nearly there", detail:`${pct}% complete` };
+    if (pct >= 40) return { kind:"active", icon:"📈", label:"On track", detail:`${pct}% complete` };
+    return { kind:"active", icon:"🎯", label:"Started", detail:`${pct}% complete` };
   }
 
-  return { kind:"active", icon:"📈", label:"In Progress", detail:`${Math.round(calc.progress)}% complete` };
+  const now = new Date();
+  const deadline = new Date(goal.deadline);
+  const monthsLeft = Math.max(0, (deadline.getFullYear()-now.getFullYear())*12+(deadline.getMonth()-now.getMonth()));
+
+  if (monthsLeft <= 0) {
+    return pct >= 100
+      ? { kind:"complete", icon:"🎉", label:"Complete!", detail:"Deadline reached" }
+      : { kind:"warning", icon:"⚠️", label:"Deadline passed", detail:`${pct}% complete at deadline` };
+  }
+
+  if (need <= 0) {
+    return { kind:"complete", icon:"✅", label:"Ahead of pace", detail:`On track for ${deadline.toLocaleDateString("en-US",{month:"short",year:"numeric"})}` };
+  }
+
+  const monthlyRate = calc.monthlyRate || 0;
+  if (monthlyRate > 0) {
+    const ratio = monthlyRate / need;
+    if (ratio >= 1.1) return { kind:"complete", icon:"🚀", label:"Ahead of pace", detail:`${Math.round(ratio*100-100)}% faster than needed` };
+    if (ratio >= 0.8) return { kind:"active", icon:"✓", label:"On track", detail:`${money(need)}/mo needed` };
+    return { kind:"warning", icon:"⚠️", label:"Behind pace", detail:`Need ${money(need)}/mo, tracking lower` };
+  }
+
+  return { kind:"active", icon:"⏳", label:"Tracking", detail:`${money(need)}/mo needed · ${monthsLeft}mo left` };
 }
 
 function goalTypeLabel(type) {
