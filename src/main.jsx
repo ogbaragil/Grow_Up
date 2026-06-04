@@ -5,7 +5,7 @@ import {
   Home, CreditCard, Repeat2, Target, Menu, Plus, Pencil, Trash2, Archive,
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Sun, Moon, TrendingUp,
   X, Save, Check, DownloadCloud, RotateCcw, SlidersHorizontal, ArrowLeft,
-  Shield, FileText, FlaskConical, LogOut, Lightbulb
+  Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
 import { supabase } from "./supabaseClient";
@@ -2115,7 +2115,7 @@ function App() {
         ) : insightsOpen ? (
           <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
         ) : compoundOpen ? (
-          <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} state={activeState} totals={totals} />
+          <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} state={activeState} setState={setState} totals={totals} />
         ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
@@ -2161,6 +2161,7 @@ function App() {
           setTab={setTab}
           setTimelineOpen={setTimelineOpen}
           setInsightsOpen={setInsightsOpen}
+          setCompoundOpen={setCompoundOpen}
           tab={tab}
           update={update}
           saveSnapshot={saveSnapshot}
@@ -3901,20 +3902,27 @@ function GoalCard({ g, totals, accounts, state, toggle, del, archive, setEditor,
   );
 }
 
-function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, totals }) {
+function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setState, totals }) {
   const startingNet = totals ? Math.max(0, Number(totals.net || 0)) : 20000;
   const startingSurplus = totals ? Math.max(0, Math.round((totals.income || 0) - (totals.expenses || 0))) : 2100;
 
+  // Load saved inputs from profile, fall back to live totals for first open
+  const saved = state.profile?.compoundInputs;
   const [inputs, setInputs] = useState({
-    start: startingNet || 20000,
-    monthly: startingSurplus || 2100,
-    years: 20,
-    rate: 7,
-    startYear: new Date().getFullYear(),
-    age: 35
+    start:     saved?.start     ?? startingNet   ?? 20000,
+    monthly:   saved?.monthly   ?? startingSurplus ?? 2100,
+    years:     saved?.years     ?? 20,
+    rate:      saved?.rate      ?? 7,
+    startYear: saved?.startYear ?? new Date().getFullYear(),
+    age:       saved?.age       ?? (state.profile?.age || 35)
   });
 
-  const change = (key, value) => setInputs(s => ({ ...s, [key]: Number(value || 0) }));
+  // Persist inputs to state whenever they change
+  const change = (key, value) => {
+    const next = { ...inputs, [key]: Number(value || 0) };
+    setInputs(next);
+    setState(s => ({ ...s, profile: { ...(s.profile || {}), compoundInputs: next } }));
+  };
 
   const rows = useMemo(() => {
     let value = Number(inputs.start || 0);
@@ -3946,7 +3954,11 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, totals }) {
   const totalContributions = Number(inputs.start || 0) + (Number(inputs.monthly || 0) * 12 * Number(inputs.years || 0));
   const totalGrowth = Math.max(0, futureValue - totalContributions);
 
-  const reset = () => setInputs({ start: startingNet || 20000, monthly: startingSurplus || 2100, years: 20, rate: 7, startYear: new Date().getFullYear(), age: 35 });
+  const reset = () => {
+    const defaults = { start: startingNet || 20000, monthly: startingSurplus || 2100, years: 20, rate: 7, startYear: new Date().getFullYear(), age: state.profile?.age || 35 };
+    setInputs(defaults);
+    setState(s => ({ ...s, profile: { ...(s.profile || {}), compoundInputs: null } }));
+  };
 
   return (
     <div className="screen compound-screen">
@@ -4231,7 +4243,7 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, tab }) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, setCompoundOpen, tab }) {
   const navClass = (name) => tab === name ? "active" : undefined;
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
@@ -4247,6 +4259,7 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <div className="drawer-section-label">Tools</div>
         <button onClick={()=>{setInsightsOpen(true); setMenuOpen(false)}}><Lightbulb/> Insights</button>
         <button onClick={()=>{setTimelineOpen(true); setMenuOpen(false)}}><TrendingUp/> Wealth Timeline</button>
+        <button onClick={()=>{setCompoundOpen(true); setMenuOpen(false)}}><Calculator/> Compound Wealth</button>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
         <button onClick={isDemo ? exitDemoMode : enterDemoMode}><FlaskConical/> {isDemo ? "Exit preview" : "Preview with sample data"}</button>
 
