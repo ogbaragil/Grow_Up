@@ -11,26 +11,48 @@
   "theme_color": "#3fa463",
   "categories": ["finance", "productivity"],
   "lang": "en-AU",
+  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
   "icons": [
-    { "src": "/icons/growup-logo.png", "sizes": "48x48",   "type": "image/png" },
-    { "src": "/icons/growup-logo.png", "sizes": "72x72",   "type": "image/png" },
-    { "src": "/icons/growup-logo.png", "sizes": "96x96",   "type": "image/png" },
-    { "src": "/icons/growup-logo.png", "sizes": "128x128", "type": "image/png" },
-    { "src": "/icons/growup-logo.png", "sizes": "144x144", "type": "image/png" },
-    { "src": "/icons/growup-logo.png", "sizes": "152x152", "type": "image/png" },
     { "src": "/icons/growup-logo.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/growup-logo.png", "sizes": "256x256", "type": "image/png" },
     { "src": "/icons/growup-logo.png", "sizes": "512x512", "type": "image/png" },
     { "src": "/icons/growup-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/growup-logo.png", "sizes": "1024x1024","type": "image/png" }
+    { "src": "/icons/growup-logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ],
   "screenshots": [
     {
-      "src": "/icons/growup-logo.png",
-      "sizes": "512x512",
-      "type": "image/png",
+      "src": "/screenshots/overview.jpeg",
+      "sizes": "920x2048",
+      "type": "image/jpeg",
       "form_factor": "narrow",
-      "label": "Grow UP — Track your net worth"
+      "label": "Overview — track your net worth at a glance"
+    },
+    {
+      "src": "/screenshots/assets-1.jpeg",
+      "sizes": "920x2048",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Assets & Debts — update balances month to month"
+    },
+    {
+      "src": "/screenshots/assets-2.jpeg",
+      "sizes": "920x2048",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Assets & Debts — full breakdown with totals"
+    },
+    {
+      "src": "/screenshots/cashflow.jpeg",
+      "sizes": "920x2048",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Cash Flow — income vs expenses at a glance"
+    },
+    {
+      "src": "/screenshots/goals.jpeg",
+      "sizes": "920x2048",
+      "type": "image/jpeg",
+      "form_factor": "narrow",
+      "label": "Wealth Goals — track progress toward every goal"
     }
   ],
   "shortcuts": [
