@@ -4896,7 +4896,7 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
             <p>{isPro ? "Grow UP Pro — active" : "Free plan · 3 accounts, 2 goals, 5 transactions"}</p>
           </div>
           {isPro ? (
-            <a className="settings-action-btn" href="https://billing.stripe.com/p/login/test_00g000000000000" target="_blank" rel="noopener noreferrer">Manage</a>
+            <a className="settings-action-btn" href="https://billing.stripe.com/p/login/test_28EbJ1dDvaPO7sYgde8IU00" target="_blank" rel="noopener noreferrer">Manage</a>
           ) : (
             <button className="settings-action-btn primary-tint" onClick={() => showUpgrade?.("general")}>Upgrade</button>
           )}
