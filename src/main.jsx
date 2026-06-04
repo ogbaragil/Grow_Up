@@ -8,7 +8,7 @@ import {
   Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator
 } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, PieChart, Pie, Cell } from "recharts";
-import { supabase } from "./supabaseClient";
+import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "./supabaseClient";
 import "./styles.css";
 
 const STORAGE_KEY = "growup_history_monthbar_v1";
@@ -2276,15 +2276,12 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
       const priceId = STRIPE_PRICES[plan];
 
       // Call edge function directly via fetch so we can read non-2xx bodies
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
-      const res = await fetch(`${supabaseUrl}/functions/v1/create-checkout-session`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "Authorization": `Bearer ${freshSession.access_token}`,
-          "apikey": supabaseAnonKey,
+          "apikey": SUPABASE_ANON_KEY,
         },
         body: JSON.stringify({ priceId, plan }),
       });
