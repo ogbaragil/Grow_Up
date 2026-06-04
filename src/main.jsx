@@ -2262,7 +2262,7 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
     reminders: "Email reminders are a Pro feature.",
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (skipTrial = false) => {
     if (!session) { notify("Please sign in first.", "error"); return; }
     setLoading(true);
     try {
@@ -2283,7 +2283,7 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
           "Authorization": `Bearer ${freshSession.access_token}`,
           "apikey": SUPABASE_ANON_KEY,
         },
-        body: JSON.stringify({ priceId, plan }),
+        body: JSON.stringify({ priceId, plan, skipTrial }),
       });
 
       const responseText = await res.text();
@@ -2350,15 +2350,16 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
           ))}
         </div>
 
-        <button className="upgrade-cta" onClick={handleUpgrade} disabled={loading}>
-          {loading
-            ? "Opening checkout…"
-            : plan === "annual"
-              ? `Start free trial — A$${annual}/yr`
-              : `Start free trial — A$${monthly}/mo`}
-        </button>
+        <div className="upgrade-cta-group">
+          <button className="upgrade-cta" onClick={() => handleUpgrade(false)} disabled={loading}>
+            {loading ? "Opening checkout…" : "Start 14-day free trial"}
+          </button>
+          <button className="upgrade-cta-secondary" onClick={() => handleUpgrade(true)} disabled={loading}>
+            {plan === "annual" ? `Subscribe now — A$${annual}/yr` : `Subscribe now — A$${monthly}/mo`}
+          </button>
+        </div>
         <p className="upgrade-fine">
-          14 days free · then auto-renews · cancel anytime
+          Trial: no card required · 14 days free · cancel anytime
         </p>
       </div>
     </div>

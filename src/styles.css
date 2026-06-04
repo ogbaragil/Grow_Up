@@ -7782,3 +7782,39 @@ button:focus-visible {
   margin-left: 6px;
   vertical-align: middle;
 }
+
+.upgrade-skip-trial {
+  width: 100%;
+  padding: 12px;
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  text-decoration: underline;
+  margin-bottom: 4px;
+}
+.upgrade-skip-trial:hover { color: var(--text); }
+.upgrade-skip-trial:disabled { opacity: .45; cursor: not-allowed; }
+
+.upgrade-cta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.upgrade-cta-secondary {
+  width: 100%;
+  padding: 15px;
+  border-radius: 16px;
+  background: transparent;
+  border: 2px solid var(--green);
+  color: var(--green);
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+  transition: background .15s;
+}
+.upgrade-cta-secondary:hover { background: var(--green2); }
+.upgrade-cta-secondary:disabled { opacity: .45; cursor: not-allowed; }

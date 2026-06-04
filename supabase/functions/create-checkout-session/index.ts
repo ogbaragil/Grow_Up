@@ -32,7 +32,7 @@ serve(async (req) => {
     }
 
     const body = await req.json();
-    const { priceId, plan } = body;
+    const { priceId, plan, skipTrial } = body;
     if (!priceId) {
       return new Response(JSON.stringify({ error: "priceId required" }), { status: 400, headers: corsHeaders });
     }
@@ -51,7 +51,7 @@ serve(async (req) => {
       "line_items[0][quantity]": "1",
       success_url: `${APP_URL}?checkout=success&plan=${plan}`,
       cancel_url: `${APP_URL}?checkout=cancel`,
-      "subscription_data[trial_period_days]": "14",
+      ...(skipTrial ? {} : { "subscription_data[trial_period_days]": "14" }),
       "payment_method_collection": "if_required",
       "metadata[user_id]": user.id,
       "metadata[plan]": plan ?? "",
