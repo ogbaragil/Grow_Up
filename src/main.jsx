@@ -2421,33 +2421,66 @@ function App() {
     refreshSubscription();
   }, [session?.user?.id]);
 
-  // Handle Stripe checkout return — poll until subscription is active
+  // Handle Stripe checkout return — verify directly with Stripe, don't wait for webhook
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const checkoutStatus = params.get("checkout");
+    const plan = params.get("plan");
     if (checkoutStatus === "success") {
       window.history.replaceState({}, "", window.location.pathname);
-      notify("🎉 Welcome to Grow UP Pro! Setting up your account…", "success");
+      notify("Processing your subscription…", "info");
 
-      // Poll every 2 seconds up to 30 seconds waiting for webhook to write subscription
-      let attempts = 0;
-      const poll = setInterval(async () => {
-        attempts++;
-        const data = await refreshSubscription();
-        if (data?.status === "active" || data?.status === "trialing") {
-          clearInterval(poll);
-          notify("✦ You're now on Grow UP Pro!", "success");
-        } else if (attempts >= 15) {
-          clearInterval(poll);
-          notify("Subscription processing — if Pro features aren't unlocked in a minute, please refresh.", "info");
+      const verify = async () => {
+        if (!supabase || !session?.user?.id) return;
+        try {
+          const { data: { session: freshSession } } = await supabase.auth.getSession();
+          if (!freshSession?.access_token) return;
+
+          // Call verify-subscription to write subscription from Stripe directly
+          const res = await fetch(`${SUPABASE_URL}/functions/v1/verify-subscription`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${freshSession.access_token}`,
+              "apikey": SUPABASE_ANON_KEY,
+            },
+            body: JSON.stringify({ plan }),
+          });
+          const result = await res.json();
+          console.log("Verify subscription result:", result);
+
+          if (result.status === "trialing" || result.status === "active") {
+            await refreshSubscription();
+            notify("✦ You're now on Grow UP Pro! Enjoy.", "success");
+          } else {
+            // Fallback: poll Supabase in case webhook fires shortly after
+            let attempts = 0;
+            const poll = setInterval(async () => {
+              attempts++;
+              const data = await refreshSubscription();
+              if (data?.status === "active" || data?.status === "trialing") {
+                clearInterval(poll);
+                notify("✦ You're now on Grow UP Pro! Enjoy.", "success");
+              } else if (attempts >= 10) {
+                clearInterval(poll);
+                notify("Your subscription is processing — please refresh in a moment.", "info");
+              }
+            }, 2000);
+          }
+        } catch (err) {
+          console.error("Verify error:", err);
+          notify("Subscription processing — please refresh if Pro features aren't active.", "info");
         }
-      }, 2000);
+      };
+
+      // Small delay to let Stripe settle
+      setTimeout(verify, 1500);
 
     } else if (checkoutStatus === "cancel") {
       notify("Checkout cancelled — you can upgrade any time.", "info");
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, []);
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!supabase) {

@@ -60,7 +60,7 @@ serve(async (req) => {
   console.log("Stripe webhook event:", event.type);
 
   // Use service role key if available, otherwise anon key
-  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
+  const supabaseKey = Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!;
   const supabase = createClient(Deno.env.get("SUPABASE_URL")!, supabaseKey);
 
   const upsertSub = async (data: Record<string, unknown>) => {
