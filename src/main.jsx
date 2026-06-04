@@ -35,10 +35,24 @@ const PRO_FEATURES = [
 async function createCheckoutSession(plan, session) {
   if (!supabase || !session) return null;
   try {
+    // Get fresh access token to ensure it's passed correctly
+    const { data: { session: freshSession } } = await supabase.auth.getSession();
+    const token = freshSession?.access_token;
+    if (!token) return null;
+
     const { data, error } = await supabase.functions.invoke("create-checkout-session", {
       body: { priceId: STRIPE_PRICES[plan], plan },
+      headers: { Authorization: `Bearer ${token}` },
     });
-    if (error) throw error;
+
+    if (error) {
+      console.error("Checkout function error:", error);
+      return null;
+    }
+    if (data?.error) {
+      console.error("Checkout session error:", data.error, data.detail);
+      return null;
+    }
     return data?.url || null;
   } catch (err) {
     console.error("Checkout error:", err);
@@ -2266,22 +2280,26 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
         <button className="upgrade-close" onClick={onClose}><X size={20}/></button>
 
         <div className="upgrade-hero">
-          <div className="upgrade-pro-badge">✦ PRO</div>
-          <h2>Grow UP Pro</h2>
-          <p>14-day free trial · cancel anytime</p>
+          <div className="upgrade-pro-badge">✦ GROW UP PRO</div>
+          <h2>Unlock everything</h2>
+          <p>14-day free trial · no card charged today</p>
         </div>
 
         {reason && reasonMessages[reason] && (
-          <div className="upgrade-reason">{reasonMessages[reason]} Upgrade to continue.</div>
+          <div className="upgrade-reason">
+            <span>⚠️</span> {reasonMessages[reason]} Upgrade to continue.
+          </div>
         )}
 
         <div className="upgrade-plan-toggle">
           <button className={plan === "monthly" ? "active" : ""} onClick={() => setPlan("monthly")}>
-            Monthly<span>A${monthly}/mo</span>
+            <span className="upgrade-plan-name">Monthly</span>
+            <span className="upgrade-plan-price">A${monthly}/mo</span>
           </button>
           <button className={plan === "annual" ? "active" : ""} onClick={() => setPlan("annual")}>
-            Annual<span>A${annualMonthly}/mo</span>
-            <span className="upgrade-save-badge">Save {saving}%</span>
+            <span className="upgrade-plan-name">Annual <span className="upgrade-save-badge">Save {saving}%</span></span>
+            <span className="upgrade-plan-price">A${annualMonthly}/mo</span>
+            <span className="upgrade-plan-billed">A${annual} billed once a year</span>
           </button>
         </div>
 
@@ -2295,11 +2313,14 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
         </div>
 
         <button className="upgrade-cta" onClick={handleUpgrade} disabled={loading}>
-          {loading ? "Opening checkout…" : `Start free trial — A$${plan === "annual" ? `${annualMonthly}/mo` : `${monthly}/mo`}`}
+          {loading
+            ? "Opening checkout…"
+            : plan === "annual"
+              ? `Start free trial — A$${annual}/yr`
+              : `Start free trial — A$${monthly}/mo`}
         </button>
         <p className="upgrade-fine">
-          {plan === "annual" ? `A$${annual} billed annually` : `A$${monthly} billed monthly`}
-          {" · "}14 days free, then auto-renews · cancel anytime
+          14 days free · then auto-renews · cancel anytime
         </p>
       </div>
     </div>
