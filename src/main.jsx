@@ -4428,28 +4428,41 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
         balance:Number(form.balance || 0),
         previous:Number(item.previous || 0)
       };
+      const isNew = !item.id;
       const accounts = item.id ? state.accounts.map(a => a.id === item.id ? { ...a, ...acct } : a) : [...state.accounts, acct];
-      const currentSnapshot = state.monthSnapshots?.[state.selectedMonth];
-      let monthSnapshots = state.monthSnapshots;
-      if (currentSnapshot) {
-        const snapshotSourceAccounts = currentSnapshot.accounts || state.accounts;
-        const snapshotAccounts = item.id
-          ? snapshotSourceAccounts.map(a => a.id === item.id ? { ...a, ...acct } : a)
-          : [...snapshotSourceAccounts, acct];
-        const assets = snapshotAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
-        const debts = snapshotAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
-        monthSnapshots = {
-          ...(state.monthSnapshots || {}),
-          [state.selectedMonth]: {
-            ...currentSnapshot,
-            accounts: snapshotAccounts,
-            assets,
-            debts,
-            net: assets - debts,
-            updatedAt: new Date().toISOString()
-          }
+
+      // For new accounts, inject into all existing snapshots with balance 0
+      // so users can navigate back and fill in historical balances.
+      // For edits, only update snapshots that already contain that account.
+      let monthSnapshots = { ...(state.monthSnapshots || {}) };
+      Object.keys(monthSnapshots).forEach(key => {
+        const snap = monthSnapshots[key];
+        const snapAccounts = snap.accounts || [];
+        const alreadyExists = snapAccounts.some(a => a.id === acct.id);
+
+        let updatedAccounts;
+        if (isNew && !alreadyExists) {
+          // Inject with zero balance as a placeholder for backfilling
+          updatedAccounts = [...snapAccounts, { ...acct, balance: 0, previous: 0 }];
+        } else if (!isNew && alreadyExists) {
+          // Update the edited account in this snapshot
+          updatedAccounts = snapAccounts.map(a => a.id === acct.id ? { ...a, ...acct } : a);
+        } else {
+          return; // nothing to change for this snapshot
+        }
+
+        const assets = updatedAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        const debts  = updatedAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        monthSnapshots[key] = {
+          ...snap,
+          accounts: updatedAccounts,
+          assets,
+          debts,
+          net: assets - debts,
+          updatedAt: snap.updatedAt // preserve original timestamp — this is a structural migration, not an edit
         };
-      }
+      });
+
       nextStateForAutoSave = { ...state, accounts, monthSnapshots };
       setState(nextStateForAutoSave);
     }
