@@ -2460,7 +2460,7 @@ function App() {
       notify("Checkout cancelled — you can upgrade any time.", "info");
       window.history.replaceState({}, "", window.location.pathname);
     }
-  }, [session?.user?.id]);
+  }, []); // Run once on mount — session loaded via retry loop inside activate()
 
   useEffect(() => {
     if (!supabase) {
