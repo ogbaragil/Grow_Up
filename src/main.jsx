@@ -2630,6 +2630,7 @@ function App() {
           isDemo={demoMode}
           enterDemoMode={enterDemoMode}
           exitDemoMode={exitDemoMode}
+          isPro={isPro}
         />
       )}
 
@@ -5046,7 +5047,7 @@ function BottomNav({ tab, setTab }) {
 }
 
 
-function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, setCompoundOpen, tab }) {
+function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, setCompoundOpen, tab, isPro=false }) {
   const navClass = (name) => tab === name ? "active" : undefined;
   return (
     <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
