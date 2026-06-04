@@ -7560,3 +7560,24 @@ button:focus-visible {
 }
 :root[data-theme="dark"] .cf-donut-center strong { color: white; }
 :root[data-theme="dark"] .cf-legend-row > div strong { color: white; }
+
+/* Cashflow donut income header */
+.cf-income-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 4px;
+}
+.cf-income-label {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+.cf-income-value {
+  font-size: 20px;
+  font-weight: 1000;
+  color: var(--text);
+  letter-spacing: -.04em;
+}

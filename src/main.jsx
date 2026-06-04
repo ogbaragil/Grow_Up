@@ -4021,62 +4021,34 @@ function CashFlow({ state, setState, totals, setEditor, setMenuOpen }) {
 
       {(income > 0 || expenses > 0) && (
         <Card>
-          <div className="cf-donut-income-header">
-            <span>Monthly income</span>
-            <strong>{money(income)}</strong>
+          <div className="cf-income-header">
+            <span className="cf-income-label">Monthly income</span>
+            <strong className="cf-income-value">{money(income)}</strong>
           </div>
-          <div className="cf-donut-layout">
-            <div className="cf-donut-wrap">
-              <svg viewBox="0 0 150 150" className="cf-donut-svg">
-                {(() => {
-                  const r = 55;
-                  const circ = 2 * Math.PI * r;
-                  const expPct = income > 0 ? Math.min(1, expenses / income) : 1;
-                  const surpPct = Math.max(0, 1 - expPct);
-                  const expLen = circ * expPct;
-                  const surpLen = circ * surpPct;
-                  const gap = expLen > 4 && surpLen > 4 ? 2 : 0;
-                  return (
-                    <>
-                      <circle cx={75} cy={75} r={r} fill="none" stroke="#E24B4A" strokeWidth={22}
-                        strokeDasharray={`${expLen - gap} ${circ - expLen + gap}`}
-                        strokeDashoffset={circ / 4}/>
-                      {surpLen > 2 && (
-                        <circle cx={75} cy={75} r={r} fill="none" stroke="#1D9E75" strokeWidth={22}
-                          strokeDasharray={`${surpLen - gap} ${circ - surpLen + gap}`}
-                          strokeDashoffset={circ / 4 - expLen}/>
-                      )}
-                    </>
-                  );
-                })()}
-              </svg>
-              <div className="cf-donut-center">
-                <strong>{money(Math.max(0, income - expenses))}</strong>
-                <span>surplus</span>
+          <div className="donut-layout">
+            <div className="donut-wrap">
+              <ResponsiveContainer width="100%" height={170}>
+                <PieChart>
+                  <Pie data={[
+                    expenses > 0 && { name:"Expenses", value:expenses, color:"#E05C2E" },
+                    (income - expenses) > 0 && { name:"Surplus", value:income - expenses, color:"#3B82F6" },
+                  ].filter(Boolean)} dataKey="value" innerRadius={48} outerRadius={78} paddingAngle={2}>
+                    {[
+                      expenses > 0 && { color:"#E05C2E" },
+                      (income - expenses) > 0 && { color:"#3B82F6" },
+                    ].filter(Boolean).map((d, i) => <Cell key={i} fill={d.color} />)}
+                  </Pie>
+                  <Tooltip formatter={(v) => money(v)} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="donut-center">
+                <b>{money(income)}</b>
+                <span>income</span>
               </div>
             </div>
-
-            <div className="cf-donut-legend">
-              <div className="cf-legend-row">
-                <span className="cf-legend-dot" style={{background:"#E24B4A"}}/>
-                <div>
-                  <p>Expenses</p>
-                  <strong className="danger">-{money(expenses)}</strong>
-                </div>
-              </div>
-              <div className="cf-legend-row">
-                <span className="cf-legend-dot" style={{background:"#1D9E75"}}/>
-                <div>
-                  <p>Surplus</p>
-                  <strong style={{color:"#0F6E56"}}>{money(Math.max(0, income - expenses))}</strong>
-                </div>
-              </div>
-              <div className="cf-savings-rate">
-                <span>Savings rate</span>
-                <strong style={{color:"#0F6E56"}}>
-                  {income > 0 ? Math.round(Math.max(0, income - expenses) / income * 100) : 0}%
-                </strong>
-              </div>
+            <div className="donut-legend">
+              <div><i style={{background:"#E05C2E"}}></i><span>Expenses</span><b className="danger">-{money(expenses)}</b></div>
+              <div><i style={{background:"#3B82F6"}}></i><span>Surplus</span><b style={{color:"#1D4ED8"}}>{signedMoney(income - expenses)}</b></div>
             </div>
           </div>
         </Card>
