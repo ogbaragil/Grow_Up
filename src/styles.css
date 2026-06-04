@@ -3486,14 +3486,14 @@ select:focus {
 /* Assets & debts */
 .round-icon.asset,
 .emoji-badge.green {
-  background: #F1E5C7 !important;
-  color: #B88A2B !important;
+  background: var(--green2) !important;
+  color: var(--green) !important;
 }
 
 .round-icon.debt,
 .emoji-badge.red {
-  background: #F6E2DA !important;
-  color: #C96D4B !important;
+  background: var(--red2) !important;
+  color: var(--red) !important;
 }
 
 .balance-display,
@@ -6918,9 +6918,16 @@ button:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 5px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 800;
   color: var(--muted);
+  min-width: 0;
+}
+.settings-profile-fields label span,
+.settings-profile-fields label > :first-child {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .settings-profile-fields input {
   padding: 10px 12px;
@@ -6930,6 +6937,9 @@ button:focus-visible {
   color: var(--text);
   font-size: 15px;
   font-weight: 900;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 .settings-profile-fields input:focus {
   outline: none;
@@ -7104,3 +7114,97 @@ button:focus-visible {
 }
 .share-networth-btn:active { opacity: .8; }
 :root[data-theme="dark"] .share-networth-card { background: var(--card); }
+
+/* ═══════════════════════════════════════════════════════
+   ACCOUNT GROUP — Premium upgrade
+   ═══════════════════════════════════════════════════════ */
+
+/* Override account-group card padding for v2 rows */
+.account-group.card {
+  padding: 0 !important;
+  overflow: hidden;
+}
+.account-group.card > h2 {
+  font-size: 22px !important;
+  padding: 18px 18px 4px !important;
+  margin: 0 !important;
+}
+.account-group.card > p {
+  padding: 0 18px 14px !important;
+  margin: 0 !important;
+  font-size: 13px !important;
+}
+
+/* V2 account row refinements */
+.account-row-v2 {
+  padding: 14px 18px !important;
+  border-bottom: 1px solid var(--line) !important;
+  margin: 0 !important;
+}
+.account-row-v2:last-child { border-bottom: none !important; }
+
+/* Larger, squarer icon */
+.account-row-v2 .round-icon {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 14px !important;
+  font-size: 22px !important;
+}
+
+/* Stronger name */
+.account-row-v2-name {
+  font-size: 17px !important;
+  font-weight: 950 !important;
+  letter-spacing: -.02em !important;
+}
+
+/* Delta arrow styling */
+.account-row-v2-delta {
+  font-size: 13px !important;
+  font-weight: 850 !important;
+  gap: 3px !important;
+}
+.account-row-v2-delta.up   { color: var(--green) !important; }
+.account-row-v2-delta.down { color: var(--red)   !important; }
+.account-row-v2-delta.flat { color: var(--muted)  !important; }
+
+/* Balance in read-only mode — prominent right-side value */
+.balance-display-v2 strong {
+  font-size: 17px !important;
+  font-weight: 1000 !important;
+  color: var(--text) !important;
+  letter-spacing: -.03em !important;
+}
+
+/* Balance input in edit mode */
+.balance-input {
+  width: 110px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 900;
+  text-align: right;
+}
+.balance-input.editing {
+  border-color: var(--green);
+  background: var(--green2);
+}
+
+/* Account group summary totals at bottom */
+.summary-list > div {
+  padding: 13px 0 !important;
+  border-bottom: 1px solid var(--line) !important;
+}
+.summary-list > div:last-child { border-bottom: none !important; }
+.summary-list > div.bold strong { font-size: 18px !important; color: var(--green) !important; }
+
+/* Snapshot banner polish */
+.snapshot-banner {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  margin: 8px 0 12px !important;
+}
