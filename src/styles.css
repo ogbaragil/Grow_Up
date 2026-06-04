@@ -6206,3 +6206,88 @@ button:focus-visible {
   padding: 0 12px;
 }
 .tl-mom-scroll .tl-drawer-stat-row { padding: 10px 0; }
+
+/* ── Spending Envelope Card ──────────────────────────────────────────────── */
+.envelope-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.envelope-surplus-toggle {
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1.5px solid var(--line);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  transition: all .2s;
+}
+.envelope-surplus-toggle.active {
+  background: var(--green2);
+  border-color: var(--green);
+  color: var(--green);
+}
+.envelope-chart-wrap {
+  margin: 8px -4px 0;
+}
+.envelope-legend {
+  margin-top: 8px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+.envelope-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 6px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background .15s;
+}
+.envelope-legend-row:hover,
+.envelope-legend-row.active {
+  background: var(--bg);
+}
+.envelope-legend-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+.envelope-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+.envelope-name {
+  font-size: 14px;
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.envelope-pct {
+  font-size: 13px;
+  font-weight: 900;
+  color: var(--muted);
+  width: 36px;
+  text-align: right;
+  flex: 0 0 auto;
+}
+.envelope-amount {
+  font-size: 14px;
+  font-weight: 900;
+  color: var(--text);
+  width: 72px;
+  text-align: right;
+  flex: 0 0 auto;
+}

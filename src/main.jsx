@@ -3747,6 +3747,112 @@ function DonutCard({ title, kind, accounts }) {
   );
 }
 
+const ENVELOPE_COLORS = [
+  "#3fa463","#5cb85c","#8bc34a","#cddc39",
+  "#ffc107","#ff9800","#ff5722","#f44336",
+  "#e91e63","#9c27b0","#42a5f5","#607d8b"
+];
+
+function SpendingEnvelopeCard({ recurringExpenses, totalExpenses, totalIncome }) {
+  const [activeIndex, setActiveIndex] = useState(null);
+  const [showSurplus, setShowSurplus] = useState(true);
+
+  const surplus = Math.max(0, totalIncome - totalExpenses);
+
+  // Build envelope rows sorted by amount desc
+  const envelopes = recurringExpenses
+    .map(t => ({ name: t.name, icon: t.icon || "💳", amount: monthlyEquivalent(t) }))
+    .filter(e => e.amount > 0)
+    .sort((a, b) => b.amount - a.amount);
+
+  if (envelopes.length < 1) return null;
+
+  const total = envelopes.reduce((s, e) => s + e.amount, 0);
+
+  const pieData = [
+    ...envelopes.map((e, i) => ({
+      name: e.name,
+      value: e.amount,
+      color: ENVELOPE_COLORS[i % ENVELOPE_COLORS.length],
+      icon: e.icon
+    })),
+    ...(showSurplus && surplus > 0 ? [{ name: "Surplus", value: surplus, color: "var(--green)", icon: "✨" }] : [])
+  ];
+
+  const onPieClick = (_, index) => setActiveIndex(activeIndex === index ? null : index);
+
+  return (
+    <Card>
+      <div className="envelope-header">
+        <div>
+          <h2>Spending by Envelope</h2>
+          <p className="muted" style={{fontSize:13,margin:"2px 0 0"}}>Total monthly expenses: <strong>{money(total)}</strong></p>
+        </div>
+        <button
+          className={`envelope-surplus-toggle ${showSurplus ? "active" : ""}`}
+          onClick={() => setShowSurplus(v => !v)}
+          title={showSurplus ? "Hide surplus" : "Show surplus"}
+        >
+          {showSurplus ? "✨ With surplus" : "Expenses only"}
+        </button>
+      </div>
+
+      <div className="envelope-chart-wrap">
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie
+              data={pieData}
+              dataKey="value"
+              innerRadius={0}
+              outerRadius={90}
+              paddingAngle={1.5}
+              startAngle={90}
+              endAngle={-270}
+              onClick={onPieClick}
+            >
+              {pieData.map((entry, i) => (
+                <Cell
+                  key={entry.name}
+                  fill={entry.color}
+                  opacity={activeIndex === null || activeIndex === i ? 1 : 0.35}
+                  stroke={activeIndex === i ? "#fff" : "transparent"}
+                  strokeWidth={activeIndex === i ? 3 : 0}
+                  style={{cursor:"pointer", transition:"opacity .2s"}}
+                />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value, name) => [money(value), name]}
+              contentStyle={{borderRadius:12, border:"1px solid var(--line)", background:"var(--card)", color:"var(--text)", fontSize:13}}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="envelope-legend">
+        {pieData.map((entry, i) => {
+          const pct = Math.round((entry.value / (total + (showSurplus ? surplus : 0))) * 100);
+          const isActive = activeIndex === i;
+          return (
+            <div
+              key={entry.name}
+              className={`envelope-legend-row ${isActive ? "active" : ""}`}
+              onClick={() => setActiveIndex(activeIndex === i ? null : i)}
+            >
+              <div className="envelope-legend-left">
+                <span className="envelope-dot" style={{background: entry.color}}/>
+                <span className="envelope-name">{entry.icon} {entry.name}</span>
+              </div>
+              <span className="envelope-pct">{pct}%</span>
+              <span className="envelope-amount">{money(entry.value)}</span>
+            </div>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
 function CashFlow({ state, totals, setEditor, setMenuOpen }) {
   const [lookAhead, setLookAhead] = useState(7);
   const next = upcomingTransactions(state.transactions, lookAhead);
@@ -3843,6 +3949,14 @@ function CashFlow({ state, totals, setEditor, setMenuOpen }) {
 
       <TransactionGroup title={`Recurring Income (${recurringIncome.length})`} total={totals.income} color="success" txns={recurringIncome} setEditor={setEditor}/>
       <TransactionGroup title={`Recurring Expenses (${recurringExpenses.length})`} total={totals.expenses} color="danger" txns={recurringExpenses} setEditor={setEditor}/>
+
+      {recurringExpenses.length >= 1 && (
+        <SpendingEnvelopeCard
+          recurringExpenses={recurringExpenses}
+          totalExpenses={totals.expenses}
+          totalIncome={totals.income}
+        />
+      )}
 
       <button className="fab" onClick={()=>setEditor({ type:"transaction" })}><Plus size={34}/></button>
     </div>
