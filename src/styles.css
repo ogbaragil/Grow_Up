@@ -7208,3 +7208,147 @@ button:focus-visible {
   border-radius: 12px !important;
   margin: 8px 0 12px !important;
 }
+
+/* ═══════════════════════════════════════════════════════
+   FIX 1 — Month bar inline status dot
+   ═══════════════════════════════════════════════════════ */
+.month-status-dot {
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1;
+  transition: color .3s;
+}
+
+/* Remove old floating badge */
+.month-save-state { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════
+   FIX 3 — Net worth hero sparkline upgraded
+   ═══════════════════════════════════════════════════════ */
+.networth-hero-sparkline {
+  width: 100%;
+  height: 68px !important;
+  display: block;
+  margin-top: 16px;
+  overflow: visible;
+}
+.nw-mom {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+.nw-mom.gain { color: #86efac; }
+.nw-mom.loss { color: #fca5a5; }
+.nw-chart-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(255,255,255,.45);
+  margin-top: 4px;
+}
+
+/* ═══════════════════════════════════════════════════════
+   FIX 4 — Carousel upgrades
+   ═══════════════════════════════════════════════════════ */
+
+/* Nav button in carousel cards */
+.carousel-nav-btn {
+  width: 38px !important;
+  height: 38px !important;
+  border-radius: 12px !important;
+  background: rgba(16,18,20,.07) !important;
+  color: #15181D !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  display: grid;
+  place-items: center;
+  transition: background .15s;
+}
+.carousel-nav-btn:hover { background: rgba(16,18,20,.14) !important; }
+
+/* Upcoming transaction icon — income vs expense coloured */
+.upcoming-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  flex: 0 0 auto;
+}
+.upcoming-icon.income { background: #e8f7ee; }
+.upcoming-icon.expense { background: #fef2f2; }
+
+/* Real cash flow bars */
+.cash-real-bars {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cash-real-bar-row {
+  display: grid;
+  grid-template-columns: 68px 1fr 72px;
+  align-items: center;
+  gap: 10px;
+}
+.cash-real-bar-row span {
+  font-size: 13px;
+  font-weight: 800;
+  color: #6D706F;
+}
+.cash-real-bar-row b {
+  font-size: 13px;
+  font-weight: 900;
+  text-align: right;
+}
+.cash-bar-track {
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(16,18,20,.08);
+  overflow: hidden;
+}
+.cash-bar-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width .6s ease;
+}
+.cash-bar-fill.income { background: #3fa463; }
+.cash-bar-fill.expense { background: #e5292f; }
+
+/* Feature dots upgrade — pill style */
+.feature-dots button {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(16,18,20,.18);
+  border: none;
+  padding: 0;
+  transition: width .25s, background .25s;
+}
+.feature-dots button.active {
+  width: 22px;
+  background: #15181D;
+}
+
+/* Dark mode carousel adjustments */
+:root[data-theme="dark"] .minimal-upcoming-card,
+:root[data-theme="dark"] .minimal-cash-snapshot-card {
+  background: var(--card) !important;
+  border-color: var(--line) !important;
+}
+:root[data-theme="dark"] .upcoming-card-head p,
+:root[data-theme="dark"] .cash-snapshot-big span,
+:root[data-theme="dark"] .cash-real-bar-row span { color: var(--muted) !important; }
+:root[data-theme="dark"] .upcoming-card-head h2,
+:root[data-theme="dark"] .cash-snapshot-big strong { color: var(--text) !important; }
+:root[data-theme="dark"] .upcoming-mini-item > span { background: rgba(255,255,255,.07) !important; }
+:root[data-theme="dark"] .upcoming-icon.income { background: var(--green2) !important; }
+:root[data-theme="dark"] .upcoming-icon.expense { background: var(--red2) !important; }
+:root[data-theme="dark"] .carousel-nav-btn { background: rgba(255,255,255,.1) !important; color: var(--text) !important; }
+:root[data-theme="dark"] .cash-bar-track { background: rgba(255,255,255,.08) !important; }
+:root[data-theme="dark"] .upcoming-empty { background: rgba(255,255,255,.05) !important; color: var(--muted) !important; }
+:root[data-theme="dark"] .feature-dots button { background: rgba(255,255,255,.2); }
+:root[data-theme="dark"] .feature-dots button.active { background: white; }

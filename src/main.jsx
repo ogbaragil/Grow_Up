@@ -2682,6 +2682,7 @@ function ScreenTitle({ title, sub, setMenuOpen, back, action }) {
 function MonthBar({ state, setState, thin=false, hasUnsaved=false }) {
   const nextMonth = addMonths(state.selectedMonth, 1);
   const nextBlocked = !canMoveToMonth(nextMonth);
+  const hasSnapshot = !!state.monthSnapshots?.[state.selectedMonth];
 
   const move = (delta) => {
     const target = addMonths(state.selectedMonth, delta);
@@ -2689,11 +2690,22 @@ function MonthBar({ state, setState, thin=false, hasUnsaved=false }) {
     setState(s => ({ ...s, selectedMonth:target }));
   };
 
+  // Status: unsaved changes > saved snapshot > no snapshot (past month) > current month
+  const statusDot = hasUnsaved
+    ? { icon:"●", color:"#fbbf24", title:"Unsaved changes" }
+    : hasSnapshot
+      ? { icon:"✓", color:"#86efac", title:"Snapshot saved" }
+      : null;
+
   return (
     <div className={thin ? "month-bar thin" : "month-bar"}>
       <button onClick={()=>move(-1)} aria-label="Previous month"><ChevronLeft size={24}/></button>
       <strong>{monthLabel(state.selectedMonth)}</strong>
-      <span className={hasUnsaved ? "month-save-state unsaved" : "month-save-state saved"}>{hasUnsaved ? "Unsaved" : "Saved"}</span>
+      {statusDot && (
+        <span className="month-status-dot" title={statusDot.title} style={{color: statusDot.color}}>
+          {statusDot.icon}
+        </span>
+      )}
       <button
         className={nextBlocked ? "blocked" : ""}
         disabled={nextBlocked}
@@ -2949,7 +2961,7 @@ function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
   const [copied, setCopied] = useState(false);
   const mom = netWorth - (prevNet || 0);
   const momStr = mom >= 0 ? `+${money(mom)}` : money(mom);
-  const text = `My net worth is ${money(netWorth)} (${momStr} this month) — tracked with Grow UP 🌱`;
+  const text = `My net worth is ${money(netWorth)} (${momStr} this month) — tracked with Grow UP 🌱 growupapp.app`;
 
   const share = async () => {
     if (navigator.share) {
@@ -3040,24 +3052,44 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
       <section className="minimal-networth-card" onClick={()=>setHistoryMetric("net")}>
         <p>Net Worth</p>
         <h2>{money(animatedNetWorth)}</h2>
-        <span>{signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} over last month</span>
+        <span className={dashboardTotals.net - dashboardTotals.prevNet >= 0 ? "nw-mom gain" : "nw-mom loss"}>
+          {signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} over last month
+        </span>
+        {chartValues.length >= 2 && (() => {
+          const pts = chartValues.map((v,i) => {
+            const x = (i/(chartValues.length-1))*300;
+            const y = 68 - ((v-min)/range)*58;
+            return `${x},${y}`;
+          });
+          const fillPath = `M${pts.map(p=>p).join(' L')} L300,80 L0,80 Z`;
+          return (
+            <svg viewBox="0 0 300 80" className="networth-hero-sparkline" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="nwFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="rgba(255,255,255,.22)"/>
+                  <stop offset="100%" stopColor="rgba(255,255,255,.0)"/>
+                </linearGradient>
+              </defs>
+              <path d={fillPath} fill="url(#nwFill)"/>
+              <polyline
+                points={pts.join(" ")}
+                fill="none" stroke="rgba(255,255,255,.75)" strokeWidth="2.5"
+                strokeLinecap="round" strokeLinejoin="round"
+              />
+              {pts.map((p, i) => {
+                const [x, y] = p.split(",").map(Number);
+                return i === pts.length - 1
+                  ? <circle key={i} cx={x} cy={y} r={4} fill="white" opacity={0.9}/>
+                  : null;
+              })}
+            </svg>
+          );
+        })()}
         {chartValues.length >= 2 && (
-          <svg viewBox="0 0 300 60" className="networth-hero-sparkline">
-            <defs>
-              <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor="rgba(255,255,255,.25)"/>
-                <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-              </linearGradient>
-            </defs>
-            <polyline
-              points={chartValues.map((v,i)=>{
-                const x = (i/(chartValues.length-1))*300;
-                const y = 54-((v-min)/range)*48;
-                return `${x},${y}`;
-              }).join(" ")}
-              fill="none" stroke="rgba(255,255,255,.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-            />
-          </svg>
+          <div className="nw-chart-labels">
+            <span>{shortMonthLabel(chartRows[0]?.key)}</span>
+            <span>{shortMonthLabel(chartRows[chartRows.length-1]?.key)}</span>
+          </div>
         )}
       </section>
 
@@ -3118,6 +3150,7 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
           onWheel={dashboardCarousel.pauseThenResume}
           onScroll={dashboardCarousel.pauseThenResume}
         >
+          {/* Card 1 — Momentum */}
           <article className="minimal-chart-card feature-slide dark-momentum-card">
             <div className="minimal-row">
               <div>
@@ -3126,29 +3159,29 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
               </div>
               <strong>{animatedMomentum >= 0 ? "+" : ""}{Math.round(animatedMomentum)}%</strong>
             </div>
-
             <svg viewBox="0 0 300 140" className="minimal-trend-svg" onClick={()=>setHistoryMetric("net")}>
               <polyline points={points} />
             </svg>
-
             <span className="feature-caption">
-              {animatedMomentum >= 10 ? "Strong positive trend" : animatedMomentum >= 0 ? "Positive trend" : "Long-term wealth path"}
+              {animatedMomentum >= 10 ? "Strong positive trend" : animatedMomentum >= 0 ? "Positive trend" : "Negative trend — review your goals"}
             </span>
           </article>
 
+          {/* Card 2 — Upcoming Transactions */}
           <article className="minimal-upcoming-card feature-slide">
             <div className="upcoming-card-head">
               <div>
-                <p>Upcoming</p>
+                <p>Coming up</p>
                 <h2>Transactions</h2>
               </div>
-              <button type="button" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
+              <button type="button" className="carousel-nav-btn" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
             </div>
-
             <div className="upcoming-mini-list">
               {upcomingMiniTxns.length ? upcomingMiniTxns.map(txn => (
                 <div className="upcoming-mini-item" key={txn.id}>
-                  <span>{txn.icon || (txn.type === "income" ? "💵" : "💳")}</span>
+                  <span className={`upcoming-icon ${txn.type === "income" ? "income" : "expense"}`}>
+                    {txn.icon || (txn.type === "income" ? "💵" : "💳")}
+                  </span>
                   <div>
                     <strong>{txn.name}</strong>
                     <small>{txn.dateObj.toLocaleDateString("en-US", { month:"short", day:"numeric" })}</small>
@@ -3158,27 +3191,41 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
                   </b>
                 </div>
               )) : (
-                <div className="upcoming-empty">No upcoming transactions.</div>
+                <div className="upcoming-empty">No upcoming transactions in the next 7 days.</div>
               )}
             </div>
           </article>
 
+          {/* Card 3 — Cash Flow (real data) */}
           <article className="minimal-cash-snapshot-card feature-slide">
             <div className="upcoming-card-head">
               <div>
                 <p>This month</p>
                 <h2>Cash Flow</h2>
               </div>
-              <button type="button" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
+              <button type="button" className="carousel-nav-btn" onClick={()=>setTab("cash")} aria-label="Open Cash Flow">→</button>
             </div>
-
             <div className="cash-snapshot-big">
-              <strong>{signedMoney(dashboardTotals.income - dashboardTotals.expenses)}</strong>
-              <span>projected balance</span>
+              <strong className={dashboardTotals.income - dashboardTotals.expenses >= 0 ? "" : "danger"}>
+                {signedMoney(dashboardTotals.income - dashboardTotals.expenses)}
+              </strong>
+              <span>monthly surplus</span>
             </div>
-
-            <div className="cash-bars">
-              <i></i><i></i><i></i><i></i><i></i>
+            <div className="cash-real-bars">
+              <div className="cash-real-bar-row">
+                <span>Income</span>
+                <div className="cash-bar-track">
+                  <div className="cash-bar-fill income" style={{width: dashboardTotals.income > 0 ? "100%" : "0%"}}/>
+                </div>
+                <b className="gain">{money(dashboardTotals.income)}</b>
+              </div>
+              <div className="cash-real-bar-row">
+                <span>Expenses</span>
+                <div className="cash-bar-track">
+                  <div className="cash-bar-fill expense" style={{width: dashboardTotals.income > 0 ? `${Math.min(100, (dashboardTotals.expenses/dashboardTotals.income)*100)}%` : "100%"}}/>
+                </div>
+                <b className="risk">-{money(dashboardTotals.expenses)}</b>
+              </div>
             </div>
           </article>
         </div>
