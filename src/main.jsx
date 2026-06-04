@@ -2706,12 +2706,17 @@ function MonthBar({ state, setState, thin=false, hasUnsaved=false }) {
   );
 }
 
-function EmptyState({ title, text, action, onClick }) {
+function EmptyState({ title, text, action, onClick, icon }) {
   return (
-    <div className="empty-state">
+    <div className="empty-state-v2">
+      <div className="empty-state-icon">{icon || "✦"}</div>
       <h3>{title}</h3>
       <p>{text}</p>
-      {action && <button className="primary" onClick={onClick}><Plus size={18}/>{action}</button>}
+      {action && (
+        <button className="empty-state-btn" onClick={onClick}>
+          <Plus size={18}/>{action}
+        </button>
+      )}
     </div>
   );
 }
@@ -2940,6 +2945,37 @@ function useAutoCarousel(itemCount = 3, intervalMs = 5200, resumeDelayMs = 5200)
 }
 
 
+function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
+  const [copied, setCopied] = useState(false);
+  const mom = netWorth - (prevNet || 0);
+  const momStr = mom >= 0 ? `+${money(mom)}` : money(mom);
+  const text = `My net worth is ${money(netWorth)} (${momStr} this month) — tracked with Grow UP 🌱`;
+
+  const share = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: "My Net Worth — Grow UP", text });
+        return;
+      } catch {}
+    }
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2200);
+  };
+
+  return (
+    <div className="share-networth-card">
+      <div className="share-networth-left">
+        <span>Share your progress</span>
+        <p>{text}</p>
+      </div>
+      <button className="share-networth-btn" onClick={share}>
+        {copied ? "✓ Copied" : "Share"}
+      </button>
+    </div>
+  );
+}
+
 function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
@@ -3005,37 +3041,73 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         <p>Net Worth</p>
         <h2>{money(animatedNetWorth)}</h2>
         <span>{signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} over last month</span>
+        {chartValues.length >= 2 && (
+          <svg viewBox="0 0 300 60" className="networth-hero-sparkline">
+            <defs>
+              <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="rgba(255,255,255,.25)"/>
+                <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+              </linearGradient>
+            </defs>
+            <polyline
+              points={chartValues.map((v,i)=>{
+                const x = (i/(chartValues.length-1))*300;
+                const y = 54-((v-min)/range)*48;
+                return `${x},${y}`;
+              }).join(" ")}
+              fill="none" stroke="rgba(255,255,255,.6)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+            />
+          </svg>
+        )}
       </section>
 
       <InsightsStrip state={dashboardState} totals={dashboardTotals} openInsights={()=>setInsightsOpen?.(true)} />
 
       <WealthTimelineBriefCard state={dashboardState} openTimeline={()=>setTimelineOpen?.(true)} />
 
-      {primaryGoal && goalCalc && (
-        <section className={`minimal-goal-card ${primaryGoal.color || "green"}`} onClick={()=>setTab("goals")}>
-          <div className="minimal-row">
-            <div>
-              <p>
-                {smartGoal?.goal === primaryGoal && smartGoal?.deadlineScore < 1000 * 60 * 60 * 24 * 120
-                  ? "Closest deadline"
-                  : smartGoal?.goal === primaryGoal && smartGoal?.offTrackScore > 40
-                  ? "Long-term wealth path"
-                  : "Top progress"}
-              </p>
-              <h2>{primaryGoal.name}</h2>
+      {primaryGoal && goalCalc && (() => {
+        const colorMap = {
+          green:  "linear-gradient(135deg,#1a7a40 0%,#236b4a 100%)",
+          red:    "linear-gradient(135deg,#b91c1c 0%,#9f1239 100%)",
+          purple: "linear-gradient(135deg,#6d28d9 0%,#4c1d95 100%)",
+          blue:   "linear-gradient(135deg,#1d4ed8 0%,#1e3a8a 100%)",
+          gold:   "linear-gradient(135deg,#b45309 0%,#92400e 100%)",
+        };
+        const bg = colorMap[primaryGoal.color || goalColorForType(primaryGoal.goalType)] || colorMap.green;
+        const pct = Math.min(100, Math.max(0, goalCalc.progress));
+        const r = 28; const circ = 2 * Math.PI * r;
+        return (
+          <section className="overview-goal-card-v2" style={{background: bg}} onClick={()=>setTab("goals")}>
+            <div className="overview-goal-row">
+              <div className="overview-goal-ring-wrap">
+                <svg width={64} height={64} viewBox="0 0 64 64">
+                  <circle cx={32} cy={32} r={r} fill="none" stroke="rgba(255,255,255,.18)" strokeWidth={5}/>
+                  <circle cx={32} cy={32} r={r} fill="none" stroke="rgba(255,255,255,.85)" strokeWidth={5}
+                    strokeDasharray={`${circ * pct/100} ${circ}`} strokeLinecap="round"
+                    transform="rotate(-90 32 32)" style={{transition:"stroke-dasharray .5s"}}/>
+                </svg>
+                <span className="overview-goal-emoji">{primaryGoal.icon || goalIconForType(primaryGoal.goalType)}</span>
+              </div>
+              <div className="overview-goal-info">
+                <p>{smartGoal?.deadlineScore < 1000*60*60*24*120 ? "Closest deadline" : "Top progress"}</p>
+                <h2>{primaryGoal.name}</h2>
+                <div className="overview-goal-status-row">
+                  {goalForecast?.label && goalForecast.label !== "Need more history" && (
+                    <span className="overview-goal-eta">→ {goalForecast.label}</span>
+                  )}
+                </div>
+              </div>
+              <strong className="overview-goal-pct">{Math.round(pct)}%</strong>
             </div>
-            <strong>{Math.round(goalCalc.progress)}%</strong>
-          </div>
-          <div className="minimal-progress">
-            <i style={{ width:`${Math.min(100, Math.max(0, goalCalc.progress))}%` }}></i>
-          </div>
-          <div className="minimal-forecast-box">
-            <p>Forecast Finish</p>
-            <h3>{goalForecast?.label || "Need more history"}</h3>
-            <span>{goalForecast?.detail || "Save more snapshots to improve forecasting."}</span>
-          </div>
-        </section>
-      )}
+            <div className="overview-goal-bar">
+              <div className="overview-goal-bar-fill" style={{width:`${pct}%`}}/>
+            </div>
+            {goalForecast?.detail && goalForecast.kind !== "neutral" && (
+              <p className="overview-goal-detail">{goalForecast.detail}</p>
+            )}
+          </section>
+        );
+      })()}
 
       <section className="minimal-feature-carousel" aria-label="Dashboard highlights">
         <div
@@ -3160,6 +3232,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         <button onClick={()=>setHistoryMetric("assets")}><span>Total Assets</span><strong>{money(dashboardTotals.assets)}</strong></button>
         <button onClick={()=>setHistoryMetric("debts")}><span>Total Debts</span><strong>{money(dashboardTotals.debts)}</strong></button>
       </section>
+
+      <ShareNetWorthCard netWorth={dashboardTotals.net} prevNet={dashboardTotals.prevNet} displayName={displayName} />
     </div>
   );
 }
@@ -3200,7 +3274,7 @@ function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMe
       </div>
 
       {state.accounts.length === 0 && state.goals.length === 0 && state.transactions.length === 0 && (
-        <EmptyState title="Start building your snapshot" text="Add your first account, goal, or cash flow item. Nothing is hard-coded." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
+        <EmptyState icon="🌱" title="Start building your snapshot" text="Add your first account, goal, or cash flow item. Nothing is hard-coded." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
       )}
 
       <Card className="networth-trend-card">
@@ -3443,24 +3517,23 @@ function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, setHisto
       </div>
 
       {selectedSnapshot && (
-        <div className="note-wrap">
+        <div className="month-note-card">
+          <div className="month-note-label">
+            <span>📝 Month note</span>
+            {noteStatus && <span className={`note-save-status ${noteStatus}`}>{noteStatus === "saving" ? "Saving…" : "✓ Saved"}</span>}
+          </div>
           <textarea
             key={state.selectedMonth}
             className="snapshot-note-textarea"
-            placeholder="Add a note about this month — a bonus, a big purchase, a market event…"
+            placeholder="Add a note — a bonus, big purchase, or market event…"
             defaultValue={selectedSnapshot.note || ""}
             onChange={e => updateNote(e.target.value)}
           />
-          {noteStatus && (
-            <span className={`note-save-status ${noteStatus}`}>
-              {noteStatus === "saving" ? "Saving…" : "✓ Saved"}
-            </span>
-          )}
         </div>
       )}
 
       {state.accounts.length === 0 ? (
-        <EmptyState title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>openAddAccount("asset")}/>
+        <EmptyState icon="💼" title="No accounts yet" text="Add assets and debts to calculate net worth." action="Add account" onClick={()=>openAddAccount("asset")}/>
       ) : (
         <>
           <AccountGroup
@@ -4143,7 +4216,7 @@ function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDem
             canMoveDown={index < sortedActiveGoals.length - 1}
           />
         )) : (
-          <EmptyState title="No active goals" text="Add your next wealth goal or restore one from the archive." action="Add goal" onClick={openAddGoal}/>
+          <EmptyState icon="🎯" title="No active goals" text="Add your next wealth goal or restore one from the archive." action="Add goal" onClick={openAddGoal}/>
         )}
       </section>
 
@@ -4533,8 +4606,61 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         <button className="settings-signout-btn" onClick={signOut}><LogOut size={16}/> Sign out</button>
       </Card>
 
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Financial Profile</h2>
+            <p>Used for FIRE calculations and timeline projections.</p>
+          </div>
+        </div>
+        <div className="settings-profile-fields">
+          <label>Age
+            <input type="number" defaultValue={state.profile?.age || ""} placeholder="e.g. 34"
+              onChange={e => update({ profile: { ...(state.profile||{}), age: Number(e.target.value)||null }})} />
+          </label>
+          <label>Retirement age
+            <input type="number" defaultValue={state.profile?.retirementAge || 65} placeholder="e.g. 65"
+              onChange={e => update({ profile: { ...(state.profile||{}), retirementAge: Number(e.target.value)||65 }})} />
+          </label>
+          <label>Monthly income ($)
+            <input type="number" defaultValue={state.profile?.income || ""} placeholder="e.g. 5000"
+              onChange={e => update({ profile: { ...(state.profile||{}), income: Number(e.target.value)||null }})} />
+          </label>
+          <label>Rough total debt ($)
+            <input type="number" defaultValue={state.profile?.roughDebt || ""} placeholder="e.g. 12000"
+              onChange={e => update({ profile: { ...(state.profile||{}), roughDebt: Number(e.target.value)||null }})} />
+          </label>
+        </div>
+        <small className="field-caption" style={{marginTop:8,display:"block"}}>These supplement your live data — real accounts and transactions always take priority.</small>
+      </Card>
+
       {/* ── PREFERENCES ────────────────────────────────────── */}
       <div className="settings-section-label">Preferences</div>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Push Notifications</h2>
+            <p>Get reminded when bills are due and to update your monthly balances.</p>
+          </div>
+          <button
+            className={`settings-action-btn ${state.notificationsEnabled ? "primary-tint" : ""}`}
+            onClick={async () => {
+              if (state.notificationsEnabled) {
+                update({ notificationsEnabled: false });
+                notify("Push notifications turned off.", "info");
+              } else {
+                await requestGrowUpNotifications(s => update(s(state)), notify);
+              }
+            }}
+          >
+            {state.notificationsEnabled ? "On" : "Enable"}
+          </button>
+        </div>
+        {state.notificationsEnabled && (
+          <p style={{fontSize:12,color:"var(--green)",fontWeight:800,margin:0}}>✓ You'll be notified about upcoming transactions and monthly balance reminders.</p>
+        )}
+      </Card>
 
       <Card>
         <div className="settings-row-head">
