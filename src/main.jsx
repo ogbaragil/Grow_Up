@@ -2276,7 +2276,7 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
       const priceId = STRIPE_PRICES[plan];
 
       // Call edge function directly via fetch so we can read non-2xx bodies
-      const res = await fetch(`${SUPABASE_URL}/functions/v1/create-checkout-session`, {
+      const res = await fetch(`${SUPABASE_URL}/functions/v1/swift-worker`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
