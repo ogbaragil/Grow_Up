@@ -3930,10 +3930,10 @@ function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setState, tot
     const rate = Number(inputs.rate || 0) / 100;
     const out = [];
 
-    for (let i = 0; i <= Number(inputs.years || 0); i++) {
-      const year = Number(inputs.startYear || new Date().getFullYear()) + i;
-      const age = Number(inputs.age || 0) + i;
-      const contribution = annualContribution * (i + 1);
+    for (let i = 1; i <= Number(inputs.years || 0); i++) {
+      const year = Number(inputs.startYear || new Date().getFullYear()) + i - 1;
+      const age = Number(inputs.age || 0) + i - 1;
+      const contribution = annualContribution * i;
       const beforeGrowth = value + annualContribution;
       const growth = beforeGrowth * rate;
       value = beforeGrowth + growth;
