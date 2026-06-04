@@ -14,6 +14,38 @@ import "./styles.css";
 const STORAGE_KEY = "growup_history_monthbar_v1";
 const SUPPORT_EMAIL = "support@lgds.com.au";
 
+// ── Stripe / Monetisation ─────────────────────────────────────────────────
+const STRIPE_PUBLISHABLE_KEY = "pk_test_51TeU2SHnS0FyPv2zbuDTqMA1bYWUZdiFVBEa6X3LN51VQ5YmryfKot1MFUkQ5iCfk60lK7jokAAUNl3M5M7FcRWc00Dp1bLA3v";
+const STRIPE_PRICES = {
+  monthly: "price_1TeUDkHnS0FyPv2zI0oBKPEj",  // A$3.99/month
+  annual:  "price_1TeUFAHnS0FyPv2z8H92AS7S",  // A$39.99/year
+};
+const PRO_LIMITS = { accounts: 3, goals: 2, transactions: 5, snapshotMonths: 3 };
+const PRO_FEATURES = [
+  "Unlimited accounts, goals & transactions",
+  "Full snapshot history (no 3-month cap)",
+  "Wealth Timeline & scenarios",
+  "Grow UP Insights",
+  "Compound Wealth calculator",
+  "FIRE financial independence goal",
+  "Email & push reminders",
+  "CSV export",
+];
+
+async function createCheckoutSession(plan, session) {
+  if (!supabase || !session) return null;
+  try {
+    const { data, error } = await supabase.functions.invoke("create-checkout-session", {
+      body: { priceId: STRIPE_PRICES[plan], plan },
+    });
+    if (error) throw error;
+    return data?.url || null;
+  } catch (err) {
+    console.error("Checkout error:", err);
+    return null;
+  }
+}
+
 const CURRENCY_OPTIONS = [
   ["USD", "US Dollar", "$"],
   ["AUD", "Australian Dollar", "$"],
@@ -2195,6 +2227,85 @@ function createMonthlySnapshotState(currentState = {}) {
 }
 
 
+function UpgradeSheet({ reason, onClose, session, notify }) {
+  const [plan, setPlan] = useState("annual");
+  const [loading, setLoading] = useState(false);
+
+  const monthly = 3.99;
+  const annual = 39.99;
+  const annualMonthly = (annual / 12).toFixed(2);
+  const saving = Math.round((1 - annual / (monthly * 12)) * 100);
+
+  const reasonMessages = {
+    accounts: `Free plan includes up to ${PRO_LIMITS.accounts} accounts.`,
+    goals: `Free plan includes up to ${PRO_LIMITS.goals} active goals.`,
+    transactions: `Free plan includes up to ${PRO_LIMITS.transactions} transactions.`,
+    timeline: "Wealth Timeline is a Pro feature.",
+    insights: "Grow UP Insights is a Pro feature.",
+    compound: "Compound Wealth calculator is a Pro feature.",
+    fire: "FIRE goal type is a Pro feature.",
+    export: "CSV export is a Pro feature.",
+    reminders: "Email reminders are a Pro feature.",
+  };
+
+  const handleUpgrade = async () => {
+    if (!session) { notify("Please sign in first.", "error"); return; }
+    setLoading(true);
+    const url = await createCheckoutSession(plan, session);
+    if (url) {
+      window.location.href = url;
+    } else {
+      notify("Could not start checkout. Please try again.", "error");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="upgrade-backdrop" onClick={onClose}>
+      <div className="upgrade-sheet" onClick={e => e.stopPropagation()}>
+        <button className="upgrade-close" onClick={onClose}><X size={20}/></button>
+
+        <div className="upgrade-hero">
+          <div className="upgrade-pro-badge">✦ PRO</div>
+          <h2>Grow UP Pro</h2>
+          <p>14-day free trial · cancel anytime</p>
+        </div>
+
+        {reason && reasonMessages[reason] && (
+          <div className="upgrade-reason">{reasonMessages[reason]} Upgrade to continue.</div>
+        )}
+
+        <div className="upgrade-plan-toggle">
+          <button className={plan === "monthly" ? "active" : ""} onClick={() => setPlan("monthly")}>
+            Monthly<span>A${monthly}/mo</span>
+          </button>
+          <button className={plan === "annual" ? "active" : ""} onClick={() => setPlan("annual")}>
+            Annual<span>A${annualMonthly}/mo</span>
+            <span className="upgrade-save-badge">Save {saving}%</span>
+          </button>
+        </div>
+
+        <div className="upgrade-features">
+          {PRO_FEATURES.map(f => (
+            <div key={f} className="upgrade-feature-row">
+              <span className="upgrade-check">✓</span>
+              <span>{f}</span>
+            </div>
+          ))}
+        </div>
+
+        <button className="upgrade-cta" onClick={handleUpgrade} disabled={loading}>
+          {loading ? "Opening checkout…" : `Start free trial — A$${plan === "annual" ? `${annualMonthly}/mo` : `${monthly}/mo`}`}
+        </button>
+        <p className="upgrade-fine">
+          {plan === "annual" ? `A$${annual} billed annually` : `A$${monthly} billed monthly`}
+          {" · "}14 days free, then auto-renews · cancel anytime
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const path = window.location.pathname;
   if (path === "/landingpage") return <LandingPage />;
@@ -2217,12 +2328,51 @@ function App() {
   const showConfirm = useConfirm();
   const fmt = useMoney(state.currency);
 
+  const [subscription, setSubscription] = useState(null);
+  const [upgradeSheet, setUpgradeSheet] = useState(null); // null | reason string
+  const isPro = subscription?.status === "active" || subscription?.status === "trialing" || demoMode;
+
+  const showUpgrade = (reason = "general") => setUpgradeSheet(reason);
+
+  const requirePro = (reason, action) => {
+    if (isPro) { action(); } else { showUpgrade(reason); }
+  };
+
 
   useEffect(() => {
     window.__GROWUP_ACTIVE_CURRENCY = state.currency;
     document.documentElement.dataset.theme = state.theme;
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, [state.theme, state.currency]);
+
+  // Load subscription status from Supabase
+  useEffect(() => {
+    if (!supabase || !session?.user?.id) { setSubscription(null); return; }
+    supabase.from("growup_subscriptions")
+      .select("*").eq("user_id", session.user.id).single()
+      .then(({ data }) => setSubscription(data || null));
+  }, [session?.user?.id]);
+
+  // Handle Stripe checkout return
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const checkoutStatus = params.get("checkout");
+    if (checkoutStatus === "success") {
+      notify("🎉 Welcome to Grow UP Pro! Your 14-day trial has started.", "success");
+      // Refresh subscription after short delay for webhook processing
+      setTimeout(() => {
+        if (supabase && session?.user?.id) {
+          supabase.from("growup_subscriptions")
+            .select("*").eq("user_id", session.user.id).single()
+            .then(({ data }) => setSubscription(data || null));
+        }
+      }, 2000);
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (checkoutStatus === "cancel") {
+      notify("Checkout cancelled — you can upgrade any time.", "info");
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [session?.user?.id]);
 
   useEffect(() => {
     if (!supabase) {
@@ -2372,7 +2522,7 @@ function App() {
     setState(s => ({ ...s, dashboardStyle: style }));
   };
 
-  const common = { state: activeState, setState: activeSetState, totals, setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, autoSaveMonthSnapshot, displayName, isDemo: demoMode, notify, showConfirm};
+  const common = { state: activeState, setState: activeSetState, totals, setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, autoSaveMonthSnapshot, displayName, isDemo: demoMode, notify, showConfirm, isPro, showUpgrade, requirePro };
 
   if (authLoading) {
     return (
@@ -2410,12 +2560,18 @@ function App() {
   return (
     <div className="app-shell">
       <main className="phone">
-        {timelineOpen ? (
+        {timelineOpen && isPro ? (
           <WealthTimelinePage state={activeState} setState={setState} setMenuOpen={setMenuOpen} setTimelineOpen={setTimelineOpen} setCompoundOpen={setCompoundOpen} setTab={setTab} />
-        ) : insightsOpen ? (
+        ) : timelineOpen && !isPro ? (
+          <>{setTimelineOpen(false)}{showUpgrade("timeline")}</>
+        ) : insightsOpen && isPro ? (
           <InsightsPage state={activeState} totals={totals} setMenuOpen={setMenuOpen} setInsightsOpen={setInsightsOpen} />
-        ) : compoundOpen ? (
+        ) : insightsOpen && !isPro ? (
+          <>{setInsightsOpen(false)}{showUpgrade("insights")}</>
+        ) : compoundOpen && isPro ? (
           <CompoundWealthPage setCompoundOpen={setCompoundOpen} setMenuOpen={setMenuOpen} state={activeState} setState={setState} totals={totals} />
+        ) : compoundOpen && !isPro ? (
+          <>{setCompoundOpen(false)}{showUpgrade("compound")}</>
         ) : historyMetric ? (
           <HistoryPage {...common} metric={historyMetric} setHistoryMetric={setHistoryMetric} />
         ) : (
@@ -2427,7 +2583,7 @@ function App() {
             {tab === "overview" && (
               dashboardStyle === "detailed"
                 ? <Overview {...common} setTab={setTab} isDemo={demoMode} />
-                : <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} />
+                : <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} isPro={isPro} showUpgrade={showUpgrade} />
             )}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
@@ -2447,6 +2603,8 @@ function App() {
                 exitDemoMode={exitDemoMode}
                 dashboardStyle={dashboardStyle}
                 setDashboardStyle={updateDashboardStyle}
+                isPro={isPro}
+                showUpgrade={showUpgrade}
               />
             )}
             <BottomNav tab={tab} setTab={setTab} />
@@ -2475,7 +2633,16 @@ function App() {
         />
       )}
 
-      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} totals={totals} />}
+      {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} totals={totals} isPro={isPro} showUpgrade={showUpgrade} />}
+
+      {upgradeSheet !== null && (
+        <UpgradeSheet
+          reason={upgradeSheet}
+          onClose={() => setUpgradeSheet(null)}
+          session={session}
+          notify={notify}
+        />
+      )}
     </div>
   );
 }
@@ -2988,7 +3155,7 @@ function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
   );
 }
 
-function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false }) {
+function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
@@ -3038,9 +3205,15 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
         <div className="minimal-title-block">
           <div className="minimal-greeting-line">
             <p>Welcome back</p>
-            <span className={isDemo ? "mode-pill demo-mode-pill" : "mode-pill real-mode-pill"}>
-              {isDemo ? "Demo Mode" : "Real Mode"}
-            </span>
+            {isPro ? (
+              <span className="mode-pill pro-mode-pill">✦ Pro</span>
+            ) : isDemo ? (
+              <span className="mode-pill demo-mode-pill">Demo Mode</span>
+            ) : (
+              <button className="mode-pill free-mode-pill" onClick={() => showUpgrade?.("general")}>
+                Free · Upgrade
+              </button>
+            )}
           </div>
           <h1>{displayName || "there"}</h1>
         </div>
@@ -4641,7 +4814,7 @@ function compactMoney(value) {
 }
 
 
-function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle, notify, showConfirm}) {
+function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle, notify, showConfirm, isPro=false, showUpgrade}) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Your account, preferences, and data." setMenuOpen={setMenuOpen} />
@@ -4714,6 +4887,20 @@ function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, s
         {state.notificationsEnabled && (
           <p style={{fontSize:12,color:"var(--green)",fontWeight:800,margin:0}}>✓ You'll be notified about upcoming transactions and monthly balance reminders.</p>
         )}
+      </Card>
+
+      <Card>
+        <div className="settings-row-head">
+          <div>
+            <h2>Subscription</h2>
+            <p>{isPro ? "Grow UP Pro — active" : "Free plan · 3 accounts, 2 goals, 5 transactions"}</p>
+          </div>
+          {isPro ? (
+            <a className="settings-action-btn" href="https://billing.stripe.com/p/login/test_00g000000000000" target="_blank" rel="noopener noreferrer">Manage</a>
+          ) : (
+            <button className="settings-action-btn primary-tint" onClick={() => showUpgrade?.("general")}>Upgrade</button>
+          )}
+        </div>
       </Card>
 
       <Card>
@@ -4873,9 +5060,9 @@ function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSn
         <button className={navClass("goals")} onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
 
         <div className="drawer-section-label">Tools</div>
-        <button onClick={()=>{setInsightsOpen(true); setMenuOpen(false)}}><Lightbulb/> Insights</button>
-        <button onClick={()=>{setTimelineOpen(true); setMenuOpen(false)}}><TrendingUp/> Wealth Timeline</button>
-        <button onClick={()=>{setCompoundOpen(true); setMenuOpen(false)}}><Calculator/> Compound Wealth</button>
+        <button onClick={()=>{setInsightsOpen(true); setMenuOpen(false)}}><Lightbulb/> Insights{!isPro && <span className="pro-lock">PRO</span>}</button>
+        <button onClick={()=>{setTimelineOpen(true); setMenuOpen(false)}}><TrendingUp/> Wealth Timeline{!isPro && <span className="pro-lock">PRO</span>}</button>
+        <button onClick={()=>{setCompoundOpen(true); setMenuOpen(false)}}><Calculator/> Compound Wealth{!isPro && <span className="pro-lock">PRO</span>}</button>
         <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
         <button onClick={isDemo ? exitDemoMode : enterDemoMode}><FlaskConical/> {isDemo ? "Exit preview" : "Preview with sample data"}</button>
 
@@ -4999,10 +5186,29 @@ function EmojiPicker({ value, onChange }) {
   );
 }
 
-function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot, totals }) {
+function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot, totals, isPro, showUpgrade }) {
   const item = editor.item || {};
   const isNew = !item.id;
-  const [presetPicked, setPresetPicked] = useState(!isNew); // skip preset screen when editing
+  const [presetPicked, setPresetPicked] = useState(!isNew);
+
+  // Free tier limit check — block before showing form for new items
+  if (isNew && !isPro) {
+    if (editor.type === "account" && (state.accounts || []).length >= PRO_LIMITS.accounts) {
+      showUpgrade?.("accounts");
+      setEditor(null);
+      return null;
+    }
+    if (editor.type === "goal" && (state.goals || []).filter(g => !g.archived).length >= PRO_LIMITS.goals) {
+      showUpgrade?.("goals");
+      setEditor(null);
+      return null;
+    }
+    if (editor.type === "transaction" && (state.transactions || []).length >= PRO_LIMITS.transactions) {
+      showUpgrade?.("transactions");
+      setEditor(null);
+      return null;
+    }
+  } // skip preset screen when editing
   const [form, setForm] = useState({
     name:item.name || "",
     icon:item.icon || "",
@@ -5232,7 +5438,7 @@ function EditorModal({ editor, setEditor, state, setState, autoSaveMonthSnapshot
               <option value="accountGrowth">Account Growth Goal</option>
               <option value="debtPayoff">Debt Payoff Goal</option>
               <option value="savings">Savings Goal</option>
-              <option value="fire">FIRE / Financial Independence</option>
+              <option value="fire" disabled={!isPro}>FIRE / Financial Independence{!isPro ? " (Pro)" : ""}</option>
             </select>
           </label>
           {form.goalType === "netWorth" ? (
