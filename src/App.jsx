@@ -98,22 +98,28 @@ export function App() {
 
     const activate = async () => {
       notify("Activating Pro…", "info");
-      const { error } = await supabase
-        .from("growup_subscriptions")
-        .upsert({
-          user_id: session.user.id,
-          status: "trialing",
-          plan,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
+      // Never write subscription status from the client — anyone could set
+      // it from devtools. The verify-subscription edge function authenticates
+      // the user, confirms the subscription with Stripe directly, and writes
+      // the row using the service role.
+      const { data: { session: freshSession } } = await supabase.auth.getSession();
+      const token = freshSession?.access_token;
+      const { data, error } = await supabase.functions.invoke("verify-subscription", {
+        body: { plan },
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
 
-      if (!error) {
+      const verified = !error && data?.status && data.status !== "no_customer" && data.status !== "no_subscription";
+      if (verified) {
         await refreshSubscription();
         notify("✦ You're now on Grow UP Pro! Enjoy.", "success");
         window.history.replaceState({}, "", window.location.pathname);
       } else {
-        console.error("Upsert error:", JSON.stringify(error));
-        notify("Error activating Pro: " + error.message, "error");
+        console.error("Verification failed:", error ? JSON.stringify(error) : JSON.stringify(data));
+        // Payment may still be settling — the Stripe webhook will activate
+        // Pro shortly even if this immediate check missed it.
+        notify("Payment received — Pro will activate within a minute. Pull to refresh if it doesn't.", "info");
+        window.history.replaceState({}, "", window.location.pathname);
       }
     };
 

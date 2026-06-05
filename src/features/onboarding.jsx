@@ -160,6 +160,8 @@ export function OnboardingWizard({ state, setState, onComplete }) {
       ["GBP","🇬🇧","British Pound"],["EUR","🇪🇺","Euro"],
       ["NZD","🇳🇿","NZ Dollar"],["CAD","🇨🇦","Canadian Dollar"],
       ["SGD","🇸🇬","Singapore Dollar"],["INR","🇮🇳","Indian Rupee"],
+      ["NGN","🇳🇬","Nigerian Naira"],["GHS","🇬🇭","Ghanaian Cedi"],
+      ["AED","🇦🇪","UAE Dirham"],
     ];
     return (
       <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">

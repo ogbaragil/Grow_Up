@@ -20,9 +20,26 @@ export const CURRENCY_OPTIONS = [
 ];
 
 export const isSupportedCurrency = (currency) => CURRENCY_OPTIONS.some(([code]) => code === currency);
-export const money = (n, currency = window.__GROWUP_ACTIVE_CURRENCY || "USD") => new Intl.NumberFormat("en-US", {
-  style: "currency", currency: isSupportedCurrency(currency) ? currency : "USD", maximumFractionDigits: 0
-}).format(Number(n || 0));
+// Official signs per currency (third column of CURRENCY_OPTIONS). Intl falls
+// back to ISO codes for currencies en-US has no symbol for (e.g. "NGN 55");
+// we substitute the currency part so users see ₦55, GH₵55, د.إ55 instead.
+const CURRENCY_SYMBOLS = Object.fromEntries(CURRENCY_OPTIONS.map(([code,, symbol]) => [code, symbol]));
+
+export const money = (n, currency = window.__GROWUP_ACTIVE_CURRENCY || "USD") => {
+  const code = isSupportedCurrency(currency) ? currency : "USD";
+  const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: code, maximumFractionDigits: 0 });
+  const parts = formatter.formatToParts(Number(n || 0));
+  return parts
+    .map((part, i) => {
+      if (part.type === "currency") return CURRENCY_SYMBOLS[code] || part.value;
+      // Drop the spacer Intl inserts between an ISO code and the number
+      // ("NGN 55") so the substituted sign hugs the digits ("₦55").
+      const neighborIsCurrency = parts[i - 1]?.type === "currency" || parts[i + 1]?.type === "currency";
+      if (part.type === "literal" && part.value.trim() === "" && neighborIsCurrency) return "";
+      return part.value;
+    })
+    .join("");
+};
 
 export function useMoney(currency) {
   return useCallback((n) => money(n, currency), [currency]);
