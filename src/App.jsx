@@ -48,6 +48,10 @@ export function App() {
   if (path === "/privacy") return <LegalPage type="privacy" />;
   if (path === "/terms") return <LegalPage type="terms" />;
 
+  // "?auth=signup" / "?auth=signin" — set by landing page CTAs so visitors
+  // land on the right tab of the auth screen.
+  const authIntent = new URLSearchParams(window.location.search).get("auth");
+
   const [state, setState] = useGrowState();
   const [tab, setTab] = useState("overview");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -156,11 +160,13 @@ export function App() {
 
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session || null);
+      if (data.session) localStorage.setItem("growup_has_used", "true");
       setAuthLoading(false);
     });
 
     const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession || null);
+      if (nextSession) localStorage.setItem("growup_has_used", "true");
       setAuthLoading(false);
       // The user arrived via a password reset email link — they're signed in
       // with a recovery token but still don't know their password. Show the
@@ -442,7 +448,9 @@ export function App() {
   }
 
   if (!session && !demoMode) {
-    return <AuthScreen enterDemoMode={enterDemoMode} />;
+    const hasUsed = localStorage.getItem("growup_has_used") === "true";
+    if (!hasUsed && !authIntent) return <LandingPage />;
+    return <AuthScreen enterDemoMode={enterDemoMode} initialMode={authIntent === "signup" ? "signUp" : "signIn"} />;
   }
 
   if (passwordRecovery && session) {

@@ -17,8 +17,8 @@ export function AuthLogo() {
   return <img className="auth-logo-img" src="/icons/growup-logo.png" alt="Grow UP" />;
 }
 
-export function AuthScreen({ enterDemoMode }) {
-  const [mode, setMode] = useState("signIn");
+export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
+  const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
@@ -127,7 +127,7 @@ export function AuthScreen({ enterDemoMode }) {
           <AuthLogo />
           <h1>Grow UP</h1>
           <p>{mode === "signIn"
-            ? "Sign in to sync your snapshots, goals, and wealth progress."
+            ? "Welcome back — your money picture is right where you left it."
             : "Free to start — see your complete financial picture in minutes."}</p>
 
           <div className="auth-tabs">
