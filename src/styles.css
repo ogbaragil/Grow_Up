@@ -2042,11 +2042,14 @@ button:disabled {
   }
 
   .landing-nav-cta {
-    display: none;
+    min-height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 14px;
   }
 
   .landing-brand small {
-    display: none;
+    font-size: 11px;
   }
 
   .landing-hero {
