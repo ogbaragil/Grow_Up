@@ -7990,3 +7990,49 @@ button:focus-visible {
 .info-badge.open .info-badge-tip { opacity: 1; pointer-events: auto; }
 
 :root[data-theme="dark"] .info-badge { background: #2a2e34; color: #b7bcc2; }
+
+/* ── Onboarding: chip-first expenses step ────────────────────── */
+.wizard-expense-presets.top { margin: 4px 0 14px; }
+.quickadd-chip.used { opacity: .35; pointer-events: none; }
+.quickadd-chip.capped { opacity: .35; pointer-events: none; }
+.wizard-expense-icon.static {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: default;
+}
+.wizard-expense-name {
+  flex: 1;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.wizard-expense-remove {
+  border: none;
+  background: transparent;
+  color: var(--muted, #6d706f);
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.wizard-expense-remove:hover { background: var(--line, #ececec); }
+.wizard-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--card, #fff);
+  border: 1px solid var(--line, #ececec);
+  border-radius: 12px;
+}
+.wizard-total-row span { font-size: 13px; color: var(--muted, #6d706f); font-weight: 700; }
+.wizard-total-row strong { font-size: 17px; font-weight: 900; letter-spacing: -0.02em; }
+
+/* Hide number spinners across all wizard amount inputs */
+.wizard-input[type="number"]::-webkit-outer-spin-button,
+.wizard-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wizard-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }

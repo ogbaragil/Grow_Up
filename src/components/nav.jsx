@@ -6,7 +6,7 @@ import { Settings } from "../features/settings";
 export function BottomNav({ tab, setTab }) {
   const items = [
     ["overview", Home, "Overview"],
-    ["assets", CreditCard, "Assets"],
+    ["assets", CreditCard, "Accounts"],
     ["cash", Repeat2, "Cash Flow"],
     ["goals", Target, "Wealth Goals"],
   ];
