@@ -4,7 +4,7 @@ import { Plus, Pencil, Trash2, Archive, ChevronDown, ChevronUp, X, ArrowLeft } f
 import { Card, EmptyState, GoalRing, ScreenTitle } from "../components/ui";
 import { calculateGoalProgress, clamp, estimateGoalCompletion, getAccountsForSelectedMonth, goalColorForType, goalIconForType, goalStatus, goalTypeLabel, goalValueForSnapshot, monthlyNeeded, refineDebtPayoffCalcWithHistory } from "../lib/goals";
 import { computeTotals } from "../lib/insights";
-import { compactMoney, money } from "../lib/money";
+import { compactMoney, currencySign, money } from "../lib/money";
 import { readOnlyDemoAlert } from "../state/demo";
 
 export function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen, isDemo=false }) {
@@ -452,8 +452,8 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
       <Card>
         <span className="section-chip">Scenario inputs</span>
         <div className="compound-grid">
-          <label>Starting amount ($)<input type="number" value={inputs.start} onChange={e=>change("start", e.target.value)} /><small className="field-caption">Pre-filled from your current net worth</small></label>
-          <label>Monthly contribution ($)<input type="number" value={inputs.monthly} onChange={e=>change("monthly", e.target.value)} /><small className="field-caption">Pre-filled from your cash surplus</small></label>
+          <label>Starting amount ({currencySign(state.currency)})<input type="number" value={inputs.start} onChange={e=>change("start", e.target.value)} /><small className="field-caption">Pre-filled from your current net worth</small></label>
+          <label>Monthly contribution ({currencySign(state.currency)})<input type="number" value={inputs.monthly} onChange={e=>change("monthly", e.target.value)} /><small className="field-caption">Pre-filled from your cash surplus</small></label>
           <label>Years<input type="number" value={inputs.years} onChange={e=>change("years", e.target.value)} /></label>
           <label>Annual rate (%)<input type="number" value={inputs.rate} onChange={e=>change("rate", e.target.value)} /></label>
           <label>Start year (calendar)<input type="number" value={inputs.startYear} onChange={e=>change("startYear", e.target.value)} /></label>

@@ -354,7 +354,7 @@ function welcomeEmailHtml() {
   `;
 }
 
-function transactionGoalEmailHtml(dueTransactions: any[], goalRows: any[], currency = "USD") {
+function transactionGoalEmailHtml(dueTransactions: any[], goalRows: any[], currency = "USD", includeGoals = true) {
   const transactionHtml = dueTransactions
     .map(({ txn, days }) => {
       const timing = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
@@ -381,15 +381,19 @@ function transactionGoalEmailHtml(dueTransactions: any[], goalRows: any[], curre
         .join("")
     : `<p style="color:#5f6561">No active goals yet. Add at least one goal to see progress here.</p>`;
 
+  const goalsSection = includeGoals
+    ? `
+      <h3 style="font-size:22px;letter-spacing:-0.03em;margin:26px 0 8px">Goal snapshot</h3>
+      ${goalsHtml}`
+    : "";
+
   return `
     <div style="font-family:Inter,Arial,sans-serif;line-height:1.65;color:#101214;max-width:620px;margin:0 auto;padding:28px">
       <h2 style="font-size:26px;letter-spacing:-0.03em;margin:0 0 10px">Upcoming money movement</h2>
-      <p style="margin:0 0 18px;color:#5f6561">A recurring transaction is coming up. Here is a quick snapshot of where your goals are sitting too.</p>
+      <p style="margin:0 0 18px;color:#5f6561">A recurring transaction is coming up.${includeGoals ? " Here is a quick snapshot of where your goals are sitting too." : ""}</p>
 
       ${transactionHtml}
-
-      <h3 style="font-size:22px;letter-spacing:-0.03em;margin:26px 0 8px">Goal snapshot</h3>
-      ${goalsHtml}
+      ${goalsSection}
 
       <p style="margin-top:24px">
         <a href="${APP_URL}" style="display:inline-block;background:#15181D;color:white;padding:12px 18px;border-radius:12px;text-decoration:none;font-weight:700">Open Grow UP</a>
@@ -554,12 +558,13 @@ serve(async () => {
       continue;
     }
 
-    const goalRows = goalSnapshotRows(state);
+    const includeGoals = pref.goal_reminders !== false;
+    const goalRows = includeGoals ? goalSnapshotRows(state) : [];
 
     const ok = await sendEmail(
       pref.email,
-      "Upcoming transaction + goal snapshot",
-      transactionGoalEmailHtml(dueTransactions, goalRows, userCurrency(state))
+      includeGoals ? "Upcoming transaction + goal snapshot" : "Upcoming transaction reminder",
+      transactionGoalEmailHtml(dueTransactions, goalRows, userCurrency(state), includeGoals)
     );
 
     if (ok) {

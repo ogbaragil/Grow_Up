@@ -135,7 +135,7 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
 
       <Card>
         <h2>Email Reminders</h2>
-        <p>Transaction alerts, monthly balance nudges, goal deadlines, and milestone moments.</p>
+        <p>Get an email when a recurring transaction is coming up, with an optional snapshot of your goal progress.</p>
         <div className="email-reminder-card">
           <div className="email-reminder-main">
             <div>
@@ -152,16 +152,11 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
                 <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
               </select>
             </label>
-            <label><span>Monthly balance day</span>
-              <select value={state.monthlyBalanceReminderDay??28} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,monthlyBalanceReminderDay:Number(e.target.value)},notify}); }}>
-                <option value={25}>25th</option><option value={28}>28th</option><option value={30}>30th</option><option value={31}>Last day</option>
-              </select>
-            </label>
           </div>
           <div className="email-reminder-toggles">
-            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Goal reminders</button>
-            <button type="button" className={state.emailMilestoneEmails?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailMilestoneEmails:!state.emailMilestoneEmails}}); }}><span>{state.emailMilestoneEmails?"✓":"○"}</span>Milestone emails</button>
+            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Include goal snapshot</button>
           </div>
+          <small className="field-caption">One email per day at most — only sent when a recurring transaction is actually due within your reminder window.</small>
         </div>
       </Card>
 

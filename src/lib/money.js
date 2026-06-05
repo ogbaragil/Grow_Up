@@ -45,18 +45,20 @@ export function useMoney(currency) {
   return useCallback((n) => money(n, currency), [currency]);
 }
 
-export function compactMoney(value) {
+export function compactMoney(value, currency = window.__GROWUP_ACTIVE_CURRENCY || "USD") {
+  const code = isSupportedCurrency(currency) ? currency : "USD";
+  const sign = CURRENCY_SYMBOLS[code] || "$";
   const n = Number(value || 0);
-  if (Math.abs(n) >= 1000000) return `$${(n/1000000).toFixed(1)}M`;
-  if (Math.abs(n) >= 10000) return `$${Math.round(n).toLocaleString("en-US")}`;
-  if (Math.abs(n) >= 1000) return `$${(n/1000).toFixed(1)}k`;
-  return money(n);
+  if (Math.abs(n) >= 1000000) return `${sign}${(n/1000000).toFixed(1)}M`;
+  if (Math.abs(n) >= 10000) return `${sign}${Math.round(n).toLocaleString("en-US")}`;
+  if (Math.abs(n) >= 1000) return `${sign}${(n/1000).toFixed(1)}k`;
+  return money(n, code);
 }
 
 
-export function signedMoney(n) {
+export function signedMoney(n, currency = window.__GROWUP_ACTIVE_CURRENCY || "USD") {
   const v = Number(n || 0);
-  return `${v >= 0 ? "+" : "-"}${money(Math.abs(v))}`;
+  return `${v >= 0 ? "+" : "-"}${money(Math.abs(v), currency)}`;
 }
 
 export function currencySign(currency) {
