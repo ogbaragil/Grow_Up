@@ -1,3 +1,4 @@
+import { getCurrentAge } from "../lib/user";
 import React, { useMemo, useState } from "react";
 import { Plus, Pencil, Trash2, Archive, ChevronDown, ChevronUp, X, ArrowLeft } from "lucide-react";
 import { Card, EmptyState, GoalRing, ScreenTitle } from "../components/ui";
@@ -381,7 +382,7 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
     years:     saved?.years     ?? 20,
     rate:      saved?.rate      ?? 7,
     startYear: saved?.startYear ?? new Date().getFullYear(),
-    age:       saved?.age       ?? (state.profile?.age || 35)
+    age:       saved?.age       ?? (getCurrentAge(state.profile) || 35)
   });
 
   // Persist inputs to state whenever they change
@@ -422,7 +423,7 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
   const totalGrowth = Math.max(0, futureValue - totalContributions);
 
   const reset = () => {
-    const defaults = { start: startingNet || 20000, monthly: startingSurplus || 2100, years: 20, rate: 7, startYear: new Date().getFullYear(), age: state.profile?.age || 35 };
+    const defaults = { start: startingNet || 20000, monthly: startingSurplus || 2100, years: 20, rate: 7, startYear: new Date().getFullYear(), age: getCurrentAge(state.profile) || 35 };
     setInputs(defaults);
     setState(s => ({ ...s, profile: { ...(s.profile || {}), compoundInputs: null } }));
   };
