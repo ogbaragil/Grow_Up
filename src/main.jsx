@@ -698,6 +698,7 @@ function DeleteAccountPage() {
 }
 
 
+function LandingPage() {
   const startApp = () => {
     window.location.href = "/";
   };
@@ -1851,6 +1852,7 @@ function OnboardingWizard({ state, setState, onComplete }) {
     age: state.profile?.age || "",
     retirementAge: state.profile?.retirementAge || 65,
     income: state.profile?.income || "",
+    currency: state.currency || "AUD",
     expenses: state.profile?.expenses?.length ? state.profile.expenses : [
       { name: "", icon: "🏠", amount: "" },
       { name: "", icon: "🛒", amount: "" },
@@ -1867,7 +1869,7 @@ function OnboardingWizard({ state, setState, onComplete }) {
     return { ...p, expenses };
   });
 
-  const TOTAL_STEPS = profile.primaryGoal === "debt" ? 5 : 4;
+  const TOTAL_STEPS = profile.primaryGoal === "debt" ? 6 : 5;
 
   const next = () => setStep(s => s + 1);
   const back = () => setStep(s => s - 1);
@@ -1936,7 +1938,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
     setState(s => ({
       ...s,
       firstName: profile.firstName || s.firstName,
+      currency: profile.currency || s.currency || "AUD",
       profileComplete: true,
+      showBackfillPrompt: true,
       profile: {
         age: Number(profile.age) || null,
         retirementAge: Number(profile.retirementAge) || 65,
@@ -1976,8 +1980,37 @@ function OnboardingWizard({ state, setState, onComplete }) {
   );
 
   // Step 1 — Primary goal
-  if (step === 1) return (
-    <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →" nextDisabled={!profile.primaryGoal}>
+  // Step 1 — Currency
+  if (step === 1) {
+    const CURRENCIES = [
+      ["AUD","🇦🇺","Australian Dollar"],["USD","🇺🇸","US Dollar"],
+      ["GBP","🇬🇧","British Pound"],["EUR","🇪🇺","Euro"],
+      ["NZD","🇳🇿","NZ Dollar"],["CAD","🇨🇦","Canadian Dollar"],
+      ["SGD","🇸🇬","Singapore Dollar"],["INR","🇮🇳","Indian Rupee"],
+    ];
+    return (
+      <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
+        <h2 className="wizard-question">What currency do you use?</h2>
+        <p className="wizard-sub">All your balances will display in this currency.</p>
+        <div className="wizard-currency-grid">
+          {CURRENCIES.map(([code, flag, name]) => (
+            <button key={code} type="button"
+              className={"wizard-currency-option" + (profile.currency === code ? " selected" : "")}
+              onClick={() => set("currency", code)}>
+              <span className="wizard-currency-flag">{flag}</span>
+              <strong>{code}</strong>
+              <small>{name}</small>
+              {profile.currency === code && <span className="wizard-check">✓</span>}
+            </button>
+          ))}
+        </div>
+      </WizardScreen>
+    );
+  }
+
+  // Step 2 — Primary goal
+  if (step === 2) return (
+    <WizardScreen step={2} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →" nextDisabled={!profile.primaryGoal}>
       <h2 className="wizard-question">What's your main financial focus right now?</h2>
       <p className="wizard-sub">Pick one — you can add more goals later.</p>
       <div className="wizard-goal-options">
@@ -2001,8 +2034,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
   );
 
   // Step 2 — Monthly income
-  if (step === 2) return (
-    <WizardScreen step={2} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
+  // Step 3 — Income
+  if (step === 3) return (
+    <WizardScreen step={3} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
       <h2 className="wizard-question">What's your monthly take-home income?</h2>
       <p className="wizard-sub">After tax. We'll pre-fill Cash Flow with this — you can refine it later.</p>
       <div className="wizard-amount-wrap">
@@ -2021,8 +2055,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
   );
 
   // Step 3 — Top 3 expenses
-  if (step === 3) return (
-    <WizardScreen step={3} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={profile.primaryGoal === "debt" ? next : finish} nextLabel={profile.primaryGoal === "debt" ? "Continue →" : "Finish setup ✓"}>
+  // Step 4 — Expenses
+  if (step === 4) return (
+    <WizardScreen step={4} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={profile.primaryGoal === "debt" ? next : finish} nextLabel={profile.primaryGoal === "debt" ? "Continue →" : "Finish setup ✓"}>
       <h2 className="wizard-question">What are your biggest monthly expenses?</h2>
       <p className="wizard-sub">Just the top 3 — roughly is fine. These unlock your FIRE number and spending chart.</p>
 
@@ -2079,8 +2114,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
   );
 
   // Step 4 — Debt amount (only if primaryGoal === "debt")
-  if (step === 4) return (
-    <WizardScreen step={4} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={finish} nextLabel="Finish setup ✓">
+  // Step 5 — Debt
+  if (step === 5) return (
+    <WizardScreen step={5} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={finish} nextLabel="Finish setup ✓">
       <h2 className="wizard-question">Roughly how much debt do you have?</h2>
       <p className="wizard-sub">A ballpark is fine — this powers your debt-free timeline and goal tracking.</p>
       <div className="wizard-amount-wrap">
@@ -2780,6 +2816,10 @@ function App() {
 
       {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} totals={totals} isPro={isPro} showUpgrade={showUpgrade} />}
 
+      {state.showBackfillPrompt && (
+        <BackfillPrompt state={activeState} setState={activeSetState} setTab={setTab} />
+      )}
+
       {upgradeSheet !== null && (
         <UpgradeSheet
           reason={upgradeSheet}
@@ -3300,6 +3340,27 @@ function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
   );
 }
 
+function BackfillPrompt({ state, setState, setTab }) {
+  const prevMonth = addMonths(state.selectedMonth, -1);
+  const prevLabel = monthLabel(prevMonth);
+  const goBackfill = () => {
+    setState(s => ({ ...s, showBackfillPrompt: false, selectedMonth: prevMonth }));
+    setTab("assets");
+  };
+  const dismiss = () => setState(s => ({ ...s, showBackfillPrompt: false }));
+  return (
+    <div className="backfill-backdrop">
+      <div className="backfill-card">
+        <div className="backfill-icon">📅</div>
+        <h2>Add last month too?</h2>
+        <p>Adding your <strong>{prevLabel}</strong> balances unlocks trends, forecasts, and momentum — the best parts of Grow UP.</p>
+        <button className="backfill-cta" onClick={goBackfill}>Go to {prevLabel} →</button>
+        <button className="backfill-skip" onClick={dismiss}>Skip for now</button>
+      </div>
+    </div>
+  );
+}
+
 function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
@@ -3362,8 +3423,8 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
           </div>
           <h1>{displayName || "there"}</h1>
         </div>
-        <button className="top-menu-btn compact-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
-          <Menu size={26}/>
+        <button className="top-menu-btn compact-menu-btn settings-header-btn" onClick={()=>setTab("settings")} aria-label="Settings">
+          <SlidersHorizontal size={24}/>
         </button>
       </div>
 
