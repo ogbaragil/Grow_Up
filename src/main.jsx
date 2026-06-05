@@ -700,6 +700,13 @@ function DeleteAccountPage() {
 
 function LandingPage() {
   const startApp = () => {
+    window.location.href = "/";
+  };
+
+  const tryDemo = () => {
+    localStorage.setItem("growup_demo_mode", "true");
+    window.location.href = "/";
+  };
 
   const features = [
     {
@@ -1972,30 +1979,24 @@ function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // Step 1 — Currency selection
+  // Step 1 — Primary goal
+  // Step 1 — Currency
   if (step === 1) {
-    const POPULAR_CURRENCIES = [
-      ["AUD", "🇦🇺", "Australian Dollar"],
-      ["USD", "🇺🇸", "US Dollar"],
-      ["GBP", "🇬🇧", "British Pound"],
-      ["EUR", "🇪🇺", "Euro"],
-      ["NZD", "🇳🇿", "NZ Dollar"],
-      ["CAD", "🇨🇦", "Canadian Dollar"],
-      ["SGD", "🇸🇬", "Singapore Dollar"],
-      ["INR", "🇮🇳", "Indian Rupee"],
+    const CURRENCIES = [
+      ["AUD","🇦🇺","Australian Dollar"],["USD","🇺🇸","US Dollar"],
+      ["GBP","🇬🇧","British Pound"],["EUR","🇪🇺","Euro"],
+      ["NZD","🇳🇿","NZ Dollar"],["CAD","🇨🇦","Canadian Dollar"],
+      ["SGD","🇸🇬","Singapore Dollar"],["INR","🇮🇳","Indian Rupee"],
     ];
     return (
       <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
         <h2 className="wizard-question">What currency do you use?</h2>
-        <p className="wizard-sub">All your balances and reports will display in this currency.</p>
+        <p className="wizard-sub">All your balances will display in this currency.</p>
         <div className="wizard-currency-grid">
-          {POPULAR_CURRENCIES.map(([code, flag, name]) => (
-            <button
-              key={code}
-              type="button"
-              className={`wizard-currency-option ${profile.currency === code ? "selected" : ""}`}
-              onClick={() => set("currency", code)}
-            >
+          {CURRENCIES.map(([code, flag, name]) => (
+            <button key={code} type="button"
+              className={"wizard-currency-option" + (profile.currency === code ? " selected" : "")}
+              onClick={() => set("currency", code)}>
               <span className="wizard-currency-flag">{flag}</span>
               <strong>{code}</strong>
               <small>{name}</small>
@@ -2032,7 +2033,8 @@ function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // Step 3 — Monthly income
+  // Step 2 — Monthly income
+  // Step 3 — Income
   if (step === 3) return (
     <WizardScreen step={3} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
       <h2 className="wizard-question">What's your monthly take-home income?</h2>
@@ -2052,7 +2054,8 @@ function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // Step 4 — Top 3 expenses
+  // Step 3 — Top 3 expenses
+  // Step 4 — Expenses
   if (step === 4) return (
     <WizardScreen step={4} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={profile.primaryGoal === "debt" ? next : finish} nextLabel={profile.primaryGoal === "debt" ? "Continue →" : "Finish setup ✓"}>
       <h2 className="wizard-question">What are your biggest monthly expenses?</h2>
@@ -2111,6 +2114,7 @@ function OnboardingWizard({ state, setState, onComplete }) {
   );
 
   // Step 4 — Debt amount (only if primaryGoal === "debt")
+  // Step 5 — Debt
   if (step === 5) return (
     <WizardScreen step={5} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={finish} nextLabel="Finish setup ✓">
       <h2 className="wizard-question">Roughly how much debt do you have?</h2>
@@ -3339,33 +3343,25 @@ function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
 function BackfillPrompt({ state, setState, setTab }) {
   const prevMonth = addMonths(state.selectedMonth, -1);
   const prevLabel = monthLabel(prevMonth);
-
   const goBackfill = () => {
     setState(s => ({ ...s, showBackfillPrompt: false, selectedMonth: prevMonth }));
     setTab("assets");
   };
   const dismiss = () => setState(s => ({ ...s, showBackfillPrompt: false }));
-
   return (
     <div className="backfill-backdrop">
       <div className="backfill-card">
         <div className="backfill-icon">📅</div>
         <h2>Add last month too?</h2>
-        <p>
-          Adding your <strong>{prevLabel}</strong> balances unlocks trends, forecasts, and momentum tracking — the best parts of Grow UP.
-        </p>
-        <button className="backfill-cta" onClick={goBackfill}>
-          Go to {prevLabel} →
-        </button>
-        <button className="backfill-skip" onClick={dismiss}>
-          Skip for now
-        </button>
+        <p>Adding your <strong>{prevLabel}</strong> balances unlocks trends, forecasts, and momentum — the best parts of Grow UP.</p>
+        <button className="backfill-cta" onClick={goBackfill}>Go to {prevLabel} →</button>
+        <button className="backfill-skip" onClick={dismiss}>Skip for now</button>
       </div>
     </div>
   );
 }
 
- state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
+function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
