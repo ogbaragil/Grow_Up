@@ -22,6 +22,20 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
   useEffect(() => {
     const snap = state.monthSnapshots?.[state.selectedMonth];
     const past = !isFutureMonth(state.selectedMonth) && state.selectedMonth !== currentMonthKey();
+
+    // Arriving via the backfill prompt: the user already said yes, so skip
+    // the redundant "no saved data" popup and go straight to the right mode.
+    if (past && state.backfillIntent && !isDemo) {
+      setShowNoDataPopup(false);
+      setState(s => ({ ...s, backfillIntent: false }));
+      if (state.accounts.length === 0) {
+        setEditor({ type:"account", defaultKind:"asset" });
+      } else {
+        setEditingBalances(true);
+      }
+      return;
+    }
+
     if (past && !snap && !isDemo) {
       setShowNoDataPopup(true);
       setEditingBalances(false);
@@ -72,6 +86,33 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
       }
 
       const priorSnapshot = s.monthSnapshots?.[addMonths(s.selectedMonth, -1)];
+      const editingPastMonth = s.selectedMonth !== currentMonthKey();
+
+      // Past month with no snapshot yet (the backfill case): create the
+      // snapshot on first edit, seeded from current accounts. Never write
+      // historical values into live `accounts`.
+      if (editingPastMonth) {
+        const seededAccounts = s.accounts.map(a =>
+          a.id === id ? { ...a, balance:numericValue } : { ...a }
+        );
+        const assets = seededAccounts.filter(a => a.kind === "asset").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        const debts = seededAccounts.filter(a => a.kind === "debt").reduce((sum, a) => sum + Number(a.balance || 0), 0);
+        return {
+          ...s,
+          monthSnapshots: {
+            ...s.monthSnapshots,
+            [s.selectedMonth]: {
+              accounts: seededAccounts,
+              assets,
+              debts,
+              net: assets - debts,
+              note: "",
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            }
+          }
+        };
+      }
 
       return {
         ...s,
@@ -142,7 +183,13 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
     setAssetMenuOpen(false);
     setEditingBalances(false);
     setHasUnsavedBalances(false);
+    const wasPastMonth = state.selectedMonth !== currentMonthKey();
     await (autoSaveMonthSnapshot ? autoSaveMonthSnapshot(state) : saveSnapshot());
+    // After backfilling a historical month, bring the user back to "now" so
+    // any further edits apply to the present, not last month.
+    if (wasPastMonth) {
+      setState(s => ({ ...s, selectedMonth: currentMonthKey() }));
+    }
   };
 
   return (
@@ -161,6 +208,10 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
                 className="primary"
                 onClick={() => {
                   setShowNoDataPopup(false);
+                  if (state.accounts.length === 0) {
+                    setEditor({ type:"account", defaultKind:"asset" });
+                    return;
+                  }
                   setEditingBalances(true);
                 }}
               >Log entry</button>

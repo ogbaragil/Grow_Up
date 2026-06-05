@@ -114,7 +114,6 @@ export function OnboardingWizard({ state, setState, onComplete }) {
       firstName: profile.firstName || s.firstName,
       currency: profile.currency || s.currency || "AUD",
       profileComplete: true,
-      showBackfillPrompt: true,
       profile: {
         age: Number(profile.age) || null,
         retirementAge: Number(profile.retirementAge) || 65,

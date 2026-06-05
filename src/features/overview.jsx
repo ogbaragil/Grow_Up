@@ -167,7 +167,7 @@ export function BackfillPrompt({ state, setState, setTab }) {
   const prevMonth = addMonths(state.selectedMonth, -1);
   const prevLabel = monthLabel(prevMonth);
   const goBackfill = () => {
-    setState(s => ({ ...s, showBackfillPrompt: false, selectedMonth: prevMonth }));
+    setState(s => ({ ...s, showBackfillPrompt: false, backfillIntent: true, selectedMonth: prevMonth }));
     setTab("assets");
   };
   const dismiss = () => setState(s => ({ ...s, showBackfillPrompt: false }));

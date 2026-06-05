@@ -1,4 +1,4 @@
-import { monthKey } from "../lib/dates";
+import { addMonths, monthKey } from "../lib/dates";
 import { calculateGoalProgress, refineDebtPayoffCalcWithHistory } from "../lib/goals";
 import { normalizeAccounts } from "./normalize";
 
@@ -16,11 +16,12 @@ export function enrichStateWithGoalSnapshotProgress(rawState) {
       .filter(a => a.kind === "debt")
       .reduce((sum, a) => sum + Number(a.balance || 0), 0);
 
+    const prevSnapshot = rawState.monthSnapshots?.[addMonths(selectedMonth, -1)];
     const totalsForMonth = {
       assets,
       debts,
       net: assets - debts,
-      prevNet: 0
+      prevNet: Number(prevSnapshot?.net ?? 0)
     };
 
     const goalsWithProgress = (rawState.goals || []).map(goal => {
@@ -98,9 +99,13 @@ export function createMonthlySnapshotState(currentState = {}) {
     updatedAt: new Date().toISOString()
   };
 
+  const isCurrentMonth = currentState.selectedMonth === monthKey();
+
   return enrichStateWithGoalSnapshotProgress({
     ...currentState,
-    accounts: cleanAccounts,
+    // Live accounts only mirror the snapshot when saving the CURRENT month.
+    // Saving/editing a historical month must never overwrite present balances.
+    accounts: isCurrentMonth ? cleanAccounts : currentState.accounts,
     monthSnapshots: {
       ...(currentState.monthSnapshots || {}),
       [currentState.selectedMonth]: snapshot

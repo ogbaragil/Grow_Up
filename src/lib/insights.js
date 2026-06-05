@@ -265,7 +265,12 @@ export function getProfileMonthlyIncome(state, totals) {
 export function latestDashboardState(state) {
   const snapshotKeys = Object.keys(state.monthSnapshots || {}).filter(key => !isFutureMonth(key));
   const latestSnapshotKey = snapshotKeys.length ? snapshotKeys.sort().at(-1) : null;
-  const selectedMonth = latestSnapshotKey || currentMonthKey();
+  // Live accounts always describe the present, so the dashboard should show
+  // the current month whenever they exist. Only fall back to the most recent
+  // snapshot when there are no live accounts (e.g. restored history only) —
+  // otherwise a backfilled past month would masquerade as "now".
+  const hasLiveAccounts = (state.accounts || []).length > 0;
+  const selectedMonth = hasLiveAccounts ? currentMonthKey() : (latestSnapshotKey || currentMonthKey());
   return { ...state, selectedMonth };
 }
 

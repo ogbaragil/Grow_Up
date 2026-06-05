@@ -17,7 +17,7 @@ import { OnboardingTips, OnboardingWizard } from "./features/onboarding";
 import { BackfillPrompt, MinimalOverview, Overview } from "./features/overview";
 import { Settings } from "./features/settings";
 import { WealthTimelinePage } from "./features/timeline";
-import { currentMonthKey, isFutureMonth, monthLabel } from "./lib/dates";
+import { addMonths, currentMonthKey, isFutureMonth, monthLabel } from "./lib/dates";
 import { computeTotals } from "./lib/insights";
 import { useMoney } from "./lib/money";
 import { getUserDisplayName } from "./lib/user";
@@ -214,11 +214,26 @@ export function App() {
     return true;
   };
 
+  // Offer backfill exactly once: right after the user's FIRST current-month
+  // snapshot, when no prior-month data exists yet. That's the moment a
+  // backfill is both possible (accounts exist) and valuable (enables trends).
+  const withBackfillOffer = (nextState, baseState) => {
+    const hadSnapshots = Object.keys(baseState.monthSnapshots || {}).length > 0;
+    const savedCurrentMonth = baseState.selectedMonth === currentMonthKey();
+    const prevKey = addMonths(baseState.selectedMonth, -1);
+    const hasPrev = Boolean(nextState.monthSnapshots?.[prevKey]);
+    if (!hadSnapshots && savedCurrentMonth && !hasPrev && !nextState.backfillOffered) {
+      return { ...nextState, showBackfillPrompt: true, backfillOffered: true };
+    }
+    return nextState;
+  };
+
   const autoSaveMonthSnapshot = async (sourceState) => {
     if (demoMode) return readOnlyDemoAlert();
 
     const selectedMonthForMessage = sourceState?.selectedMonth || state.selectedMonth;
-    const nextStateForSupabase = createMonthlySnapshotState(sourceState || state);
+    const baseState = sourceState || state;
+    const nextStateForSupabase = withBackfillOffer(createMonthlySnapshotState(baseState), baseState);
 
     setState(nextStateForSupabase);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextStateForSupabase));
@@ -230,7 +245,7 @@ export function App() {
     if (demoMode) return readOnlyDemoAlert();
 
     const selectedMonthForMessage = state.selectedMonth;
-    const nextState = createMonthlySnapshotState(state);
+    const nextState = withBackfillOffer(createMonthlySnapshotState(state), state);
     setState(nextState);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(nextState));
     await uploadSnapshotState(nextState, selectedMonthForMessage, { requireSession: true });
