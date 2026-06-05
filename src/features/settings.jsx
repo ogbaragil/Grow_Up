@@ -2,10 +2,16 @@ import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
 import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun } from "lucide-react";
 import { Card, ScreenTitle } from "../components/ui";
+import { useConfirm, useToast } from "../context/ToastContext";
 import { requestGrowUpNotifications, saveEmailReminderPreferences } from "./notifications";
 import { STORAGE_KEY } from "../state/useGrowState";
 
-export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, notify, showConfirm, isPro=false, showUpgrade}) {
+export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, isPro=false, showUpgrade}) {
+  // Pulled from context instead of props: App's render site historically
+  // omitted these, which made every handler below throw on undefined and
+  // silently no-op (including Reset local data).
+  const notify = useToast();
+  const showConfirm = useConfirm();
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Your account, preferences, and data." setMenuOpen={setMenuOpen} />
