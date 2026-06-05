@@ -1,3 +1,4 @@
+import { currencySign } from "../lib/money";
 import React, { useState } from "react";
 import { safeId } from "../state/normalize";
 
@@ -215,7 +216,7 @@ export function OnboardingWizard({ state, setState, onComplete }) {
       <h2 className="wizard-question">What's your monthly take-home income?</h2>
       <p className="wizard-sub">After tax. We'll pre-fill Cash Flow with this — you can refine it later.</p>
       <div className="wizard-amount-wrap">
-        <span className="wizard-currency">$</span>
+        <span className="wizard-currency">{currencySign(profile.currency)}</span>
         <input
           className="wizard-input large"
           type="number"
@@ -256,7 +257,7 @@ export function OnboardingWizard({ state, setState, onComplete }) {
             onChange={e => setExpense(i, "name", e.target.value)}
           />
           <div className="wizard-amount-wrap small">
-            <span className="wizard-currency">$</span>
+            <span className="wizard-currency">{currencySign(profile.currency)}</span>
             <input
               className="wizard-input"
               type="number"
@@ -295,7 +296,7 @@ export function OnboardingWizard({ state, setState, onComplete }) {
       <h2 className="wizard-question">Roughly how much debt do you have?</h2>
       <p className="wizard-sub">A ballpark is fine — this powers your debt-free timeline and goal tracking.</p>
       <div className="wizard-amount-wrap">
-        <span className="wizard-currency">$</span>
+        <span className="wizard-currency">{currencySign(profile.currency)}</span>
         <input
           className="wizard-input large"
           type="number"

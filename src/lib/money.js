@@ -23,7 +23,7 @@ export const isSupportedCurrency = (currency) => CURRENCY_OPTIONS.some(([code]) 
 // Official signs per currency (third column of CURRENCY_OPTIONS). Intl falls
 // back to ISO codes for currencies en-US has no symbol for (e.g. "NGN 55");
 // we substitute the currency part so users see ₦55, GH₵55, د.إ55 instead.
-const CURRENCY_SYMBOLS = Object.fromEntries(CURRENCY_OPTIONS.map(([code,, symbol]) => [code, symbol]));
+export const CURRENCY_SYMBOLS = Object.fromEntries(CURRENCY_OPTIONS.map(([code,, symbol]) => [code, symbol]));
 
 export const money = (n, currency = window.__GROWUP_ACTIVE_CURRENCY || "USD") => {
   const code = isSupportedCurrency(currency) ? currency : "USD";
@@ -59,3 +59,6 @@ export function signedMoney(n) {
   return `${v >= 0 ? "+" : "-"}${money(Math.abs(v))}`;
 }
 
+export function currencySign(currency) {
+  return CURRENCY_SYMBOLS[currency] || "$";
+}
