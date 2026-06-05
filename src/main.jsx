@@ -698,14 +698,8 @@ function DeleteAccountPage() {
 }
 
 
+function LandingPage() {
   const startApp = () => {
-    window.location.href = "/";
-  };
-
-  const tryDemo = () => {
-    localStorage.setItem("growup_demo_mode", "true");
-    window.location.href = "/";
-  };
 
   const features = [
     {
