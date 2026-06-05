@@ -7876,3 +7876,8 @@ button:focus-visible {
   font-size: 14px; font-weight: 800; cursor: pointer;
   padding: 8px; text-decoration: underline;
 }
+
+/* Settings icon in Overview header */
+.settings-header-btn {
+  color: var(--text) !important;
+}

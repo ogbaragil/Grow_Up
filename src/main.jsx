@@ -3423,12 +3423,9 @@ function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab,
           </div>
           <h1>{displayName || "there"}</h1>
         </div>
-        <button className="top-menu-btn compact-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
-          <Menu size={26}/>
-        </button>
-      </div>
-
-      <section className="minimal-networth-card" onClick={()=>setHistoryMetric("net")}>
+        <button className="top-menu-btn compact-menu-btn settings-header-btn" onClick={()=>setTab("settings")} aria-label="Settings">
+          <SlidersHorizontal size={24}/>
+        </button> onClick={()=>setHistoryMetric("net")}>
         <p>Net Worth</p>
         <h2>{money(animatedNetWorth)}</h2>
         <span className={dashboardTotals.net - dashboardTotals.prevNet >= 0 ? "nw-mom gain" : "nw-mom loss"}>
@@ -5238,14 +5235,13 @@ function BottomNav({ tab, setTab }) {
     ["overview", Home, "Overview"],
     ["assets", CreditCard, "Assets"],
     ["cash", Repeat2, "Cash Flow"],
-    ["goals", Target, "Goals"],
-    ["settings", SlidersHorizontal, "Settings"],
+    ["goals", Target, "Wealth Goals"],
   ];
   return (
     <nav className="bottom-nav">
       {items.map(([id, Icon, label]) => (
         <button key={id} className={tab === id ? "active" : ""} onClick={()=>setTab(id)}>
-          <Icon size={24}/><span>{label}</span>
+          <Icon size={26}/><span>{label}</span>
         </button>
       ))}
     </nav>
