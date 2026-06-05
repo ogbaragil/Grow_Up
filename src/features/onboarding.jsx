@@ -32,6 +32,25 @@ const CURRENCY_FLAGS = {
 
 const num = (v) => Math.max(0, Number(v) || 0);
 
+export function InfoBadge({ tip }) {
+  // Hover shows the tooltip on desktop; tap/focus toggles it on touch devices.
+  const [open, setOpen] = useState(false);
+  return (
+    <span
+      className={`info-badge${open ? " open" : ""}`}
+      role="button"
+      tabIndex={0}
+      aria-label={tip}
+      onClick={(e) => { e.preventDefault(); setOpen(o => !o); }}
+      onBlur={() => setOpen(false)}
+      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setOpen(o => !o); } }}
+    >
+      i
+      <span className="info-badge-tip">{tip}</span>
+    </span>
+  );
+}
+
 export function OnboardingWizard({ state, setState, onComplete }) {
   const [step, setStep] = useState(0);
   const [iconCycle, setIconCycle] = useState({});
@@ -357,10 +376,19 @@ export function OnboardingWizard({ state, setState, onComplete }) {
 
   // ── Step 5 — Balances (seeds accounts + first snapshot = real net worth) ──
   if (step === 5) {
-    const goalTargetLabel =
-      profile.primaryGoal === "house" ? "Home deposit target" :
-      profile.primaryGoal === "invest" ? "Portfolio target" :
-      profile.primaryGoal === "savings" ? `Emergency fund target${derived.monthlyExpenses > 0 ? ` (suggested: ${money(Math.round(derived.monthlyExpenses * 3), profile.currency)})` : ""}` :
+    const goalTargetMeta =
+      profile.primaryGoal === "house" ? {
+        label: "Home deposit target",
+        tip: "How much you need saved for your deposit. Progress tracks your Savings balance automatically as it grows."
+      } :
+      profile.primaryGoal === "invest" ? {
+        label: "Portfolio target",
+        tip: "The total value you want your investments to reach. Progress tracks your Investments balance automatically."
+      } :
+      profile.primaryGoal === "savings" ? {
+        label: `Emergency fund target${derived.monthlyExpenses > 0 ? ` (suggested: ${money(Math.round(derived.monthlyExpenses * 3), profile.currency)})` : ""}`,
+        tip: "A cash buffer for surprises. Three months of expenses is a common starting point — progress tracks your Savings balance."
+      } :
       null;
 
     return (
@@ -387,8 +415,8 @@ export function OnboardingWizard({ state, setState, onComplete }) {
           </div>
         </label>
 
-        {goalTargetLabel && (
-          <label className="wizard-label">🎯 {goalTargetLabel}
+        {goalTargetMeta && (
+          <label className="wizard-label">🎯 {goalTargetMeta.label} <InfoBadge tip={goalTargetMeta.tip} />
             <div className="wizard-amount-wrap small full">
               <span className="wizard-currency">{currencySign(profile.currency)}</span>
               <input className="wizard-input" type="number" min="0" placeholder="0" value={profile.goalTarget} onChange={e => set("goalTarget", e.target.value)} />
@@ -477,7 +505,7 @@ export function OnboardingTips({ state, setState, setTab }) {
 
   const steps = [
     { done: accountsDone, title:"Add your accounts", detail:"Start with the assets and debts that drive your net worth.", tab:"assets" },
-    { done: snapshotsDone, title:"Update two months", detail:"Save this month's balances, then come back next month and save again. Two snapshots unlock your trend chart, goal forecasting, and the full history table.", tab:"assets" },
+    { done: snapshotsDone, title:"Save two months of balances", detail:"Save this month, then switch the month selector back one and save last month's balances too. Two months unlock your trend chart, goal forecasting, and the full history table — no waiting.", tab:"assets" },
     { done: cashDone, title:"Add cash flow", detail:"Salary, rent, subscriptions, and recurring bills make insights smarter.", tab:"cash" },
     { done: goalsDone, title:"Create one goal", detail:"A single target gives the timeline something meaningful to project.", tab:"goals" }
   ];
@@ -490,7 +518,7 @@ export function OnboardingTips({ state, setState, setTab }) {
     <>
       {showCelebration && (
         <div className="snapshot-celebration-banner">
-          <span>First snapshot saved 🎉 Come back next month and save again to unlock trends and forecasting.</span>
+          <span>First snapshot saved 🎉 Switch back one month and save last month's balances to unlock trends and forecasting right now.</span>
           <button onClick={() => setState(s => ({ ...s, firstSnapshotCelebrationDismissed: true }))}>×</button>
         </div>
       )}
