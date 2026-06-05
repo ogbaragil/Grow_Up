@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { EditorModal } from "./components/EditorModal";
 import { BottomNav, MenuSheet } from "./components/nav";
@@ -26,6 +26,21 @@ import { normalizeGrowState } from "./state/normalize";
 import { createMonthlySnapshotState } from "./state/snapshots";
 import { STORAGE_KEY, useGrowState } from "./state/useGrowState";
 
+// Rough size of a user's data — used to detect a near-blank state about to
+// shadow a rich cloud backup (e.g. fresh device, cleared storage).
+function dataRichness(s) {
+  if (!s) return 0;
+  return (s.accounts?.length || 0)
+    + (s.transactions?.length || 0)
+    + (s.goals?.length || 0)
+    + Object.keys(s.monthSnapshots || {}).length;
+}
+
+const stripVolatileForBackup = (s) => {
+  const { lastBackupAt, showBackfillPrompt, ...rest } = s || {};
+  return JSON.stringify(rest);
+};
+
 export function App() {
   const path = window.location.pathname;
   if (path === "/delete-account") return <DeleteAccountPage />;
@@ -44,6 +59,12 @@ export function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
+  const [cloudCheck, setCloudCheck] = useState("idle"); // idle | checking | done
+  const stateRef = useRef(null);
+  const backupTimerRef = useRef(null);
+  const lastBackedUpJsonRef = useRef(null);
+  const lastCloudRichnessRef = useRef(null);
+  const downgradeApprovedRef = useRef(false);
   const notify = useToast();
   const showConfirm = useConfirm();
   const fmt = useMoney(state.currency);
@@ -145,6 +166,50 @@ export function App() {
     return () => data?.subscription?.unsubscribe?.();
   }, []);
 
+  useEffect(() => { stateRef.current = state; }, [state]);
+
+  useEffect(() => {
+    setCloudCheck("idle");
+    downgradeApprovedRef.current = false;
+    lastCloudRichnessRef.current = null;
+    lastBackedUpJsonRef.current = null;
+  }, [session?.user?.id]);
+
+  // ── Auto-restore on sign-in ──
+  // A fresh device (or cleared storage) boots with blank local state, which
+  // would re-run onboarding and eventually shadow the user's real cloud data.
+  // Before showing the wizard, pull the latest cloud snapshot if local is empty.
+  useEffect(() => {
+    if (!session?.user?.id || demoMode || !supabase) return;
+    if (cloudCheck !== "idle") return;
+    if (state.profileComplete || dataRichness(state) > 0) { setCloudCheck("done"); return; }
+
+    setCloudCheck("checking");
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("growup_snapshots")
+          .select("app_state, state")
+          .eq("user_id", session.user.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        const latest = data?.[0]?.app_state || data?.[0]?.state;
+        if (!error && latest && dataRichness(latest) > 0) {
+          const normalized = normalizeGrowState(latest);
+          setState(normalized);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+          lastCloudRichnessRef.current = dataRichness(normalized);
+          lastBackedUpJsonRef.current = stripVolatileForBackup(normalized);
+          notify("Welcome back — your data was restored from your cloud backup.", "success");
+        }
+      } catch (e) {
+        console.error("Cloud restore check failed:", e);
+      }
+      setCloudCheck("done");
+    })();
+  }, [session?.user?.id, demoMode, cloudCheck, state.profileComplete]);
+
   useEffect(() => {
     if (isFutureMonth(state.selectedMonth)) {
       setState(s => ({ ...s, selectedMonth: currentMonthKey() }));
@@ -180,36 +245,114 @@ export function App() {
     setMenuOpen(false);
   };
 
-  const uploadSnapshotState = async (snapshotState, selectedMonthForMessage, { requireSession = true } = {}) => {
+  const uploadSnapshotState = async (snapshotState, selectedMonthForMessage, { requireSession = true, silent = false } = {}) => {
     if (requireSession && !session?.user?.id) {
-      notify("Please sign in before backing up your data.", "error");
+      if (!silent) notify("Please sign in before backing up your data.", "error");
       return false;
     }
 
     if (!snapshotState) {
-      notify("Could not save snapshot. Please try again.", "error");
+      if (!silent) notify("Could not save snapshot. Please try again.", "error");
       return false;
     }
 
     if (!supabase) {
-      notify("Data backed up locally. Supabase env vars are missing.", "info");
+      if (!silent) notify("Data backed up locally. Supabase env vars are missing.", "info");
       return false;
     }
 
     if (!session?.user?.id) return false;
+
+    // ── Downgrade guard ──
+    // Never silently make a much emptier state the "latest" backup — that's
+    // the device-switch / cleared-storage scenario shadowing real data.
+    const outgoing = dataRichness(snapshotState);
+    const knownCloud = lastCloudRichnessRef.current;
+    if (!downgradeApprovedRef.current && (knownCloud == null || outgoing < knownCloud)) {
+      let cloudCount = knownCloud;
+      if (cloudCount == null) {
+        try {
+          const { data } = await supabase
+            .from("growup_snapshots")
+            .select("app_state, state")
+            .eq("user_id", session.user.id)
+            .order("created_at", { ascending: false })
+            .limit(1);
+          const latest = data?.[0]?.app_state || data?.[0]?.state;
+          cloudCount = latest ? dataRichness(latest) : 0;
+          lastCloudRichnessRef.current = cloudCount;
+        } catch (e) {
+          console.error("Backup pre-check failed:", e);
+          cloudCount = 0;
+        }
+      }
+
+      if (outgoing < cloudCount) {
+        const ok = await showConfirm(
+          `Heads up — your cloud backup holds more data than this device (${cloudCount} items vs ${outgoing}). ` +
+          `Backing up now makes this smaller version your latest backup. Continue?`
+        );
+        if (!ok) {
+          if (!silent) notify("Backup skipped — your cloud data is untouched. Use Restore in Settings to pull it down.", "info");
+          return false;
+        }
+        downgradeApprovedRef.current = true;
+      }
+    }
 
     const { error } = await supabase
       .from("growup_snapshots")
       .insert({ user_id:session.user.id, app_state:snapshotState });
 
     if (error) {
-      notify(`Local data saved, but cloud backup failed: ${error.message}`, "error");
+      if (!silent) notify(`Local data saved, but cloud backup failed: ${error.message}`, "error");
+      else console.error("Auto-backup failed:", error.message);
       return false;
     }
 
-    notify(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`, "success");
+    lastCloudRichnessRef.current = outgoing;
+    lastBackedUpJsonRef.current = stripVolatileForBackup(snapshotState);
+    setState(s => ({ ...s, lastBackupAt: new Date().toISOString() }));
+
+    if (!silent) notify(`Data backed up for ${monthLabel(selectedMonthForMessage)}.`, "success");
     return true;
   };
+
+  // ── Silent auto-backup ──
+  // Debounced cloud upload ~45s after the last change, plus a best-effort
+  // flush when the tab is hidden. Covers transactions, goals, and settings
+  // edits that previously only ever lived in localStorage.
+  const runAutoBackup = async () => {
+    const current = stateRef.current;
+    if (!current || demoMode || !session?.user?.id || !supabase) return;
+    if (!current.profileComplete) return;
+    const json = stripVolatileForBackup(current);
+    if (json === lastBackedUpJsonRef.current) return;
+    await uploadSnapshotState(current, current.selectedMonth, { silent: true });
+  };
+
+  useEffect(() => {
+    if (demoMode || !session?.user?.id || !supabase) return;
+    if (!state.profileComplete) return;
+    if (cloudCheck === "checking") return;
+    const json = stripVolatileForBackup(state);
+    if (json === lastBackedUpJsonRef.current) return;
+
+    clearTimeout(backupTimerRef.current);
+    backupTimerRef.current = setTimeout(runAutoBackup, 45000);
+    return () => clearTimeout(backupTimerRef.current);
+  }, [state, session?.user?.id, demoMode, cloudCheck]);
+
+  useEffect(() => {
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") {
+        clearTimeout(backupTimerRef.current);
+        runAutoBackup();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, [session?.user?.id, demoMode]);
 
   // Offer backfill exactly once: right after the user's FIRST current-month
   // snapshot, when no prior-month data exists yet. That's the moment a
@@ -272,6 +415,8 @@ export function App() {
     const normalizedRestored = normalizeGrowState(restored);
     setState(normalizedRestored);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(normalizedRestored));
+    lastCloudRichnessRef.current = dataRichness(normalizedRestored);
+    lastBackedUpJsonRef.current = stripVolatileForBackup(normalizedRestored);
     notify("Latest saved data restored.", "success");
   };
 
@@ -293,6 +438,20 @@ export function App() {
 
   if (!session && !demoMode) {
     return <AuthScreen enterDemoMode={enterDemoMode} />;
+  }
+
+  if (!demoMode && session && cloudCheck === "checking") {
+    return (
+      <div className="app-shell">
+        <main className="phone auth-phone">
+          <div className="auth-loading">
+            <div className="app-icon large">GV</div>
+            <h1>Grow UP</h1>
+            <p>Syncing your data…</p>
+          </div>
+        </main>
+      </div>
+    );
   }
 
   // Show onboarding wizard for new users who haven't completed profile setup

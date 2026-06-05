@@ -1,4 +1,5 @@
 import { getCurrentAge } from "../lib/user";
+import { timeAgo } from "../lib/dates";
 import { createPortalSession } from "../config";
 import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
@@ -167,9 +168,14 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
         <div className="settings-row-head">
           <div>
             <h2>Cloud Backup</h2>
-            <p>Keep your data safe and restore anytime.</p>
+            <p>Backs up automatically as you make changes.</p>
           </div>
         </div>
+        <small className="field-caption" style={{display:"block",marginBottom:8}}>
+          {state.lastBackupAt && timeAgo(state.lastBackupAt)
+            ? `Last backed up ${timeAgo(state.lastBackupAt)}.`
+            : "No cloud backup from this device yet."}
+        </small>
         <div className="settings-action-row">
           <button className="settings-action-btn primary-tint" disabled={isDemo} onClick={saveSnapshot}><Save size={16}/> Back up now</button>
           <button className="settings-action-btn" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud size={16}/> Restore</button>

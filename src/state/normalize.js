@@ -3,7 +3,7 @@ import { normalizeAccountName } from "../lib/goals";
 import { isSupportedCurrency } from "../lib/money";
 
 export const ACCOUNT_SUBTYPE_OPTIONS = [
-  ["super", "Super / retirement"],
+  ["super", "Retirement fund"],
   ["investment", "Investment"],
   ["savings", "Savings"],
   ["property", "Property"],

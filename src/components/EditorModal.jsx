@@ -3,6 +3,7 @@ import { Trash2, X } from "lucide-react";
 import { PRO_LIMITS } from "../config";
 import { goalColorForType, goalIconForType } from "../lib/goals";
 import { money } from "../lib/money";
+import { monthKey } from "../lib/dates";
 import { ACCOUNT_SUBTYPE_OPTIONS, inferAccountSubtype, safeId } from "../state/normalize";
 
 export const ACCOUNT_PRESETS = {
@@ -10,7 +11,7 @@ export const ACCOUNT_PRESETS = {
     { name:"Savings Account",    icon:"🏦", subtype:"savings" },
     { name:"Everyday Account",   icon:"💳", subtype:"savings" },
     { name:"Investment Account", icon:"📈", subtype:"investment" },
-    { name:"Super / 401k",       icon:"🏛️", subtype:"super" },
+    { name:"Retirement fund",    icon:"🏛️", subtype:"super" },
     { name:"Property",           icon:"🏠", subtype:"property" },
     { name:"Emergency Fund",     icon:"🛡️", subtype:"emergency" },
     { name:"Crypto",             icon:"₿",  subtype:"investment" },
@@ -192,9 +193,12 @@ export function EditorModal({ editor, setEditor, state, setState, autoSaveMonthS
       const isNew = !item.id;
       const accounts = item.id ? state.accounts.map(a => a.id === item.id ? { ...a, ...acct } : a) : [...state.accounts, acct];
 
-      // For new accounts, inject into all existing snapshots with balance 0
-      // so users can navigate back and fill in historical balances.
+      // For new accounts, inject into PAST snapshots with balance 0 so users
+      // can navigate back and fill in historical balances. The current (and
+      // any future) month keeps the balance the user just entered — otherwise
+      // the new balance is immediately overwritten by the zero placeholder.
       // For edits, only update snapshots that already contain that account.
+      const nowKey = monthKey();
       let monthSnapshots = { ...(state.monthSnapshots || {}) };
       Object.keys(monthSnapshots).forEach(key => {
         const snap = monthSnapshots[key];
@@ -203,11 +207,18 @@ export function EditorModal({ editor, setEditor, state, setState, autoSaveMonthS
 
         let updatedAccounts;
         if (isNew && !alreadyExists) {
-          // Inject with zero balance as a placeholder for backfilling
-          updatedAccounts = [...snapAccounts, { ...acct, balance: 0, previous: 0 }];
+          const injectBalance = key.localeCompare(nowKey) >= 0 ? acct.balance : 0;
+          updatedAccounts = [...snapAccounts, { ...acct, balance: injectBalance, previous: 0 }];
         } else if (!isNew && alreadyExists) {
-          // Update the edited account in this snapshot
-          updatedAccounts = snapAccounts.map(a => a.id === acct.id ? { ...a, ...acct } : a);
+          // Propagate metadata (name, icon, type) everywhere, but only update
+          // the balance from the current month forward — past months keep
+          // their saved history.
+          const isPast = key.localeCompare(nowKey) < 0;
+          updatedAccounts = snapAccounts.map(a =>
+            a.id === acct.id
+              ? { ...a, ...acct, ...(isPast ? { balance: a.balance, previous: a.previous } : {}) }
+              : a
+          );
         } else {
           return; // nothing to change for this snapshot
         }

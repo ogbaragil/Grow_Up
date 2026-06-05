@@ -53,18 +53,13 @@ export function InfoBadge({ tip }) {
 
 export function OnboardingWizard({ state, setState, onComplete }) {
   const [step, setStep] = useState(0);
-  const [iconCycle, setIconCycle] = useState({});
   const [profile, setProfile] = useState({
     firstName: state.firstName || "",
     birth: state.profile?.birth || "",
     retirementAge: state.profile?.retirementAge || 65,
     income: state.profile?.income || "",
     currency: state.currency || "USD",
-    expenses: state.profile?.expenses?.length ? state.profile.expenses : [
-      { name: "", icon: "🏠", amount: "" },
-      { name: "", icon: "🛒", amount: "" },
-      { name: "", icon: "📱", amount: "" },
-    ],
+    expenses: state.profile?.expenses?.length ? state.profile.expenses : [],
     primaryGoal: state.profile?.primaryGoal || null,
     cashBalance: "",
     investBalance: "",
@@ -313,66 +308,85 @@ export function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // ── Step 4 — Expenses ──
-  if (step === 4) return (
-    <WizardScreen {...screenProps} step={4} onBack={back} onNext={next} nextLabel="Continue →">
-      <h2 className="wizard-question">What are your biggest monthly expenses?</h2>
-      <p className="wizard-sub">Just the top 3 — roughly is fine. These unlock your FIRE number and spending chart.</p>
+  // ── Step 4 — Expenses (chip-first: tap a chip to add a row) ──
+  if (step === 4) {
+    const MAX_EXPENSES = 5;
+    const atCap = profile.expenses.length >= MAX_EXPENSES;
+    const usedNames = new Set(profile.expenses.map(e => e.name));
 
-      {profile.expenses.map((exp, i) => (
-        <div key={i} className="wizard-expense-row">
-          <button
-            type="button"
-            className="wizard-expense-icon"
-            onClick={() => {
-              const presets = COMMON_EXPENSE_PRESETS;
-              const count = (iconCycle[i] ?? i) + 1;
-              setIconCycle(c => ({ ...c, [i]: count }));
-              const preset = presets[count % presets.length];
-              setExpense(i, "icon", preset.icon);
-              if (!exp.name) setExpense(i, "name", preset.name);
-            }}
-            title="Tap to cycle icon"
-          >{exp.icon || "💳"}</button>
-          <input
-            className="wizard-input flex1"
-            placeholder={["Rent / Mortgage", "Groceries", "Other expense"][i]}
-            value={exp.name}
-            onChange={e => setExpense(i, "name", e.target.value)}
-          />
-          <div className="wizard-amount-wrap small">
-            <span className="wizard-currency">{currencySign(profile.currency)}</span>
-            <input
-              className="wizard-input"
-              type="number"
-              min="0"
-              placeholder="0"
-              value={exp.amount}
-              onChange={e => setExpense(i, "amount", e.target.value)}
-            />
-          </div>
+    const addPreset = (p) => {
+      if (atCap || usedNames.has(p.name)) return;
+      setProfile(prev => ({ ...prev, expenses: [...prev.expenses, { name: p.name, icon: p.icon, amount: "" }] }));
+    };
+    const addCustom = () => {
+      if (atCap) return;
+      setProfile(prev => ({ ...prev, expenses: [...prev.expenses, { name: "", icon: "💳", amount: "", custom: true }] }));
+    };
+    const removeExpense = (i) => setProfile(prev => ({ ...prev, expenses: prev.expenses.filter((_, idx) => idx !== i) }));
+
+    return (
+      <WizardScreen {...screenProps} step={4} onBack={back} onNext={next} nextLabel="Continue →">
+        <h2 className="wizard-question">What are your biggest monthly expenses?</h2>
+        <p className="wizard-sub">Tap to add your top 3 — rough amounts are fine. These unlock your FIRE number and spending chart.</p>
+
+        <div className="wizard-expense-presets top">
+          {COMMON_EXPENSE_PRESETS.map(p => {
+            const used = usedNames.has(p.name);
+            return (
+              <button
+                key={p.name}
+                type="button"
+                className={`quickadd-chip small${used ? " used" : ""}${atCap && !used ? " capped" : ""}`}
+                disabled={used || atCap}
+                onClick={() => addPreset(p)}
+              >{p.icon} {p.name}</button>
+            );
+          })}
+          <button type="button" className={`quickadd-chip small${atCap ? " capped" : ""}`} disabled={atCap} onClick={addCustom}>＋ Add your own</button>
         </div>
-      ))}
 
-      <div className="wizard-expense-presets">
-        {COMMON_EXPENSE_PRESETS.map(p => (
-          <button
-            key={p.name}
-            type="button"
-            className="quickadd-chip small"
-            onClick={() => {
-              const emptyIdx = profile.expenses.findIndex(e => !e.name);
-              const idx = emptyIdx >= 0 ? emptyIdx : 0;
-              setExpense(idx, "name", p.name);
-              setExpense(idx, "icon", p.icon);
-            }}
-          >{p.icon} {p.name}</button>
+        {profile.expenses.map((exp, i) => (
+          <div key={i} className="wizard-expense-row">
+            <span className="wizard-expense-icon static">{exp.icon || "💳"}</span>
+            {exp.custom ? (
+              <input
+                className="wizard-input flex1"
+                placeholder="Expense name"
+                autoFocus
+                value={exp.name}
+                onChange={e => setExpense(i, "name", e.target.value)}
+              />
+            ) : (
+              <strong className="wizard-expense-name">{exp.name}</strong>
+            )}
+            <div className="wizard-amount-wrap small">
+              <span className="wizard-currency">{currencySign(profile.currency)}</span>
+              <input
+                className="wizard-input"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                placeholder="0"
+                autoFocus={!exp.custom}
+                value={exp.amount}
+                onChange={e => setExpense(i, "amount", e.target.value)}
+              />
+            </div>
+            <button type="button" className="wizard-expense-remove" aria-label={`Remove ${exp.name || "expense"}`} onClick={() => removeExpense(i)}>×</button>
+          </div>
         ))}
-      </div>
 
-      <button type="button" className="wizard-skip" onClick={next}>Skip for now</button>
-    </WizardScreen>
-  );
+        {profile.expenses.length > 0 && (
+          <div className="wizard-total-row">
+            <span>Monthly total</span>
+            <strong>{money(derived.monthlyExpenses, profile.currency)}</strong>
+          </div>
+        )}
+
+        <button type="button" className="wizard-skip" onClick={next}>Skip for now</button>
+      </WizardScreen>
+    );
+  }
 
   // ── Step 5 — Balances (seeds accounts + first snapshot = real net worth) ──
   if (step === 5) {
@@ -402,7 +416,7 @@ export function OnboardingWizard({ state, setState, onComplete }) {
             <input className="wizard-input" type="number" min="0" placeholder="0" value={profile.cashBalance} onChange={e => set("cashBalance", e.target.value)} />
           </div>
         </label>
-        <label className="wizard-label">📈 Investments &amp; super
+        <label className="wizard-label">📈 Investments &amp; retirement funds
           <div className="wizard-amount-wrap small full">
             <span className="wizard-currency">{currencySign(profile.currency)}</span>
             <input className="wizard-input" type="number" min="0" placeholder="0" value={profile.investBalance} onChange={e => set("investBalance", e.target.value)} />
