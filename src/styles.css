@@ -8361,3 +8361,30 @@ button:focus-visible {
   .floating-chip { left: 0; top: 4%; }
   .proof-band { grid-template-columns: 1fr; }
 }
+
+/* Anchor hero overlay cards to the device frame so they hang off the bezel
+   instead of covering screen content. */
+.hero-device-wrap {
+  position: relative;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.hero-device-wrap .floating-chip {
+  top: 44px;
+  left: -86px;
+  right: auto;
+}
+.hero-device-wrap .floating-stat {
+  bottom: 56px;
+  left: -104px;
+  right: auto;
+  top: auto;
+}
+@media (max-width: 1060px) {
+  .hero-device-wrap .floating-chip { left: -40px; }
+  .hero-device-wrap .floating-stat { left: -48px; }
+}
+@media (max-width: 760px) {
+  .hero-device-wrap .floating-chip { left: -6px; top: 24px; }
+  .hero-device-wrap .floating-stat { left: -6px; bottom: 28px; }
+}

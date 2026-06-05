@@ -127,19 +127,21 @@ export function LandingPage() {
           </div>
 
           <div className="hero-visual hero-enter delayed">
-            <div className="hero-device">
-              <img src="/screenshots/overview.jpeg" alt="Grow UP overview dashboard showing net worth and trends" />
-            </div>
+            <div className="hero-device-wrap">
+              <div className="hero-device">
+                <img src="/screenshots/overview.jpeg" alt="Grow UP overview dashboard showing net worth and trends" />
+              </div>
 
-            <div className="floating-chip float-soft">
-              <small>Goal forecast</small>
-              <strong>Debt free · 67%</strong>
-            </div>
+              <div className="floating-chip float-soft">
+                <small>Goal forecast</small>
+                <strong>Debt free · 67%</strong>
+              </div>
 
-            <div className="floating-stat float-soft slower">
-              <small>Monthly growth</small>
-              <strong>+$2,430</strong>
-              <span>On track this month</span>
+              <div className="floating-stat float-soft slower">
+                <small>Monthly growth</small>
+                <strong>+$2,430</strong>
+                <span>On track this month</span>
+              </div>
             </div>
           </div>
         </section>
