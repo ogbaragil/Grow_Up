@@ -1,3 +1,4 @@
+import { getCurrentAge } from "../lib/user";
 import { currencySign } from "../lib/money";
 import React, { useState } from "react";
 import { safeId } from "../state/normalize";
@@ -116,7 +117,8 @@ export function OnboardingWizard({ state, setState, onComplete }) {
       currency: profile.currency || s.currency || "AUD",
       profileComplete: true,
       profile: {
-        age: Number(profile.age) || null,
+        birth: profile.birth || null,
+        age: getCurrentAge(profile),
         retirementAge: Number(profile.retirementAge) || 65,
         income: Number(profile.income) || null,
         expenses: profile.expenses.filter(e => e.name && Number(e.amount) > 0),
@@ -143,10 +145,10 @@ export function OnboardingWizard({ state, setState, onComplete }) {
         <input className="wizard-input" placeholder="First name" value={profile.firstName || ""} onChange={e => set("firstName", e.target.value)} />
       </label>
       <div className="wizard-row">
-        <label className="wizard-label">Your age
-          <input className="wizard-input" type="number" placeholder="e.g. 34" value={profile.age} onChange={e => set("age", e.target.value)} min="18" max="99" />
+        <label className="wizard-label">Birth month &amp; year
+          <input className="wizard-input" type="month" value={profile.birth || ""} max={new Date().toISOString().slice(0, 7)} onChange={e => set("birth", e.target.value)} />
         </label>
-        <label className="wizard-label">Target retirement age
+        <label className="wizard-label">Desired retirement age
           <input className="wizard-input" type="number" placeholder="e.g. 65" value={profile.retirementAge} onChange={e => set("retirementAge", e.target.value)} min="40" max="99" />
         </label>
       </div>

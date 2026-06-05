@@ -12,23 +12,25 @@ function welcomeHtml() {
   <div style="font-family:Inter,Arial,sans-serif;line-height:1.65;color:#101214;max-width:620px;margin:0 auto;padding:28px">
     <h1 style="font-size:28px;letter-spacing:-0.04em;margin:0 0 18px">Welcome to Grow UP</h1>
 
-    <p>Hey,</p>
+    <p>Hi,</p>
 
-    <p>My name is Gil — I'm the founder and CEO of Grow UP.</p>
+    <p>I'm Gil, founder of Grow UP.</p>
 
-    <p>We started Grow UP because managing money shouldn’t feel overwhelming. Most people know they want to build wealth, pay off debt, or feel more in control financially — but they’ve never had a simple system that brings everything together in one place.</p>
+    <p>I built Grow UP to help people see their complete financial picture without spreadsheets, guesswork, or stress.</p>
 
-    <p><strong>Here are 3 tips to get started.</strong></p>
+    <p><strong>To help you get immediate value from the app, complete these 3 quick steps:</strong></p>
 
     <ol>
-      <li>Add your Assets and Debts Accounts</li>
-      <li>Add Important Recurring Transactions</li>
-      <li>Add at least one goal</li>
+      <li>Add your assets and debts to see your net worth in one place.</li>
+      <li>Add recurring transactions so you never miss important payments.</li>
+      <li>Add a financial goal and track your progress automatically.</li>
     </ol>
 
-    <p><strong>P.S.:</strong> Why did you sign up? What brought you here?</p>
+    <p>Most users complete setup in under 5 minutes.</p>
 
-    <p>Hit “Reply” and let me know. I read and reply to every email.</p>
+    <p><strong>P.S.:</strong> What's the one thing you're hoping Grow UP helps you accomplish?</p>
+
+    <p>Hit “Reply” and let me know. I read and respond to every email personally.</p>
 
     <p>Cheers,<br/>Gil</p>
 

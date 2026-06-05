@@ -1,3 +1,4 @@
+import { getCurrentAge } from "../lib/user";
 import { createPortalSession } from "../config";
 import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
@@ -14,12 +15,17 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
   const notify = useToast();
   const showConfirm = useConfirm();
   const [portalLoading, setPortalLoading] = React.useState(false);
+  const currentAge = getCurrentAge(state.profile);
+  // Prefill for users who onboarded with a static age before birth month existed:
+  // approximate their birth as (this year − age), current month.
+  const birthDefault = state.profile?.birth
+    || (currentAge ? `${new Date().getFullYear() - currentAge}-${String(new Date().getMonth() + 1).padStart(2, "0")}` : "");
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Your account, preferences, and data." setMenuOpen={setMenuOpen} />
 
       {/* ── PROFILE ────────────────────────────────────────── */}
-      <div className="settings-section-label">Profile</div>
+      <div className="settings-section-label">Your Profile</div>
 
       <Card className="settings-profile-card">
         <div className="settings-profile-row">
@@ -29,35 +35,18 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
             <span className="settings-profile-email">{session?.user?.email || "Not signed in"}</span>
           </div>
         </div>
-        <button className="settings-signout-btn" onClick={signOut}><LogOut size={16}/> Sign out</button>
-      </Card>
-
-      <Card>
-        <div className="settings-row-head">
-          <div>
-            <h2>Financial Profile</h2>
-            <p>Used for FIRE calculations and timeline projections.</p>
-          </div>
-        </div>
         <div className="settings-profile-fields">
-          <label>Age
-            <input type="number" defaultValue={state.profile?.age || ""} placeholder="e.g. 34"
-              onChange={e => update({ profile: { ...(state.profile||{}), age: Number(e.target.value)||null }})} />
+          <label>Birth month &amp; year{currentAge ? <span className="field-caption"> · age {currentAge}</span> : null}
+            <input type="month" defaultValue={birthDefault} max={new Date().toISOString().slice(0, 7)}
+              onChange={e => update({ profile: { ...(state.profile||{}), birth: e.target.value || null, age: null }})} />
           </label>
-          <label>Retirement age
-            <input type="number" defaultValue={state.profile?.retirementAge || 65} placeholder="e.g. 65"
+          <label>Desired retirement age
+            <input type="number" defaultValue={state.profile?.retirementAge || 65} placeholder="e.g. 65" min="40" max="99"
               onChange={e => update({ profile: { ...(state.profile||{}), retirementAge: Number(e.target.value)||65 }})} />
           </label>
-          <label>Monthly income ($)
-            <input type="number" defaultValue={state.profile?.income || ""} placeholder="e.g. 5000"
-              onChange={e => update({ profile: { ...(state.profile||{}), income: Number(e.target.value)||null }})} />
-          </label>
-          <label>Rough total debt ($)
-            <input type="number" defaultValue={state.profile?.roughDebt || ""} placeholder="e.g. 12000"
-              onChange={e => update({ profile: { ...(state.profile||{}), roughDebt: Number(e.target.value)||null }})} />
-          </label>
         </div>
-        <small className="field-caption" style={{marginTop:8,display:"block"}}>These supplement your live data — real accounts and transactions always take priority.</small>
+        <small className="field-caption" style={{marginTop:8,display:"block"}}>Powers your FIRE number and Wealth Timeline projections.</small>
+        <button className="settings-signout-btn" onClick={signOut}><LogOut size={16}/> Sign out</button>
       </Card>
 
       {/* ── PREFERENCES ────────────────────────────────────── */}
@@ -146,7 +135,7 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
 
       <Card>
         <h2>Email Reminders</h2>
-        <p>Transaction alerts, monthly balance nudges, goal deadlines, and milestone moments.</p>
+        <p>Get an email when a recurring transaction is coming up, with an optional snapshot of your goal progress.</p>
         <div className="email-reminder-card">
           <div className="email-reminder-main">
             <div>
@@ -163,16 +152,11 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
                 <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
               </select>
             </label>
-            <label><span>Monthly balance day</span>
-              <select value={state.monthlyBalanceReminderDay??28} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,monthlyBalanceReminderDay:Number(e.target.value)},notify}); }}>
-                <option value={25}>25th</option><option value={28}>28th</option><option value={30}>30th</option><option value={31}>Last day</option>
-              </select>
-            </label>
           </div>
           <div className="email-reminder-toggles">
-            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Goal reminders</button>
-            <button type="button" className={state.emailMilestoneEmails?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailMilestoneEmails:!state.emailMilestoneEmails}}); }}><span>{state.emailMilestoneEmails?"✓":"○"}</span>Milestone emails</button>
+            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Include goal snapshot</button>
           </div>
+          <small className="field-caption">One email per day at most — only sent when a recurring transaction is actually due within your reminder window.</small>
         </div>
       </Card>
 

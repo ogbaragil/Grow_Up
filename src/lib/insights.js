@@ -1,3 +1,4 @@
+import { getCurrentAge } from "./user";
 import { historyRows } from "./history";
 import { addMonths, currentMonthKey, isFutureMonth, monthLabel } from "./dates";
 import { calculateGoalProgress, estimateGoalCompletion, getAccountsForSelectedMonth, goalIconForType, refineDebtPayoffCalcWithHistory } from "./goals";
@@ -215,7 +216,7 @@ export function buildWealthTimelineItems(state, scenario = "balanced") {
   if (monthlyExpenses > 0) {
     const annualExpenses = monthlyExpenses * 12;
     const fireTarget = annualExpenses * 25;
-    const age = Number(profile.age || 35);
+    const age = getCurrentAge(profile) || 35;
     const retirementAge = Number(profile.retirementAge || 65);
     const yearsToRetirement = Math.max(1, retirementAge - age);
     const realReturn = 0.05;
