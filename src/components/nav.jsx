@@ -1,7 +1,6 @@
 import React from "react";
 import { Home, CreditCard, Repeat2, Target, Sun, Moon, TrendingUp, X, Save, DownloadCloud, SlidersHorizontal, Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator } from "lucide-react";
 import { Goals } from "../features/goals";
-import { Overview } from "../features/overview";
 import { Settings } from "../features/settings";
 
 export function BottomNav({ tab, setTab }) {

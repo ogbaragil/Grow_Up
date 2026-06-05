@@ -71,17 +71,6 @@ export function EmptyState({ title, text, action, onClick, icon }) {
 }
 
 
-export function Kpi({ title, value, sub, icon, dot, onClick, animated=false }) {
-  return (
-    <button className={animated ? "kpi kpi-animated" : "kpi"} onClick={onClick}>
-      <div className={`emoji-badge ${dot}`}>{icon}</div>
-      <span className={`dot ${dot}`}></span>
-      <p>{title}</p>
-      <h2>{value}</h2>
-      <small>{sub}</small>
-    </button>
-  );
-}
 
 export function GoalRing({ pct, color, size = 56 }) {
   const r = (size - 6) / 2;

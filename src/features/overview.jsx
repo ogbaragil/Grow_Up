@@ -2,7 +2,7 @@ import { historyRows } from "../lib/history";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Repeat2, Menu, ChevronDown, TrendingUp, SlidersHorizontal } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
-import { Card, EmptyState, Kpi } from "../components/ui";
+import { Card, EmptyState } from "../components/ui";
 import { CompactTxn } from "./cashflow";
 import { InsightsStrip } from "./insights";
 import { WealthTimelineBriefCard } from "./timeline";
@@ -487,80 +487,4 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
   );
 }
 
-export function Overview({  state, totals, setEditor, setTab, setMenuOpen, setHistoryMetric, displayName, isDemo = false}) {
-  const dashboardState = useMemo(() => latestDashboardState(state), [state]);
-  const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
-  const dashboardMonthLabel = monthLabel(dashboardState.selectedMonth);
-
-  const completedGoals = dashboardState.goals.filter(g =>
-    calculateGoalProgress(g, dashboardTotals, getAccountsForSelectedMonth(dashboardState)).progress >= 100
-  ).length;
-
-  const upcoming = upcomingTransactions(dashboardState.transactions, 7);
-  const chartData = historyRows(dashboardState).slice().reverse().map(r => ({ m:shortMonthLabel(r.key), net:r.net }));
-
-  const animatedStartNetWorth = sixMonthAnimationStart(dashboardState, dashboardTotals.prevNet || dashboardTotals.net);
-  const animatedNetWorth = useAnimatedNumber(dashboardTotals.net, animatedStartNetWorth, 1300);
-
-  return (
-    <div className="screen">
-      <CompactOverviewHeader
-        title={`Welcome, ${displayName || "there"}`}
-        sub={`Here's your Snapshot for ${dashboardMonthLabel}`}
-        isDemo={isDemo}
-        setMenuOpen={setMenuOpen}
-      />
-
-      <InsightsStrip state={state} totals={totals} openInsights={()=>setInsightsOpen?.(true)} />
-
-      <WealthTimelineBriefCard state={state} openTimeline={()=>setTimelineOpen?.(true)} />
-
-      <div className="kpi-grid">
-        <Kpi onClick={()=>setHistoryMetric("assets")} title="Total Assets" value={money(dashboardTotals.assets)} sub={`${signedMoney(dashboardTotals.assets - dashboardTotals.prevAssets)} vs last month`} icon="💼" dot="green" />
-        <Kpi onClick={()=>setHistoryMetric("debts")} title="Total Debts" value={money(dashboardTotals.debts)} sub={`${signedMoney(dashboardTotals.debts - dashboardTotals.prevDebts)} vs last month`} icon="💳" dot="red" />
-        <Kpi onClick={()=>setHistoryMetric("net")} title="Net Worth" value={money(animatedNetWorth)} sub={`${signedMoney(dashboardTotals.net - dashboardTotals.prevNet)} vs last month`} icon="$" dot="blue" animated />
-        <Kpi onClick={()=>setTab("goals")} title="Goals" value={`${completedGoals} / ${state.goals.length}`} sub="completed" icon="🎯" dot="purple" />
-      </div>
-
-      {state.accounts.length === 0 && state.goals.length === 0 && state.transactions.length === 0 && (
-        <EmptyState icon="🌱" title="Start building your snapshot" text="Add your first account, goal, or cash flow item. Nothing is hard-coded." action="Add account" onClick={()=>setEditor({ type:"account" })}/>
-      )}
-
-      <Card className="networth-trend-card">
-        <div className="card-head">
-          <span className="green-square"><TrendingUp size={22}/></span>
-          <div><h2>Net Worth Trend</h2><p>Use the dropdown for History</p></div>
-          <button className="trend-history-btn" onClick={(e)=>{ e.stopPropagation(); setHistoryMetric("net"); }} aria-label="Open net worth history"><ChevronDown size={22}/></button>
-        </div>
-        <div className="trend-box">
-          <div><span>Current Net Worth</span><strong className="counting-networth">{money(animatedNetWorth)}</strong></div>
-          <div><span>Snapshots</span><strong className="success">{Object.keys(state.monthSnapshots || {}).length}</strong></div>
-        </div>
-        <div className="chart-holder">
-          <ResponsiveContainer width="100%" height={110}>
-            <LineChart data={chartData.length ? chartData : [{m:"Now", net:totals.net}]}>
-              <XAxis dataKey="m" hide />
-              <YAxis hide />
-              <Tooltip formatter={(v)=>money(v)} />
-              <Line type="monotone" dataKey="net" stroke="#3fa463" strokeWidth={3} dot={false}/>
-            </LineChart>
-          </ResponsiveContainer>
-        </div>
-      </Card>
-
-      <Card className="cash-card" onClick={()=>setTab("cash")}>
-        <div className="card-head">
-          <span className="blue-square"><Repeat2 size={22}/></span>
-          <h2>Cash Flow</h2>
-        </div>
-        <div className="mini-pair">
-          <div><span>Money In (monthly)</span><strong>{money(dashboardTotals.income)}</strong></div>
-          <div><span>Money Out (monthly)</span><strong>{money(dashboardTotals.expenses)}</strong></div>
-        </div>
-        <div className="upcoming-head"><h3>Upcoming <span>· Next 7 days</span></h3><span>{upcoming.length} upcoming</span></div>
-        {upcoming.length ? upcoming.slice(0,4).map(t => <CompactTxn key={t.id} t={t}/>) : <p className="muted">No upcoming transactions yet.</p>}
-      </Card>
-    </div>
-  );
-}
 
