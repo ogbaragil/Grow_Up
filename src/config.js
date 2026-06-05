@@ -54,3 +54,28 @@ export async function createCheckoutSession(plan, session) {
   }
 }
 
+export async function createPortalSession(session) {
+  if (!supabase || !session) return null;
+  try {
+    const { data: { session: freshSession } } = await supabase.auth.getSession();
+    const token = freshSession?.access_token;
+    if (!token) return null;
+
+    const { data, error } = await supabase.functions.invoke("create-portal-session", {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (error) {
+      console.error("Portal function error:", error);
+      return null;
+    }
+    if (data?.error) {
+      console.error("Portal session error:", data.error, data.detail);
+      return null;
+    }
+    return data?.url || null;
+  } catch (err) {
+    console.error("Portal error:", err);
+    return null;
+  }
+}

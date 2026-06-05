@@ -1,3 +1,4 @@
+import { createPortalSession } from "../config";
 import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
 import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun } from "lucide-react";
@@ -12,6 +13,7 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
   // silently no-op (including Reset local data).
   const notify = useToast();
   const showConfirm = useConfirm();
+  const [portalLoading, setPortalLoading] = React.useState(false);
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Your account, preferences, and data." setMenuOpen={setMenuOpen} />
@@ -93,7 +95,21 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
             <p>{isPro ? "Grow UP Pro — active" : "Free plan · 3 accounts, 2 goals, 5 transactions"}</p>
           </div>
           {isPro ? (
-            <a className="settings-action-btn" href="https://billing.stripe.com/p/login/test_28EbJ1dDvaPO7sYgde8IU00" target="_blank" rel="noopener noreferrer">Manage</a>
+            <button
+              className="settings-action-btn"
+              disabled={portalLoading}
+              onClick={async () => {
+                if (isDemo) return;
+                setPortalLoading(true);
+                const url = await createPortalSession(session);
+                setPortalLoading(false);
+                if (url) {
+                  window.open(url, "_blank", "noopener,noreferrer");
+                } else {
+                  notify("Couldn't open the billing portal — please try again or contact support.", "error");
+                }
+              }}
+            >{portalLoading ? "Opening…" : "Manage"}</button>
           ) : (
             <button className="settings-action-btn primary-tint" onClick={() => showUpgrade?.("general")}>Upgrade</button>
           )}
