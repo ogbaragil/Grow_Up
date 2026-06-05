@@ -8036,3 +8036,51 @@ button:focus-visible {
 .wizard-input[type="number"]::-webkit-outer-spin-button,
 .wizard-input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .wizard-input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* ── Auth screen: logo, password toggle, message types ───────── */
+.auth-logo-img {
+  width: 74px;
+  height: 74px;
+  border-radius: 22px;
+  margin: 0 auto 16px;
+  display: block;
+  object-fit: cover;
+}
+.auth-loading .auth-logo-img { margin-bottom: 12px; }
+
+.password-wrap { position: relative; }
+.password-wrap input { width: 100%; padding-right: 44px; }
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: transparent;
+  color: var(--muted, #6d706f);
+  padding: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+}
+.password-toggle:hover { color: var(--ink, #101214); }
+
+.auth-message.success {
+  background: rgba(46, 125, 79, .1);
+  color: var(--green, #2e7d4f);
+  border: 1px solid rgba(46, 125, 79, .25);
+}
+.auth-message.error {
+  background: rgba(192, 57, 43, .08);
+  color: #c0392b;
+  border: 1px solid rgba(192, 57, 43, .25);
+}
+.auth-message.info {
+  background: var(--bg, #f4f1ea);
+  color: var(--muted, #6d706f);
+  border: 1px solid var(--line, #ececec);
+}
+
+.google-auth-btn svg { flex: 0 0 auto; }
+.google-auth-btn:disabled { opacity: .6; }

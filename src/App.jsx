@@ -4,7 +4,7 @@ import { EditorModal } from "./components/EditorModal";
 import { BottomNav, MenuSheet } from "./components/nav";
 import { useConfirm, useToast } from "./context/ToastContext";
 import { AssetsDebts } from "./features/accounts";
-import { AuthScreen } from "./features/auth";
+import { AuthLogo, AuthScreen, ResetPasswordScreen } from "./features/auth";
 import { UpgradeSheet } from "./features/billing";
 import { CashFlow } from "./features/cashflow";
 import { CompoundWealthPage, Goals } from "./features/goals";
@@ -58,6 +58,7 @@ export function App() {
   const [insightsOpen, setInsightsOpen] = useState(false);
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
   const [cloudCheck, setCloudCheck] = useState("idle"); // idle | checking | done
   const stateRef = useRef(null);
@@ -158,9 +159,13 @@ export function App() {
       setAuthLoading(false);
     });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
       setSession(nextSession || null);
       setAuthLoading(false);
+      // The user arrived via a password reset email link — they're signed in
+      // with a recovery token but still don't know their password. Show the
+      // set-new-password screen before anything else.
+      if (event === "PASSWORD_RECOVERY") setPasswordRecovery(true);
     });
 
     return () => data?.subscription?.unsubscribe?.();
@@ -427,7 +432,7 @@ export function App() {
       <div className="app-shell">
         <main className="phone auth-phone">
           <div className="auth-loading">
-            <div className="app-icon large">GV</div>
+            <AuthLogo />
             <h1>Grow UP</h1>
             <p>Checking your session…</p>
           </div>
@@ -440,12 +445,16 @@ export function App() {
     return <AuthScreen enterDemoMode={enterDemoMode} />;
   }
 
+  if (passwordRecovery && session) {
+    return <ResetPasswordScreen notify={notify} onDone={() => setPasswordRecovery(false)} />;
+  }
+
   if (!demoMode && session && cloudCheck === "checking") {
     return (
       <div className="app-shell">
         <main className="phone auth-phone">
           <div className="auth-loading">
-            <div className="app-icon large">GV</div>
+            <AuthLogo />
             <h1>Grow UP</h1>
             <p>Syncing your data…</p>
           </div>
