@@ -640,7 +640,64 @@ function TermsContent() {
 
 
 
-function LandingPage() {
+function DeleteAccountPage() {
+  const [email, setEmail] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!email) return;
+    if (supabase) {
+      await supabase.from("account_deletion_requests").insert({ email, requested_at: new Date().toISOString() }).catch(() => {});
+    }
+    setSubmitted(true);
+  };
+
+  return (
+    <div style={{maxWidth:480,margin:"0 auto",padding:"48px 24px",fontFamily:"inherit"}}>
+      <div style={{textAlign:"center",marginBottom:32}}>
+        <div style={{fontSize:48,marginBottom:12}}>🌱</div>
+        <h1 style={{fontSize:28,fontWeight:900,margin:"0 0 8px"}}>Delete Your Account</h1>
+        <p style={{color:"#6D706F",margin:0,lineHeight:1.5}}>
+          Submit your request below. We'll permanently delete your account and all associated data within 30 days.
+        </p>
+      </div>
+
+      {submitted ? (
+        <div style={{background:"#e8f7ee",border:"1.5px solid #3fa463",borderRadius:16,padding:24,textAlign:"center"}}>
+          <div style={{fontSize:32,marginBottom:12}}>✓</div>
+          <h2 style={{color:"#1a7a40",margin:"0 0 8px",fontSize:20,fontWeight:900}}>Request received</h2>
+          <p style={{color:"#236b4a",margin:0}}>We'll process your deletion request within 30 days and send a confirmation to <strong>{email}</strong>.</p>
+        </div>
+      ) : (
+        <div style={{background:"white",border:"1.5px solid #e5e7eb",borderRadius:16,padding:24}}>
+          <label style={{display:"block",marginBottom:16}}>
+            <span style={{fontSize:14,fontWeight:800,color:"#374151",display:"block",marginBottom:6}}>Email address on your account</span>
+            <input
+              type="email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              style={{width:"100%",padding:"12px 14px",borderRadius:12,border:"1.5px solid #d1d5db",fontSize:16,boxSizing:"border-box"}}
+            />
+          </label>
+          <button
+            onClick={handleSubmit}
+            disabled={!email}
+            style={{width:"100%",padding:14,borderRadius:12,background:email?"#e5292f":"#d1d5db",color:"white",fontWeight:900,fontSize:16,border:"none",cursor:email?"pointer":"not-allowed"}}
+          >
+            Request account deletion
+          </button>
+          <p style={{fontSize:12,color:"#9ca3af",textAlign:"center",marginTop:12,lineHeight:1.5}}>
+            This will permanently delete your account, all snapshots, goals, and financial data. This cannot be undone.
+            You can also email <a href="mailto:support@lgds.com.au" style={{color:"#3fa463"}}>support@lgds.com.au</a>
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
   const startApp = () => {
     window.location.href = "/";
   };
@@ -1794,6 +1851,7 @@ function OnboardingWizard({ state, setState, onComplete }) {
     age: state.profile?.age || "",
     retirementAge: state.profile?.retirementAge || 65,
     income: state.profile?.income || "",
+    currency: state.currency || "AUD",
     expenses: state.profile?.expenses?.length ? state.profile.expenses : [
       { name: "", icon: "🏠", amount: "" },
       { name: "", icon: "🛒", amount: "" },
@@ -1810,7 +1868,7 @@ function OnboardingWizard({ state, setState, onComplete }) {
     return { ...p, expenses };
   });
 
-  const TOTAL_STEPS = profile.primaryGoal === "debt" ? 5 : 4;
+  const TOTAL_STEPS = profile.primaryGoal === "debt" ? 6 : 5;
 
   const next = () => setStep(s => s + 1);
   const back = () => setStep(s => s - 1);
@@ -1879,7 +1937,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
     setState(s => ({
       ...s,
       firstName: profile.firstName || s.firstName,
+      currency: profile.currency || s.currency || "AUD",
       profileComplete: true,
+      showBackfillPrompt: true,
       profile: {
         age: Number(profile.age) || null,
         retirementAge: Number(profile.retirementAge) || 65,
@@ -1918,9 +1978,44 @@ function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // Step 1 — Primary goal
-  if (step === 1) return (
-    <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →" nextDisabled={!profile.primaryGoal}>
+  // Step 1 — Currency selection
+  if (step === 1) {
+    const POPULAR_CURRENCIES = [
+      ["AUD", "🇦🇺", "Australian Dollar"],
+      ["USD", "🇺🇸", "US Dollar"],
+      ["GBP", "🇬🇧", "British Pound"],
+      ["EUR", "🇪🇺", "Euro"],
+      ["NZD", "🇳🇿", "NZ Dollar"],
+      ["CAD", "🇨🇦", "Canadian Dollar"],
+      ["SGD", "🇸🇬", "Singapore Dollar"],
+      ["INR", "🇮🇳", "Indian Rupee"],
+    ];
+    return (
+      <WizardScreen step={1} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
+        <h2 className="wizard-question">What currency do you use?</h2>
+        <p className="wizard-sub">All your balances and reports will display in this currency.</p>
+        <div className="wizard-currency-grid">
+          {POPULAR_CURRENCIES.map(([code, flag, name]) => (
+            <button
+              key={code}
+              type="button"
+              className={`wizard-currency-option ${profile.currency === code ? "selected" : ""}`}
+              onClick={() => set("currency", code)}
+            >
+              <span className="wizard-currency-flag">{flag}</span>
+              <strong>{code}</strong>
+              <small>{name}</small>
+              {profile.currency === code && <span className="wizard-check">✓</span>}
+            </button>
+          ))}
+        </div>
+      </WizardScreen>
+    );
+  }
+
+  // Step 2 — Primary goal
+  if (step === 2) return (
+    <WizardScreen step={2} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →" nextDisabled={!profile.primaryGoal}>
       <h2 className="wizard-question">What's your main financial focus right now?</h2>
       <p className="wizard-sub">Pick one — you can add more goals later.</p>
       <div className="wizard-goal-options">
@@ -1943,9 +2038,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // Step 2 — Monthly income
-  if (step === 2) return (
-    <WizardScreen step={2} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
+  // Step 3 — Monthly income
+  if (step === 3) return (
+    <WizardScreen step={3} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={next} nextLabel="Continue →">
       <h2 className="wizard-question">What's your monthly take-home income?</h2>
       <p className="wizard-sub">After tax. We'll pre-fill Cash Flow with this — you can refine it later.</p>
       <div className="wizard-amount-wrap">
@@ -1963,9 +2058,9 @@ function OnboardingWizard({ state, setState, onComplete }) {
     </WizardScreen>
   );
 
-  // Step 3 — Top 3 expenses
-  if (step === 3) return (
-    <WizardScreen step={3} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={profile.primaryGoal === "debt" ? next : finish} nextLabel={profile.primaryGoal === "debt" ? "Continue →" : "Finish setup ✓"}>
+  // Step 4 — Top 3 expenses
+  if (step === 4) return (
+    <WizardScreen step={4} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={profile.primaryGoal === "debt" ? next : finish} nextLabel={profile.primaryGoal === "debt" ? "Continue →" : "Finish setup ✓"}>
       <h2 className="wizard-question">What are your biggest monthly expenses?</h2>
       <p className="wizard-sub">Just the top 3 — roughly is fine. These unlock your FIRE number and spending chart.</p>
 
@@ -2022,8 +2117,8 @@ function OnboardingWizard({ state, setState, onComplete }) {
   );
 
   // Step 4 — Debt amount (only if primaryGoal === "debt")
-  if (step === 4) return (
-    <WizardScreen step={4} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={finish} nextLabel="Finish setup ✓">
+  if (step === 5) return (
+    <WizardScreen step={5} total={TOTAL_STEPS} progress={progressPct} onBack={back} onNext={finish} nextLabel="Finish setup ✓">
       <h2 className="wizard-question">Roughly how much debt do you have?</h2>
       <p className="wizard-sub">A ballpark is fine — this powers your debt-free timeline and goal tracking.</p>
       <div className="wizard-amount-wrap">
@@ -2368,6 +2463,7 @@ function UpgradeSheet({ reason, onClose, session, notify }) {
 
 function App() {
   const path = window.location.pathname;
+  if (path === "/delete-account") return <DeleteAccountPage />;
   if (path === "/landingpage") return <LandingPage />;
   if (path === "/privacy") return <LegalPage type="privacy" />;
   if (path === "/terms") return <LegalPage type="terms" />;
@@ -2721,6 +2817,10 @@ function App() {
       )}
 
       {!demoMode && editor && <EditorModal editor={editor} setEditor={setEditor} state={state} setState={setState} autoSaveMonthSnapshot={autoSaveMonthSnapshot} totals={totals} isPro={isPro} showUpgrade={showUpgrade} />}
+
+      {state.showBackfillPrompt && (
+        <BackfillPrompt state={activeState} setState={activeSetState} setTab={setTab} />
+      )}
 
       {upgradeSheet !== null && (
         <UpgradeSheet
@@ -3242,7 +3342,36 @@ function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
   );
 }
 
-function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
+function BackfillPrompt({ state, setState, setTab }) {
+  const prevMonth = addMonths(state.selectedMonth, -1);
+  const prevLabel = monthLabel(prevMonth);
+
+  const goBackfill = () => {
+    setState(s => ({ ...s, showBackfillPrompt: false, selectedMonth: prevMonth }));
+    setTab("assets");
+  };
+  const dismiss = () => setState(s => ({ ...s, showBackfillPrompt: false }));
+
+  return (
+    <div className="backfill-backdrop">
+      <div className="backfill-card">
+        <div className="backfill-icon">📅</div>
+        <h2>Add last month too?</h2>
+        <p>
+          Adding your <strong>{prevLabel}</strong> balances unlocks trends, forecasts, and momentum tracking — the best parts of Grow UP.
+        </p>
+        <button className="backfill-cta" onClick={goBackfill}>
+          Go to {prevLabel} →
+        </button>
+        <button className="backfill-skip" onClick={dismiss}>
+          Skip for now
+        </button>
+      </div>
+    </div>
+  );
+}
+
+ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
@@ -5119,13 +5248,14 @@ function BottomNav({ tab, setTab }) {
     ["overview", Home, "Overview"],
     ["assets", CreditCard, "Assets"],
     ["cash", Repeat2, "Cash Flow"],
-    ["goals", Target, "Wealth Goals"],
+    ["goals", Target, "Goals"],
+    ["settings", SlidersHorizontal, "Settings"],
   ];
   return (
     <nav className="bottom-nav">
       {items.map(([id, Icon, label]) => (
         <button key={id} className={tab === id ? "active" : ""} onClick={()=>setTab(id)}>
-          <Icon size={26}/><span>{label}</span>
+          <Icon size={24}/><span>{label}</span>
         </button>
       ))}
     </nav>

@@ -7818,3 +7818,119 @@ button:focus-visible {
 }
 .upgrade-cta-secondary:hover { background: var(--green2); }
 .upgrade-cta-secondary:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ═══════════════════════════════════════════════════════
+   ONBOARDING — Currency step
+   ═══════════════════════════════════════════════════════ */
+.wizard-currency-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+.wizard-currency-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 14px;
+  border-radius: 16px;
+  border: 1.5px solid var(--line);
+  background: var(--card);
+  cursor: pointer;
+  text-align: left;
+  position: relative;
+  transition: border-color .15s, background .15s;
+}
+.wizard-currency-option.selected {
+  border-color: var(--green);
+  background: var(--green2);
+}
+.wizard-currency-flag { font-size: 24px; flex: 0 0 auto; }
+.wizard-currency-option strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--text);
+}
+.wizard-currency-option small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  font-weight: 700;
+}
+.wizard-currency-option .wizard-check {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  font-size: 13px;
+  color: var(--green);
+  font-weight: 900;
+}
+
+/* ═══════════════════════════════════════════════════════
+   BACKFILL PROMPT
+   ═══════════════════════════════════════════════════════ */
+.backfill-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: fadeInBackdrop .2s ease;
+}
+.backfill-card {
+  background: var(--card);
+  border-radius: 24px;
+  padding: 32px 24px 28px;
+  max-width: 380px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,.2);
+  animation: slideUpPopup .25s cubic-bezier(.34,1.2,.64,1);
+}
+.backfill-icon {
+  font-size: 52px;
+  margin-bottom: 16px;
+  line-height: 1;
+}
+.backfill-card h2 {
+  font-size: 24px;
+  font-weight: 1000;
+  color: var(--text);
+  margin: 0 0 10px;
+  letter-spacing: -.03em;
+}
+.backfill-card p {
+  font-size: 15px;
+  color: var(--muted);
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+.backfill-card p strong { color: var(--text); }
+.backfill-cta {
+  width: 100%;
+  padding: 15px;
+  border-radius: 14px;
+  background: linear-gradient(135deg,#1a7a40,#236b4a);
+  color: white;
+  font-size: 16px;
+  font-weight: 900;
+  border: none;
+  cursor: pointer;
+  margin-bottom: 10px;
+  box-shadow: 0 4px 14px rgba(26,122,64,.3);
+}
+.backfill-cta:active { opacity: .85; }
+.backfill-skip {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 8px;
+  text-decoration: underline;
+}
