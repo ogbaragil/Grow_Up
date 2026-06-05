@@ -1,5 +1,18 @@
-import React from "react";
+import React, { useEffect } from "react";
+import { Check, LineChart, Target, Telescope, TrendingUp, Zap } from "lucide-react";
 import { PRO_LIMITS, SUPPORT_EMAIL } from "../config";
+
+// Replace with real user quotes when you have them — the band stays hidden
+// while this array is empty, so nothing fake ever ships.
+const TESTIMONIALS = [
+  // { quote: "Finally see all my money in one place without linking my bank.", name: "Sam", detail: "Early user" },
+];
+
+const PROOF_STATS = [
+  { value: "16", label: "currencies supported" },
+  { value: "5 min", label: "average setup time" },
+  { value: "A$0", label: "to start — free forever plan" },
+];
 
 export function LandingPage() {
   const startSignup = () => {
@@ -15,24 +28,45 @@ export function LandingPage() {
     window.location.href = "/";
   };
 
+  // Restrained scroll-reveal: fade-up once, ~400ms, disabled for users who
+  // prefer reduced motion.
+  useEffect(() => {
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const nodes = document.querySelectorAll("[data-reveal]");
+    if (reduced || !("IntersectionObserver" in window)) {
+      nodes.forEach(n => n.classList.add("is-revealed"));
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("is-revealed");
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
+    nodes.forEach(n => observer.observe(n));
+    return () => observer.disconnect();
+  }, []);
+
   const features = [
     {
-      icon: "📈",
+      icon: TrendingUp,
       title: "Track real wealth",
       body: "See assets, debts, net worth, goals, and cash flow in one calm dashboard."
     },
     {
-      icon: "🎯",
+      icon: Target,
       title: "Forecast your goals",
       body: "Estimate completion dates from your actual month-by-month progress."
     },
     {
-      icon: "⚡",
+      icon: Zap,
       title: "Crush debt faster",
       body: "Track payoff momentum and understand how quickly debt is moving down."
     },
     {
-      icon: "🔮",
+      icon: Telescope,
       title: "Project the future",
       body: "Use compound wealth scenarios to visualise long-term financial outcomes."
     }
@@ -61,7 +95,7 @@ export function LandingPage() {
 
       <main>
         <section className="landing-hero">
-          <div className="hero-copy">
+          <div className="hero-copy hero-enter">
             <div className="hero-badge">
               <span></span>
               Built for intentional wealth builders
@@ -85,62 +119,24 @@ export function LandingPage() {
             <div className="trust-grid">
               {["No bank connection required", "Private by default", "Secure cloud backup", "Built for long-term wealth"].map(item => (
                 <div key={item}>
-                  <i>✓</i>
+                  <i><Check size={13} strokeWidth={3.5} /></i>
                   <span>{item}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="hero-visual">
-            <div className="phone-mockup">
-              <div className="mock-phone-inner">
-                <div className="mock-header">
-                  <div>
-                    <small>Welcome back</small>
-                    <strong>Alex</strong>
-                  </div>
-                  <span>On track</span>
-                </div>
-
-                <div className="mock-networth">
-                  <small>Net worth</small>
-                  <strong>$92,400</strong>
-                  <em>↑ +$12,320 over 6 months</em>
-                </div>
-
-                <div className="mock-card">
-                  <div className="mock-card-row">
-                    <div>
-                      <small>Goal forecast</small>
-                      <strong>Debt free</strong>
-                    </div>
-                    <b>67%</b>
-                  </div>
-                  <div className="mock-progress"><i></i></div>
-                  <div className="mock-forecast">
-                    <small>Forecast finish</small>
-                    <strong>March 2027</strong>
-                    <span>Based on your current pace.</span>
-                  </div>
-                </div>
-
-                <div className="mock-chart-card">
-                  <div className="mock-card-row">
-                    <div>
-                      <small>Net worth trend</small>
-                      <strong>Momentum</strong>
-                    </div>
-                    <b>+18%</b>
-                  </div>
-                  <svg viewBox="0 0 300 140">
-                    <path d="M0 120 C 30 118, 50 112, 75 105 C 100 96, 120 92, 150 84 C 180 76, 210 66, 235 52 C 255 42, 275 30, 300 18" />
-                  </svg>
-                </div>
-              </div>
+          <div className="hero-visual hero-enter delayed">
+            <div className="hero-device">
+              <img src="/screenshots/overview.jpeg" alt="Grow UP overview dashboard showing net worth and trends" />
             </div>
 
-            <div className="floating-stat">
+            <div className="floating-chip float-soft">
+              <small>Goal forecast</small>
+              <strong>Debt free · 67%</strong>
+            </div>
+
+            <div className="floating-stat float-soft slower">
               <small>Monthly growth</small>
               <strong>+$2,430</strong>
               <span>On track this month</span>
@@ -148,32 +144,61 @@ export function LandingPage() {
           </div>
         </section>
 
+        <section className="proof-band" data-reveal>
+          {PROOF_STATS.map(stat => (
+            <div key={stat.label}>
+              <strong>{stat.value}</strong>
+              <span>{stat.label}</span>
+            </div>
+          ))}
+        </section>
+
+        {TESTIMONIALS.length > 0 && (
+          <section className="landing-section testimonials-section" data-reveal>
+            <div className="section-heading">
+              <span>From early users</span>
+              <h2>People are switching off their spreadsheets.</h2>
+            </div>
+            <div className="testimonial-grid">
+              {TESTIMONIALS.map(t => (
+                <figure key={t.name}>
+                  <blockquote>“{t.quote}”</blockquote>
+                  <figcaption><b>{t.name}</b> · {t.detail}</figcaption>
+                </figure>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section id="features" className="landing-section">
-          <div className="section-heading">
+          <div className="section-heading" data-reveal>
             <span>Why Grow UP</span>
             <h2>Build wealth with calm precision.</h2>
             <p>See your assets, debt, cash flow, goals, insights, and future milestones in one premium wealth dashboard.</p>
           </div>
 
           <div className="feature-grid">
-            {features.map(feature => (
-              <article key={feature.title}>
-                <div>{feature.icon}</div>
-                <h3>{feature.title}</h3>
-                <p>{feature.body}</p>
-              </article>
-            ))}
+            {features.map((feature, i) => {
+              const Icon = feature.icon;
+              return (
+                <article key={feature.title} data-reveal style={{ transitionDelay: `${i * 70}ms` }}>
+                  <div className="feature-icon"><Icon size={22} strokeWidth={2.4} /></div>
+                  <h3>{feature.title}</h3>
+                  <p>{feature.body}</p>
+                </article>
+              );
+            })}
           </div>
         </section>
 
         <section className="landing-section screens-section">
-          <div className="section-heading">
+          <div className="section-heading" data-reveal>
             <span>See it in action</span>
             <h2>The real app, not a render.</h2>
             <p>Every screen below is Grow UP as your users see it — overview, goals, cash flow, and accounts.</p>
           </div>
 
-          <div className="screens-row">
+          <div className="screens-row" data-reveal>
             {[
               ["/screenshots/overview.jpeg", "Overview dashboard with net worth and trends"],
               ["/screenshots/goals.jpeg", "Wealth goals with progress and forecasts"],
@@ -185,9 +210,9 @@ export function LandingPage() {
           </div>
         </section>
 
-        <section id="demo" className="demo-conversion">
+        <section id="demo" className="demo-conversion" data-reveal>
           <div>
-            <span>Interactive Demo</span>
+            <span>Interactive demo</span>
             <h2>Try the full experience instantly.</h2>
             <p>
               Explore Grow UP with realistic sample data. No signup required. Demo Mode is read-only, so you can safely click around.
@@ -197,7 +222,7 @@ export function LandingPage() {
         </section>
 
         <section className="product-showcase">
-          <div className="showcase-copy">
+          <div className="showcase-copy" data-reveal>
             <span>Built around momentum</span>
             <h2>Not another budget tracker.</h2>
             <p>
@@ -206,63 +231,59 @@ export function LandingPage() {
           </div>
 
           <div className="showcase-cards">
-            <article>
-              <b>01</b>
-              <h3>Monthly snapshots</h3>
-              <p>Store historical assets, debts, and net worth so progress becomes visible.</p>
-            </article>
-            <article>
-              <b>02</b>
-              <h3>Goal forecasting</h3>
-              <p>Estimate when you will hit goals based on your actual historical pace.</p>
-            </article>
-            <article>
-              <b>03</b>
-              <h3>Flexible cash flow</h3>
-              <p>Track weekly, fortnightly, monthly, quarterly, yearly, and one-off items.</p>
-            </article>
+            {[
+              ["01", "Monthly snapshots", "Store historical assets, debts, and net worth so progress becomes visible."],
+              ["02", "Goal forecasting", "Estimate when you will hit goals based on your actual historical pace."],
+              ["03", "Flexible cash flow", "Track weekly, fortnightly, monthly, quarterly, yearly, and one-off items."],
+            ].map(([num, title, body], i) => (
+              <article key={num} data-reveal style={{ transitionDelay: `${i * 70}ms` }}>
+                <b>{num}</b>
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
           </div>
         </section>
 
         <section id="pricing" className="landing-section pricing-section">
-          <div className="section-heading">
+          <div className="section-heading" data-reveal>
             <span>Pricing</span>
             <h2>Free to start. Cheap to go all in.</h2>
             <p>Begin with the free plan and upgrade only when your wealth picture outgrows it.</p>
           </div>
 
           <div className="pricing-grid">
-            <article>
+            <article data-reveal>
               <h3>Free</h3>
               <div className="price"><strong>A$0</strong><span>forever</span></div>
               <ul>
-                <li>✓ Net worth dashboard</li>
-                <li>✓ Up to {PRO_LIMITS.accounts} accounts</li>
-                <li>✓ Up to {PRO_LIMITS.goals} goals</li>
-                <li>✓ Up to {PRO_LIMITS.transactions} recurring transactions</li>
-                <li>✓ {PRO_LIMITS.snapshotMonths} months of snapshot history</li>
-                <li>✓ Compound calculator &amp; cloud backup</li>
+                <li><Check size={15} strokeWidth={3} /> Net worth dashboard</li>
+                <li><Check size={15} strokeWidth={3} /> Up to {PRO_LIMITS.accounts} accounts</li>
+                <li><Check size={15} strokeWidth={3} /> Up to {PRO_LIMITS.goals} goals</li>
+                <li><Check size={15} strokeWidth={3} /> Up to {PRO_LIMITS.transactions} recurring transactions</li>
+                <li><Check size={15} strokeWidth={3} /> {PRO_LIMITS.snapshotMonths} months of snapshot history</li>
+                <li><Check size={15} strokeWidth={3} /> Compound calculator &amp; cloud backup</li>
               </ul>
               <button onClick={startSignup} className="secondary-landing">Start free</button>
             </article>
 
-            <article className="featured">
+            <article className="featured" data-reveal style={{ transitionDelay: "80ms" }}>
               <em>Most popular</em>
               <h3>Pro</h3>
               <div className="price"><strong>A$3.99</strong><span>/month, or A$39.99/year</span></div>
               <ul>
-                <li>✓ Everything in Free</li>
-                <li>✓ Unlimited accounts, goals &amp; transactions</li>
-                <li>✓ Full snapshot history</li>
-                <li>✓ Insights — smart reads on your money</li>
-                <li>✓ Wealth Timeline projections</li>
+                <li><Check size={15} strokeWidth={3} /> Everything in Free</li>
+                <li><Check size={15} strokeWidth={3} /> Unlimited accounts, goals &amp; transactions</li>
+                <li><Check size={15} strokeWidth={3} /> Full snapshot history</li>
+                <li><Check size={15} strokeWidth={3} /> Insights — smart reads on your money</li>
+                <li><Check size={15} strokeWidth={3} /> Wealth Timeline projections</li>
               </ul>
               <button onClick={startSignup} className="primary-landing">Start free, upgrade any time</button>
             </article>
           </div>
         </section>
 
-        <section id="privacy" className="privacy-band">
+        <section id="privacy" className="privacy-band" data-reveal>
           <div>
             <h2>Private by design. Premium by feel.</h2>
             <p>
@@ -278,7 +299,7 @@ export function LandingPage() {
           </ul>
         </section>
 
-        <section className="final-cta">
+        <section className="final-cta" data-reveal>
           <h2>See the future you are building.</h2>
           <p>Grow UP turns financial progress into a timeline you can see, track, and feel.</p>
           <div>
@@ -306,7 +327,3 @@ export function LandingPage() {
     </div>
   );
 }
-
-
-
-

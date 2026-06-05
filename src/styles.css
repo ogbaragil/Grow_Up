@@ -8167,3 +8167,197 @@ button:focus-visible {
   flex: 1;
 }
 .pricing-grid button { width: 100%; }
+
+/* ── Landing premium pass ─────────────────────────────────────── */
+
+/* Hero device frame (real screenshot, replaces CSS mock) */
+.hero-device {
+  background: #15181d;
+  border-radius: 46px;
+  padding: 12px;
+  box-shadow: 0 40px 90px rgba(16, 25, 22, .28), 0 12px 30px rgba(16, 25, 22, .14);
+  max-width: 340px;
+  margin: 0 auto;
+  transform: rotate(1.5deg);
+}
+.hero-device img {
+  display: block;
+  width: 100%;
+  border-radius: 36px;
+}
+
+.floating-chip {
+  position: absolute;
+  top: 8%;
+  left: -8px;
+  background: white;
+  border: 1px solid rgba(16, 25, 22, .07);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(16, 25, 22, .14);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.floating-chip small {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-weight: 900;
+  color: rgba(16, 25, 22, .5);
+}
+.floating-chip strong {
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: -.02em;
+  color: #101916;
+}
+
+/* Restrained motion */
+.hero-enter { animation: heroUp .7s cubic-bezier(.2, .7, .2, 1) both; }
+.hero-enter.delayed { animation-delay: .12s; }
+@keyframes heroUp {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+.float-soft { animation: floatSoft 5.5s ease-in-out infinite; }
+.float-soft.slower { animation-duration: 7s; animation-delay: .8s; }
+@keyframes floatSoft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity .45s ease, transform .55s cubic-bezier(.2, .7, .2, 1);
+}
+[data-reveal].is-revealed { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter, .float-soft { animation: none; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* Feature icons — consistent stroke set instead of emoji */
+.feature-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(31, 157, 85, .1);
+  color: #1f9d55;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.trust-grid i,
+.trust-grid div i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pricing-grid li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pricing-grid li svg { color: #1f9d55; flex: 0 0 auto; }
+
+/* Proof band */
+.proof-band {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 clamp(18px, 5vw, 72px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.proof-band > div {
+  background: white;
+  border: 1px solid rgba(16, 25, 22, .07);
+  border-radius: 20px;
+  padding: 20px 22px;
+  text-align: center;
+}
+.proof-band strong {
+  display: block;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 1000;
+  letter-spacing: -.04em;
+  color: #101916;
+}
+.proof-band span {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: rgba(16, 25, 22, .55);
+}
+
+/* Testimonials (hidden until quotes exist) */
+.testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.testimonial-grid figure {
+  margin: 0;
+  background: white;
+  border: 1px solid rgba(16, 25, 22, .07);
+  border-radius: 22px;
+  padding: 24px;
+  text-align: left;
+}
+.testimonial-grid blockquote {
+  margin: 0 0 14px;
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: #101916;
+}
+.testimonial-grid figcaption {
+  font-size: 13.5px;
+  color: rgba(16, 25, 22, .55);
+  font-weight: 700;
+}
+
+/* Typographic + spacing rhythm */
+.landing-page main > section + section {
+  margin-top: clamp(64px, 9vw, 120px);
+}
+.landing-page .landing-hero { padding-bottom: clamp(40px, 6vw, 70px); }
+.section-heading h2 {
+  letter-spacing: -.045em;
+}
+
+/* Hover lifts — cards respond, gently. Scoped to .is-revealed so the lift
+   transition doesn't fight the slower reveal transition on the same property. */
+.feature-grid article.is-revealed,
+.showcase-cards article.is-revealed,
+.pricing-grid article.is-revealed,
+.testimonial-grid figure {
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.feature-grid article:hover,
+.showcase-cards article:hover,
+.pricing-grid article:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 48px rgba(16, 25, 22, .1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-grid article:hover,
+  .showcase-cards article:hover,
+  .pricing-grid article:hover { transform: none; box-shadow: none; }
+}
+
+@media (max-width: 760px) {
+  .hero-device { max-width: 270px; transform: none; }
+  .floating-chip { left: 0; top: 4%; }
+  .proof-band { grid-template-columns: 1fr; }
+}
