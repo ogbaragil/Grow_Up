@@ -5,7 +5,7 @@ import { Card, ScreenTitle } from "../components/ui";
 import { requestGrowUpNotifications, saveEmailReminderPreferences } from "./notifications";
 import { STORAGE_KEY } from "../state/useGrowState";
 
-export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, dashboardStyle="minimal", setDashboardStyle, notify, showConfirm, isPro=false, showUpgrade}) {
+export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, notify, showConfirm, isPro=false, showUpgrade}) {
   return (
     <div className="screen">
       <ScreenTitle title="Settings" sub="Your account, preferences, and data." setMenuOpen={setMenuOpen} />
@@ -91,19 +91,6 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
           ) : (
             <button className="settings-action-btn primary-tint" onClick={() => showUpgrade?.("general")}>Upgrade</button>
           )}
-        </div>
-      </Card>
-
-      <Card>
-        <div className="settings-row-head">
-          <div>
-            <h2>Dashboard Style</h2>
-            <p>Choose your Overview layout.</p>
-          </div>
-        </div>
-        <div className="dashboard-style-toggle">
-          <button type="button" className={dashboardStyle === "minimal" ? "active" : ""} onClick={()=>setDashboardStyle("minimal")}>Minimal</button>
-          <button type="button" className={dashboardStyle === "detailed" ? "active" : ""} onClick={()=>setDashboardStyle("detailed")}>Detailed</button>
         </div>
       </Card>
 
@@ -210,7 +197,14 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
       <Card className="settings-danger-card">
         <h2>Danger Zone</h2>
         <p>Permanently wipe all local data. This cannot be undone.</p>
-        <button className="settings-danger-btn" disabled={isDemo} onClick={async()=>{ if(await showConfirm("Reset local data? This cannot be undone.")) { localStorage.removeItem(STORAGE_KEY); location.reload(); }}}>
+        <button className="settings-danger-btn" disabled={isDemo} onClick={async()=>{ if(await showConfirm("Reset local data? This cannot be undone.")) {
+          // Remove every app-owned key (state blob, demo flag, notification
+          // dedupe keys, etc.) while leaving the auth session intact.
+          Object.keys(localStorage)
+            .filter(key => key.startsWith("growup_"))
+            .forEach(key => localStorage.removeItem(key));
+          location.reload();
+        }}}>
           <RotateCcw size={16}/> Reset local data
         </button>
       </Card>

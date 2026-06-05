@@ -3,7 +3,6 @@ import { currentMonthKey, monthKey } from "../lib/dates";
 export const DEMO_STATE = {
   firstName: "Demo",
   theme: "light",
-  dashboardStyle: "minimal",
   selectedMonth: currentMonthKey(),
   accounts: [
     { id:"demo-super", name:"Retirement Fund", icon:"🏦", kind:"asset", subtype:"super", balance:75000, previous:72726 },

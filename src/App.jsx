@@ -14,7 +14,7 @@ import { LandingPage } from "./features/landing";
 import { DeleteAccountPage, LegalPage } from "./features/legal";
 import { runGrowUpNotificationChecks } from "./features/notifications";
 import { OnboardingTips, OnboardingWizard } from "./features/onboarding";
-import { BackfillPrompt, MinimalOverview, Overview } from "./features/overview";
+import { BackfillPrompt, MinimalOverview } from "./features/overview";
 import { Settings } from "./features/settings";
 import { WealthTimelinePage } from "./features/timeline";
 import { addMonths, currentMonthKey, isFutureMonth, monthLabel } from "./lib/dates";
@@ -44,7 +44,6 @@ export function App() {
   const [session, setSession] = useState(null);
   const [authLoading, setAuthLoading] = useState(true);
   const [demoMode, setDemoMode] = useState(() => localStorage.getItem("growup_demo_mode") === "true");
-  const [dashboardStyle, setDashboardStyle] = useState(() => localStorage.getItem("growup_dashboard_style") || "minimal");
   const notify = useToast();
   const showConfirm = useConfirm();
   const fmt = useMoney(state.currency);
@@ -175,14 +174,6 @@ export function App() {
     setMenuOpen(false);
   };
 
-  const updateDashboardStyle = (style) => {
-    localStorage.setItem("growup_dashboard_style", style);
-    setDashboardStyle(style);
-    if (!demoMode) {
-      setState(s => ({ ...s, dashboardStyle: style }));
-    }
-  };
-
   const uploadSnapshotState = async (snapshotState, selectedMonthForMessage, { requireSession = true } = {}) => {
     if (requireSession && !session?.user?.id) {
       notify("Please sign in before backing up your data.", "error");
@@ -278,12 +269,6 @@ export function App() {
     notify("Latest saved data restored.", "success");
   };
 
-  const changeDashboardStyle = (style) => {
-    localStorage.setItem("growup_dashboard_style", style);
-    setDashboardStyle(style);
-    setState(s => ({ ...s, dashboardStyle: style }));
-  };
-
   const common = { state: activeState, setState: activeSetState, totals, setEditor, setMenuOpen, setHistoryMetric, setInsightsOpen, setTimelineOpen, saveSnapshot, autoSaveMonthSnapshot, displayName, isDemo: demoMode, notify, showConfirm, isPro, showUpgrade, requirePro };
 
   if (authLoading) {
@@ -343,9 +328,7 @@ export function App() {
             )}
 
             {tab === "overview" && (
-              dashboardStyle === "detailed"
-                ? <Overview {...common} setTab={setTab} isDemo={demoMode} />
-                : <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} isPro={isPro} showUpgrade={showUpgrade} />
+              <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} isPro={isPro} showUpgrade={showUpgrade} />
             )}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}
@@ -363,8 +346,6 @@ export function App() {
                 isDemo={demoMode}
                 enterDemoMode={enterDemoMode}
                 exitDemoMode={exitDemoMode}
-                dashboardStyle={dashboardStyle}
-                setDashboardStyle={updateDashboardStyle}
                 isPro={isPro}
                 showUpgrade={showUpgrade}
               />

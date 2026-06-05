@@ -133,7 +133,6 @@ export function safeId() {
 export const EMPTY_STATE = {
   firstName: "",
   theme: "light",
-  dashboardStyle: "minimal",
   notificationsEnabled: false,
   emailRemindersEnabled: false,
   emailReminderDays: 1,
