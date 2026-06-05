@@ -14,12 +14,60 @@ const headers = {
   "Content-Type": "application/json",
 };
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-AU", {
+// Mirrors src/lib/money.js — keep these two lists in sync.
+const CURRENCY_OPTIONS: [string, string, string][] = [
+  ["USD", "US Dollar", "$"],
+  ["AUD", "Australian Dollar", "$"],
+  ["GBP", "British Pound", "£"],
+  ["EUR", "Euro", "€"],
+  ["NGN", "Nigerian Naira", "₦"],
+  ["CAD", "Canadian Dollar", "$"],
+  ["NZD", "New Zealand Dollar", "$"],
+  ["JPY", "Japanese Yen", "¥"],
+  ["CNY", "Chinese Yuan", "¥"],
+  ["INR", "Indian Rupee", "₹"],
+  ["ZAR", "South African Rand", "R"],
+  ["GHS", "Ghanaian Cedi", "₵"],
+  ["KES", "Kenyan Shilling", "KSh"],
+  ["CHF", "Swiss Franc", "CHF"],
+  ["SGD", "Singapore Dollar", "$"],
+  ["AED", "UAE Dirham", "د.إ"],
+];
+
+const CURRENCY_SYMBOLS: Record<string, string> = Object.fromEntries(
+  CURRENCY_OPTIONS.map(([code, , symbol]) => [code, symbol])
+);
+
+const isSupportedCurrency = (currency: string) =>
+  CURRENCY_OPTIONS.some(([code]) => code === currency);
+
+function userCurrency(state: any) {
+  const currency = state?.currency;
+  return isSupportedCurrency(currency) ? currency : "USD";
+}
+
+function money(value: number, currency = "USD") {
+  const code = isSupportedCurrency(currency) ? currency : "USD";
+  const formatter = new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency: "AUD",
+    currency: code,
     maximumFractionDigits: 0,
-  }).format(Number(value || 0));
+  });
+
+  // Intl falls back to ISO codes for currencies en-US has no symbol for
+  // (e.g. "NGN 55"); substitute the currency part so users see ₦55 instead.
+  const parts = formatter.formatToParts(Number(value || 0));
+  return parts
+    .map((part, i) => {
+      if (part.type === "currency") return CURRENCY_SYMBOLS[code] || part.value;
+      if (part.type === "literal") {
+        const neighborIsCurrency =
+          parts[i - 1]?.type === "currency" || parts[i + 1]?.type === "currency";
+        if (neighborIsCurrency) return "";
+      }
+      return part.value;
+    })
+    .join("");
 }
 
 function todayKey() {
@@ -277,23 +325,25 @@ function welcomeEmailHtml() {
     <div style="font-family:Inter,Arial,sans-serif;line-height:1.65;color:#101214;max-width:620px;margin:0 auto;padding:28px">
       <h1 style="font-size:28px;letter-spacing:-0.04em;margin:0 0 18px">Welcome to Grow UP</h1>
 
-      <p>Hey,</p>
+      <p>Hi,</p>
 
-      <p>My name is Gil — I'm the founder and CEO of Grow UP.</p>
+      <p>I'm Gil, founder of Grow UP.</p>
 
-      <p>We started Grow UP because managing money shouldn’t feel overwhelming. Most people know they want to build wealth, pay off debt, or feel more in control financially — but they’ve never had a simple system that brings everything together in one place.</p>
+      <p>I built Grow UP to help people see their complete financial picture without spreadsheets, guesswork, or stress.</p>
 
-      <p><strong>Here are 3 tips to get started.</strong></p>
+      <p><strong>To help you get immediate value from the app, complete these 3 quick steps:</strong></p>
 
       <ol>
-        <li>Add your Assets and Debts Accounts</li>
-        <li>Add Important Recurring Transactions</li>
-        <li>Add at least one goal</li>
+        <li>Add your assets and debts to see your net worth in one place.</li>
+        <li>Add recurring transactions so you never miss important payments.</li>
+        <li>Add a financial goal and track your progress automatically.</li>
       </ol>
 
-      <p><strong>P.S.:</strong> Why did you sign up? What brought you here?</p>
+      <p>Most users complete setup in under 5 minutes.</p>
 
-      <p>Hit “Reply” and let me know. I read and reply to every email.</p>
+      <p><strong>P.S.:</strong> What's the one thing you're hoping Grow UP helps you accomplish?</p>
+
+      <p>Hit “Reply” and let me know. I read and respond to every email personally.</p>
 
       <p>Cheers,<br/>Gil</p>
 
@@ -304,7 +354,7 @@ function welcomeEmailHtml() {
   `;
 }
 
-function transactionGoalEmailHtml(dueTransactions: any[], goalRows: any[]) {
+function transactionGoalEmailHtml(dueTransactions: any[], goalRows: any[], currency = "USD") {
   const transactionHtml = dueTransactions
     .map(({ txn, days }) => {
       const timing = days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`;
@@ -312,7 +362,7 @@ function transactionGoalEmailHtml(dueTransactions: any[], goalRows: any[]) {
         <div style="padding:16px 0;border-bottom:1px solid #ECECEC">
           <div style="font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:#6D706F;font-weight:800">Upcoming transaction</div>
           <strong>${txn.name}</strong> is due ${timing}.<br/>
-          Amount: <strong>${money(txn.amount)}</strong>
+          Amount: <strong>${money(txn.amount, currency)}</strong>
         </div>
       `;
     })
@@ -509,7 +559,7 @@ serve(async () => {
     const ok = await sendEmail(
       pref.email,
       "Upcoming transaction + goal snapshot",
-      transactionGoalEmailHtml(dueTransactions, goalRows)
+      transactionGoalEmailHtml(dueTransactions, goalRows, userCurrency(state))
     );
 
     if (ok) {
