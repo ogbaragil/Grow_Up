@@ -2042,11 +2042,14 @@ button:disabled {
   }
 
   .landing-nav-cta {
-    display: none;
+    min-height: 38px;
+    padding: 0 16px;
+    font-size: 14px;
+    border-radius: 14px;
   }
 
   .landing-brand small {
-    display: none;
+    font-size: 11px;
   }
 
   .landing-hero {
@@ -8167,3 +8170,590 @@ button:focus-visible {
   flex: 1;
 }
 .pricing-grid button { width: 100%; }
+
+/* ── Landing premium pass ─────────────────────────────────────── */
+
+/* Hero device frame (real screenshot, replaces CSS mock) */
+.hero-device {
+  background: #15181d;
+  border-radius: 46px;
+  padding: 12px;
+  box-shadow: 0 40px 90px rgba(16, 25, 22, .28), 0 12px 30px rgba(16, 25, 22, .14);
+  max-width: 340px;
+  margin: 0 auto;
+  transform: rotate(1.5deg);
+}
+.hero-device img {
+  display: block;
+  width: 100%;
+  border-radius: 36px;
+}
+
+.floating-chip {
+  position: absolute;
+  top: 8%;
+  left: -8px;
+  background: white;
+  border: 1px solid rgba(16, 25, 22, .07);
+  border-radius: 18px;
+  box-shadow: 0 18px 44px rgba(16, 25, 22, .14);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.floating-chip small {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  font-weight: 900;
+  color: rgba(16, 25, 22, .5);
+}
+.floating-chip strong {
+  font-size: 15px;
+  font-weight: 950;
+  letter-spacing: -.02em;
+  color: #101916;
+}
+
+/* Restrained motion */
+.hero-enter { animation: heroUp .7s cubic-bezier(.2, .7, .2, 1) both; }
+.hero-enter.delayed { animation-delay: .12s; }
+@keyframes heroUp {
+  from { opacity: 0; transform: translateY(26px); }
+  to { opacity: 1; transform: none; }
+}
+
+.float-soft { animation: floatSoft 5.5s ease-in-out infinite; }
+.float-soft.slower { animation-duration: 7s; animation-delay: .8s; }
+@keyframes floatSoft {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-9px); }
+}
+
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(22px);
+  transition: opacity .45s ease, transform .55s cubic-bezier(.2, .7, .2, 1);
+}
+[data-reveal].is-revealed { opacity: 1; transform: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-enter, .float-soft { animation: none; }
+  [data-reveal] { opacity: 1; transform: none; transition: none; }
+}
+
+/* Feature icons — consistent stroke set instead of emoji */
+.feature-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(31, 157, 85, .1);
+  color: #1f9d55;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+}
+
+.trust-grid i,
+.trust-grid div i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pricing-grid li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pricing-grid li svg { color: #1f9d55; flex: 0 0 auto; }
+
+/* Proof band */
+.proof-band {
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 0 clamp(18px, 5vw, 72px);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+.proof-band > div {
+  background: white;
+  border: 1px solid rgba(16, 25, 22, .07);
+  border-radius: 20px;
+  padding: 20px 22px;
+  text-align: center;
+}
+.proof-band strong {
+  display: block;
+  font-size: clamp(26px, 3vw, 34px);
+  font-weight: 1000;
+  letter-spacing: -.04em;
+  color: #101916;
+}
+.proof-band span {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: rgba(16, 25, 22, .55);
+}
+
+/* Testimonials (hidden until quotes exist) */
+.testimonial-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+  max-width: 980px;
+  margin: 0 auto;
+}
+.testimonial-grid figure {
+  margin: 0;
+  background: white;
+  border: 1px solid rgba(16, 25, 22, .07);
+  border-radius: 22px;
+  padding: 24px;
+  text-align: left;
+}
+.testimonial-grid blockquote {
+  margin: 0 0 14px;
+  font-size: 17px;
+  line-height: 1.5;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  color: #101916;
+}
+.testimonial-grid figcaption {
+  font-size: 13.5px;
+  color: rgba(16, 25, 22, .55);
+  font-weight: 700;
+}
+
+/* Typographic + spacing rhythm */
+.landing-page main > section + section {
+  margin-top: clamp(64px, 9vw, 120px);
+}
+.landing-page .landing-hero { padding-bottom: clamp(40px, 6vw, 70px); }
+.section-heading h2 {
+  letter-spacing: -.045em;
+}
+
+/* Hover lifts — cards respond, gently. Scoped to .is-revealed so the lift
+   transition doesn't fight the slower reveal transition on the same property. */
+.feature-grid article.is-revealed,
+.showcase-cards article.is-revealed,
+.pricing-grid article.is-revealed,
+.testimonial-grid figure {
+  transition: transform .25s ease, box-shadow .25s ease;
+}
+.feature-grid article:hover,
+.showcase-cards article:hover,
+.pricing-grid article:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 22px 48px rgba(16, 25, 22, .1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .feature-grid article:hover,
+  .showcase-cards article:hover,
+  .pricing-grid article:hover { transform: none; box-shadow: none; }
+}
+
+@media (max-width: 760px) {
+  .hero-device { max-width: 270px; transform: none; }
+  .floating-chip { left: 0; top: 4%; }
+  .proof-band { grid-template-columns: 1fr; }
+}
+
+/* Anchor hero overlay cards to the device frame so they hang off the bezel
+   instead of covering screen content. */
+.hero-device-wrap {
+  position: relative;
+  max-width: 340px;
+  margin: 0 auto;
+}
+.hero-device-wrap .floating-chip {
+  top: 44px;
+  left: -86px;
+  right: auto;
+}
+.hero-device-wrap .floating-stat {
+  bottom: 56px;
+  left: -104px;
+  right: auto;
+  top: auto;
+}
+@media (max-width: 1060px) {
+  .hero-device-wrap .floating-chip { left: -40px; }
+  .hero-device-wrap .floating-stat { left: -48px; }
+}
+@media (max-width: 760px) {
+  .hero-device-wrap .floating-chip { left: -6px; top: 24px; }
+  .hero-device-wrap .floating-stat { left: -6px; bottom: 28px; }
+}
+
+/* =========================================================
+   DARK MODE COUNTER-PASS for "Neutral Luxury Theme"
+   The luxury pass above hardcodes light colors with !important,
+   which defeats the data-theme variable system. This section
+   (placed last so it wins the cascade at equal specificity +
+   !important) re-skins those surfaces for dark mode.
+   ========================================================= */
+
+/* Dark values for the lux / premium token systems */
+:root[data-theme="dark"] {
+  --premium-bg: #0d1321;
+  --premium-card: #111a2c;
+  --premium-card-soft: #1a2436;
+  --premium-text: #f3f5f9;
+  --premium-secondary: #a8adb9;
+  --premium-muted: #7f8694;
+  --wealth-soft: rgba(47,143,91,.20);
+  --insight-soft: rgba(89,103,232,.22);
+  --gold-soft: rgba(184,138,43,.22);
+  --attention-soft: rgba(201,109,75,.20);
+  --premium-shadow: 0 16px 46px rgba(0,0,0,.45);
+  --premium-border: 1px solid rgba(255,255,255,.08);
+
+  --lux-bg: #0d1321;
+  --lux-surface: #111a2c;
+  --lux-surface-2: #1a2436;
+  --lux-text: #f3f5f9;
+  --lux-subtle: #a8adb9;
+  --lux-muted: #7f8694;
+  --graphite-soft: #1a2436;
+  --gain-soft: rgba(47,143,91,.20);
+  --forecast-soft: rgba(89,103,232,.22);
+  --asset-gold-soft: rgba(184,138,43,.22);
+  --risk-soft: rgba(201,109,75,.20);
+  --lux-border: 1px solid rgba(255,255,255,.08);
+  --lux-shadow: 0 18px 52px rgba(0,0,0,.5);
+
+  color-scheme: dark;
+}
+
+/* App shell */
+[data-theme="dark"] html,
+html[data-theme="dark"],
+[data-theme="dark"] body,
+[data-theme="dark"] #root,
+[data-theme="dark"] .app-shell,
+[data-theme="dark"] .phone,
+[data-theme="dark"] .minimal-dashboard-screen,
+[data-theme="dark"] .screen:has(.kpi-grid) {
+  background:
+    radial-gradient(circle at 50% -16%, rgba(184,138,43,.08), transparent 28%),
+    linear-gradient(180deg, #101728 0%, #0d1321 100%) !important;
+  color: var(--text);
+}
+
+/* General cards */
+[data-theme="dark"] .card,
+[data-theme="dark"] .empty-state,
+[data-theme="dark"] .account-group,
+[data-theme="dark"] .center-card,
+[data-theme="dark"] .donut-card,
+[data-theme="dark"] .history-table,
+[data-theme="dark"] .checkpoint-card,
+[data-theme="dark"] .simple-row,
+[data-theme="dark"] .auth-card,
+[data-theme="dark"] .legal-card,
+[data-theme="dark"] .archived-goals-toggle,
+[data-theme="dark"] .insight-card,
+[data-theme="dark"] .timeline-content,
+[data-theme="dark"] .feature-grid article,
+[data-theme="dark"] .showcase-cards article,
+[data-theme="dark"] .privacy-band,
+[data-theme="dark"] .landing-proof-card,
+[data-theme="dark"] .mock-card,
+[data-theme="dark"] .mock-chart-card,
+[data-theme="dark"] .minimal-upcoming-card,
+[data-theme="dark"] .minimal-cash-snapshot-card {
+  background: rgba(17,26,44,.94) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  box-shadow: 0 18px 52px rgba(0,0,0,.45) !important;
+}
+
+/* Headings & key text the luxury pass pinned to near-black */
+[data-theme="dark"] .card h2,
+[data-theme="dark"] .empty-state h3,
+[data-theme="dark"] .section-title h2,
+[data-theme="dark"] .page-header h1,
+[data-theme="dark"] .ScreenTitle h1,
+[data-theme="dark"] .compound-header h1,
+[data-theme="dark"] .future-value b,
+[data-theme="dark"] .simple-row b,
+[data-theme="dark"] .feature-grid h3,
+[data-theme="dark"] .showcase-cards h3,
+[data-theme="dark"] .onboarding-steps strong,
+[data-theme="dark"] .hero-copy h1,
+[data-theme="dark"] .landing-brand b,
+[data-theme="dark"] .section-heading h2,
+[data-theme="dark"] .showcase-copy h2,
+[data-theme="dark"] .privacy-band h2 {
+  color: var(--text) !important;
+}
+
+/* Buttons — graphite primaries get a hairline so they read on dark bg */
+[data-theme="dark"] .primary,
+[data-theme="dark"] .fab,
+[data-theme="dark"] .app-icon,
+[data-theme="dark"] .month-bar,
+[data-theme="dark"] .mock-networth,
+[data-theme="dark"] .landing-nav-cta,
+[data-theme="dark"] .primary-landing,
+[data-theme="dark"] .auth-tabs button.active,
+[data-theme="dark"] .timeline-scenario-tabs button.active,
+[data-theme="dark"] .timeline-item.now .timeline-node span,
+[data-theme="dark"] .hero-badge span,
+[data-theme="dark"] .trust-grid i,
+[data-theme="dark"] .menu-icon.green {
+  background: linear-gradient(135deg, #2a3349, #1c2436) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,.14) !important;
+}
+[data-theme="dark"] .secondary,
+[data-theme="dark"] .onboarding-head button,
+[data-theme="dark"] .menu-icon.gray,
+[data-theme="dark"] .auth-tabs,
+[data-theme="dark"] .notification-settings-row,
+[data-theme="dark"] .upcoming-card-head button,
+[data-theme="dark"] .balance-display,
+[data-theme="dark"] .account-row input:disabled,
+[data-theme="dark"] .cash-totals div,
+[data-theme="dark"] .mini-pair div,
+[data-theme="dark"] .trend-box,
+[data-theme="dark"] .insight-icon,
+[data-theme="dark"] .timeline-node span,
+[data-theme="dark"] .privacy-band li,
+[data-theme="dark"] .email-reminder-toggles button span {
+  background: #1a2436 !important;
+  color: var(--text) !important;
+}
+
+/* Floating / nav chrome */
+[data-theme="dark"] .mini-menu-btn,
+[data-theme="dark"] .round-nav-btn,
+[data-theme="dark"] .top-menu-btn,
+[data-theme="dark"] .compact-menu-btn,
+[data-theme="dark"] .floating-chip,
+[data-theme="dark"] .floating-stat,
+[data-theme="dark"] .landing-nav,
+[data-theme="dark"] .hero-badge,
+[data-theme="dark"] .trust-grid div,
+[data-theme="dark"] .proof-band > div,
+[data-theme="dark"] .testimonial-grid figure {
+  background: rgba(17,26,44,.92) !important;
+  border-color: rgba(255,255,255,.08) !important;
+  color: var(--text) !important;
+}
+[data-theme="dark"] .bottom-nav {
+  background: rgba(13,19,33,.92) !important;
+  border-top: 1px solid rgba(255,255,255,.08) !important;
+}
+[data-theme="dark"] .bottom-nav button.active { color: #fff !important; }
+
+/* Sheets, modals, fab menus */
+[data-theme="dark"] .menu-sheet,
+[data-theme="dark"] .editor-modal,
+[data-theme="dark"] .asset-fab-menu,
+[data-theme="dark"] .goal-fab-menu {
+  background: rgba(15,22,38,.97) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+}
+[data-theme="dark"] .menu-sheet > button { background: rgba(255,255,255,.04); color: var(--text); }
+[data-theme="dark"] .menu-sheet > button:hover,
+[data-theme="dark"] .menu-sheet > button:active { background: rgba(255,255,255,.10); }
+[data-theme="dark"] .menu-sheet > button b,
+[data-theme="dark"] .menu-sheet > button span,
+[data-theme="dark"] .menu-sheet > button svg { color: var(--text); }
+
+/* Forms */
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea,
+[data-theme="dark"] .editor-modal input,
+[data-theme="dark"] .editor-modal select,
+[data-theme="dark"] .auth-card input,
+[data-theme="dark"] .email-reminder-grid select {
+  background: #0f1830 !important;
+  color: var(--text) !important;
+  border-color: rgba(255,255,255,.14) !important;
+}
+
+/* Accent soft chips (goal cards, insight icons, section chips, etc.) */
+[data-theme="dark"] .goal-card.green, [data-theme="dark"] .mom.good,
+[data-theme="dark"] .insight-card.gain .insight-icon,
+[data-theme="dark"] .timeline-item.gain .timeline-node span,
+[data-theme="dark"] .onboarding-steps button.done > span,
+[data-theme="dark"] .insight-dashboard-card.gain .insights-strip-head span,
+[data-theme="dark"] .upcoming-icon.income { background: rgba(47,143,91,.22) !important; }
+
+[data-theme="dark"] .goal-card.purple, [data-theme="dark"] .section-chip,
+[data-theme="dark"] .insight-card.forecast .insight-icon,
+[data-theme="dark"] .timeline-item.forecast .timeline-node span,
+[data-theme="dark"] .insights-strip-head span,
+[data-theme="dark"] .feature-grid article div,
+[data-theme="dark"] .demo-auth-btn,
+[data-theme="dark"] .email-reminder-toggles button.active span { background: rgba(89,103,232,.24) !important; color: var(--text) !important; }
+
+[data-theme="dark"] .goal-card.red, [data-theme="dark"] .mom.bad,
+[data-theme="dark"] .insight-card.risk .insight-icon,
+[data-theme="dark"] .timeline-item.risk .timeline-node span,
+[data-theme="dark"] .upcoming-icon.expense { background: rgba(201,109,75,.22) !important; }
+
+[data-theme="dark"] .goal-card.gold,
+[data-theme="dark"] .insight-card.gold .insight-icon,
+[data-theme="dark"] .timeline-item.gold .timeline-node span,
+[data-theme="dark"] .insight-dashboard-card.gold .insights-strip-head span,
+[data-theme="dark"] .mock-header span { background: rgba(184,138,43,.22) !important; }
+
+[data-theme="dark"] .goal-icon { background: rgba(255,255,255,.08) !important; color: var(--text) !important; }
+[data-theme="dark"] .pace-card { background: rgba(255,255,255,.06) !important; }
+[data-theme="dark"] .forecast-pill { background: rgba(255,255,255,.08) !important; }
+[data-theme="dark"] .future-value {
+  background: linear-gradient(180deg, rgba(89,103,232,.18), rgba(17,26,44,.92)) !important;
+}
+
+/* Settings / email reminders */
+[data-theme="dark"] .email-reminder-main {
+  background: radial-gradient(circle at 90% 0%, rgba(89,103,232,.16), transparent 32%), #1a2436 !important;
+}
+[data-theme="dark"] .email-reminder-grid label,
+[data-theme="dark"] .email-reminder-toggles button { background: rgba(255,255,255,.05); color: var(--text); }
+[data-theme="dark"] .email-reminder-toggles button.active { color: var(--text); }
+
+/* Upcoming / dashboard slides */
+[data-theme="dark"] .upcoming-mini-item > span,
+[data-theme="dark"] .upcoming-empty { background: #1a2436; color: var(--text); }
+[data-theme="dark"] .feature-dots button.active { background: #fff; }
+[data-theme="dark"] .feature-dots span:first-child { background: #fff; }
+
+/* Insights / timeline structure */
+[data-theme="dark"] .wealth-timeline-list::before {
+  background: linear-gradient(180deg, #6f7890, rgba(255,255,255,.06));
+}
+[data-theme="dark"] .insight-dashboard-card,
+[data-theme="dark"] .insights-strip {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(89,103,232,.14), transparent 30%),
+    rgba(17,26,44,.94) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+}
+
+/* Auth / legal / onboarding shells */
+[data-theme="dark"] .auth-phone,
+[data-theme="dark"] .legal-phone,
+[data-theme="dark"] .mock-phone-inner,
+[data-theme="dark"] .mock-forecast {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(184,138,43,.10), transparent 32%),
+    #0d1321 !important;
+}
+[data-theme="dark"] .google-auth-btn { background: #1a2436 !important; color: var(--text) !important; border-color: rgba(255,255,255,.14) !important; }
+[data-theme="dark"] .google-auth-btn span { background: #fff; border-radius: 50%; }
+
+/* Landing page (pre-auth marketing) */
+[data-theme="dark"] .landing-page {
+  background:
+    radial-gradient(circle at 8% 0%, rgba(184,138,43,.10), transparent 34%),
+    radial-gradient(circle at 92% 10%, rgba(89,103,232,.12), transparent 34%),
+    #0d1321 !important;
+  color: var(--text) !important;
+}
+[data-theme="dark"] .landing-nav nav a:hover { color: #fff !important; }
+[data-theme="dark"] .section-heading > span,
+[data-theme="dark"] .showcase-copy span,
+[data-theme="dark"] .demo-conversion span { background: rgba(255,255,255,.08) !important; color: var(--text) !important; }
+[data-theme="dark"] .secondary-landing { background: #1a2436 !important; color: var(--text) !important; }
+[data-theme="dark"] .demo-conversion button { background: #fff !important; color: #15181D !important; }
+
+/* Mode pills */
+[data-theme="dark"] .mode-pill,
+[data-theme="dark"] .mode-pill.real,
+[data-theme="dark"] .phone .mode-pill.real-mode-pill { background: rgba(47,143,91,.20) !important; color: var(--text); }
+[data-theme="dark"] .mode-pill.demo,
+[data-theme="dark"] .phone .mode-pill.demo-mode-pill { background: rgba(214,122,0,.18) !important; color: #ffd48a !important; border-color: rgba(243,207,120,.28) !important; }
+[data-theme="dark"] .top-asset-label span,
+[data-theme="dark"] .goal-status-chip.warn { background: rgba(214,122,0,.18) !important; color: #ffd48a !important; }
+
+/* =========================================================
+   DARK COUNTER-PASS v2 — additions from screenshot audit
+   (overview minimal dashboard cards, cashflow, accounts)
+   ========================================================= */
+[data-theme="dark"] .minimal-top-asset-card {
+  background:
+    linear-gradient(180deg, rgba(26,36,54,.96), rgba(34,30,18,.55)) !important;
+  border: 1px solid rgba(184,138,43,.34) !important;
+  box-shadow: 0 18px 52px rgba(0,0,0,.45) !important;
+}
+[data-theme="dark"] .minimal-split-card,
+[data-theme="dark"] .minimal-chart-card,
+[data-theme="dark"] .minimal-goal-card,
+[data-theme="dark"] .kpi,
+[data-theme="dark"] .summary-list {
+  background: rgba(17,26,44,.94) !important;
+  border: 1px solid rgba(255,255,255,.08) !important;
+  box-shadow: 0 18px 52px rgba(0,0,0,.45) !important;
+}
+[data-theme="dark"] .minimal-split-card div,
+[data-theme="dark"] .minimal-split-card button {
+  background: #1a2436 !important;
+  border: 1px solid rgba(255,255,255,.07) !important;
+}
+[data-theme="dark"] .minimal-forecast-box {
+  background: linear-gradient(180deg, rgba(89,103,232,.18), rgba(17,26,44,.9)) !important;
+  border: 1px solid rgba(89,103,232,.30) !important;
+}
+[data-theme="dark"] .top-asset-ring .ring-bg { stroke: rgba(255,255,255,.12) !important; }
+[data-theme="dark"] .minimal-top-asset-copy p,
+[data-theme="dark"] .minimal-top-asset-copy small,
+[data-theme="dark"] .minimal-split-card span,
+[data-theme="dark"] .kpi p,
+[data-theme="dark"] .kpi small { color: var(--muted) !important; }
+[data-theme="dark"] .kpi h2,
+[data-theme="dark"] .minimal-row h2,
+[data-theme="dark"] .summary-list strong,
+[data-theme="dark"] .cf-income-value { color: var(--text) !important; }
+[data-theme="dark"] .goals-section-label strong,
+[data-theme="dark"] .settings-section-label { color: var(--muted) !important; }
+
+/* =========================================================
+   Appearance segmented control (Light | Dark) — both themes
+   ========================================================= */
+.theme-segment {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 14px;
+  background: #ECEDEA;
+  border: 1px solid rgba(16,18,20,.06);
+  flex: 0 0 auto;
+}
+.theme-segment button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 900;
+  color: #6D706F;
+  background: transparent;
+  transition: background .15s ease, color .15s ease;
+}
+.theme-segment button.active {
+  background: linear-gradient(135deg, #15181D, #23272F);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(16,18,20,.22);
+}
+[data-theme="dark"] .theme-segment {
+  background: #0f1830;
+  border-color: rgba(255,255,255,.10);
+}
+[data-theme="dark"] .theme-segment button { color: #a8adb9; }
+[data-theme="dark"] .theme-segment button.active {
+  background: linear-gradient(135deg, #3a4663, #2a3349);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0,0,0,.4);
+}
