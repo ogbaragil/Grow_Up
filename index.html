@@ -37,6 +37,21 @@
       });
     }
   </script>
+  <script>
+    // Capture the PWA install event as early as possible (it can fire before
+    // React mounts). Stash it globally and notify the app so the install
+    // prompt can offer one-tap install on Android/Chromium.
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      window.__deferredInstallPrompt = e;
+      window.dispatchEvent(new Event('growup:installavailable'));
+    });
+    window.addEventListener('appinstalled', function () {
+      window.__deferredInstallPrompt = null;
+      try { localStorage.setItem('growup_pwa_installed', '1'); } catch (e) {}
+      window.dispatchEvent(new Event('growup:installed'));
+    });
+  </script>
 </head>
 <body>
   <div id="root"></div>

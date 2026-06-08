@@ -6,7 +6,7 @@ import React from "react";
 import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun } from "lucide-react";
 import { Card, ScreenTitle } from "../components/ui";
 import { useConfirm, useToast } from "../context/ToastContext";
-import { requestGrowUpNotifications, saveEmailReminderPreferences } from "./notifications";
+import { saveEmailReminderPreferences } from "./notifications";
 import { STORAGE_KEY } from "../state/useGrowState";
 
 export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, isPro=false, showUpgrade}) {
@@ -52,31 +52,6 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
 
       {/* ── PREFERENCES ────────────────────────────────────── */}
       <div className="settings-section-label">Preferences</div>
-
-      <Card>
-        <div className="settings-row-head">
-          <div>
-            <h2>Push Notifications</h2>
-            <p>Get reminded when bills are due and to update your monthly balances.</p>
-          </div>
-          <button
-            className={`settings-action-btn ${state.notificationsEnabled ? "primary-tint" : ""}`}
-            onClick={async () => {
-              if (state.notificationsEnabled) {
-                update({ notificationsEnabled: false });
-                notify("Push notifications turned off.", "info");
-              } else {
-                await requestGrowUpNotifications(s => update(s(state)), notify);
-              }
-            }}
-          >
-            {state.notificationsEnabled ? "On" : "Enable"}
-          </button>
-        </div>
-        {state.notificationsEnabled && (
-          <p style={{fontSize:12,color:"var(--green)",fontWeight:800,margin:0}}>✓ You'll be notified about upcoming transactions and monthly balance reminders.</p>
-        )}
-      </Card>
 
       <Card>
         <div className="settings-row-head">

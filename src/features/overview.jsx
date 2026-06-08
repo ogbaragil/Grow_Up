@@ -1,6 +1,6 @@
 import { historyRows } from "../lib/history";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Repeat2, Menu, ChevronDown, TrendingUp, SlidersHorizontal, LogOut } from "lucide-react";
+import { Repeat2, Menu, ChevronDown, TrendingUp, LogOut } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, EmptyState } from "../components/ui";
 import { CompactTxn } from "./cashflow";
@@ -312,8 +312,8 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
           </div>
           <h1>{displayName || "there"}</h1>
         </div>
-        <button className="top-menu-btn compact-menu-btn settings-header-btn" onClick={()=>setTab("settings")} aria-label="Settings">
-          <SlidersHorizontal size={24}/>
+        <button className="top-menu-btn compact-menu-btn settings-header-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={24}/>
         </button>
       </div>
 

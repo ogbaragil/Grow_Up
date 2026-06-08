@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "./supabaseClient";
 import { EditorModal } from "./components/EditorModal";
 import { BottomNav, MenuSheet } from "./components/nav";
+import { InstallPrompt } from "./components/InstallPrompt";
 import { useConfirm, useToast } from "./context/ToastContext";
 import { AssetsDebts } from "./features/accounts";
 import { AuthLogo, AuthScreen, ResetPasswordScreen } from "./features/auth";
@@ -12,7 +13,6 @@ import { HistoryPage } from "./features/history";
 import { InsightsPage } from "./features/insights";
 import { LandingPage } from "./features/landing";
 import { DeleteAccountPage, LegalPage } from "./features/legal";
-import { runGrowUpNotificationChecks } from "./features/notifications";
 import { OnboardingTips, OnboardingWizard } from "./features/onboarding";
 import { BackfillPrompt, MinimalOverview } from "./features/overview";
 import { Settings } from "./features/settings";
@@ -233,9 +233,6 @@ export function App() {
   const totals = useMemo(() => computeTotals(activeState), [activeState]);
   const displayName = demoMode ? "Demo" : getUserDisplayName(session, state);
 
-  useEffect(() => {
-    if (!demoMode) runGrowUpNotificationChecks(activeState);
-  }, [demoMode, activeState]);
   const update = (patch) => setState(s => ({ ...s, ...patch }));
 
   const signOut = async () => {
@@ -450,7 +447,12 @@ export function App() {
   if (!session && !demoMode) {
     const hasUsed = localStorage.getItem("growup_has_used") === "true";
     if (!hasUsed && !authIntent) return <LandingPage />;
-    return <AuthScreen enterDemoMode={enterDemoMode} initialMode={authIntent === "signup" ? "signUp" : "signIn"} />;
+    return (
+      <>
+        <AuthScreen enterDemoMode={enterDemoMode} initialMode={authIntent === "signup" ? "signUp" : "signIn"} />
+        <InstallPrompt show />
+      </>
+    );
   }
 
   if (passwordRecovery && session) {
@@ -573,6 +575,15 @@ export function App() {
           notify={notify}
         />
       )}
+
+      <InstallPrompt
+        aboveNav
+        show={
+          tab === "overview" &&
+          !timelineOpen && !insightsOpen && !compoundOpen && !historyMetric &&
+          !menuOpen && !editor && upgradeSheet === null && !state.showBackfillPrompt
+        }
+      />
     </div>
   );
 }
