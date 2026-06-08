@@ -1396,6 +1396,34 @@ button:disabled {
   content: none !important;
 }
 
+/* Demo pill doubles as an exit control on the overview header.
+   Sits right next to the "Demo" name so visitors who entered from the
+   landing page always have a one-tap way back out of demo mode. */
+.mode-pill.demo-exit-pill,
+.screen .mode-pill.demo-exit-pill,
+.phone .mode-pill.demo-exit-pill {
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: color .15s ease, background .15s ease, border-color .15s ease !important;
+}
+.mode-pill.demo-exit-pill .demo-exit-sep {
+  width: 1px !important;
+  height: 12px !important;
+  background: currentColor !important;
+  opacity: .35 !important;
+  margin: 0 1px !important;
+}
+.mode-pill.demo-exit-pill:hover,
+.mode-pill.demo-exit-pill:focus-visible {
+  color: #b42318 !important;
+  background: #fee4e2 !important;
+  border-color: #f3b4ad !important;
+}
+.mode-pill.demo-exit-pill:focus-visible {
+  outline: 2px solid #b42318 !important;
+  outline-offset: 2px !important;
+}
+
 
 /* =========================================================
    Premium Landing Page

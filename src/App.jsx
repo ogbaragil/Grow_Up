@@ -510,7 +510,7 @@ export function App() {
             )}
 
             {tab === "overview" && (
-              <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} isPro={isPro} showUpgrade={showUpgrade} />
+              <MinimalOverview {...common} setTab={setTab} isDemo={demoMode} isPro={isPro} showUpgrade={showUpgrade} exitDemoMode={exitDemoMode} />
             )}
             {tab === "assets" && <AssetsDebts {...common} />}
             {tab === "cash" && <CashFlow {...common} />}

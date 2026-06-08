@@ -1,6 +1,6 @@
 import { historyRows } from "../lib/history";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Repeat2, Menu, ChevronDown, TrendingUp, SlidersHorizontal } from "lucide-react";
+import { Repeat2, Menu, ChevronDown, TrendingUp, SlidersHorizontal, LogOut } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip } from "recharts";
 import { Card, EmptyState } from "../components/ui";
 import { CompactTxn } from "./cashflow";
@@ -239,7 +239,7 @@ export function BackfillPrompt({ state, setState, setTab }) {
   );
 }
 
-export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade }) {
+export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, setTab, displayName, setInsightsOpen, setTimelineOpen, isDemo=false, isPro=false, showUpgrade, exitDemoMode }) {
   const dashboardState = useMemo(() => latestDashboardState(state), [state]);
   const dashboardTotals = useMemo(() => computeTotals(dashboardState), [dashboardState]);
   const accounts = getAccountsForSelectedMonth(dashboardState);
@@ -292,7 +292,18 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
             {isPro ? (
               <span className="mode-pill pro-mode-pill">✦ Pro</span>
             ) : isDemo ? (
-              <span className="mode-pill demo-mode-pill">Demo Mode</span>
+              <button
+                type="button"
+                className="mode-pill demo-mode-pill demo-exit-pill"
+                onClick={() => exitDemoMode?.()}
+                aria-label="Exit demo mode"
+                title="Exit demo mode"
+              >
+                Demo Mode
+                <span className="demo-exit-sep" aria-hidden="true" />
+                <LogOut size={13} aria-hidden="true" />
+                Exit
+              </button>
             ) : (
               <button className="mode-pill free-mode-pill" onClick={() => showUpgrade?.("general")}>
                 Free · Upgrade
