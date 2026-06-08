@@ -3,35 +3,54 @@ import {
   ArrowRight,
   BarChart3,
   Check,
+  ChevronRight,
   Cloud,
   Database,
-  Eye,
+  EyeOff,
   Fingerprint,
   LineChart,
   Lock,
   Shield,
   Target,
-  TrendingUp,
   Wallet,
-  Zap,
 } from "lucide-react";
 import { PRO_LIMITS, SUPPORT_EMAIL } from "../config";
 
-const SCREENS = [
-  ["/screenshots/overview.jpeg", "Overview dashboard showing net worth and progress"],
-  ["/screenshots/goals.jpeg", "Goals screen with progress cards and forecasts"],
-  ["/screenshots/cashflow.jpeg", "Cash flow screen showing recurring transactions"],
-  ["/screenshots/assets-1.jpeg", "Assets and debts screen with account balances"],
+const screens = {
+  overview: ["/screenshots/overview.jpeg", "Grow UP overview dashboard with net worth and monthly movement"],
+  goals: ["/screenshots/goals.jpeg", "Grow UP goals screen with progress timelines"],
+  cashflow: ["/screenshots/cashflow.jpeg", "Grow UP cash flow screen with income, expenses, and surplus"],
+  assets: ["/screenshots/assets-1.jpeg", "Grow UP assets and debts screen with balances"],
+};
+
+const story = [
+  {
+    eyebrow: "01 · Overview",
+    title: "Net worth that stays visible.",
+    body: "Your assets, debts, and monthly movement stay in one calm view — clear enough to revisit every month.",
+    image: screens.overview,
+  },
+  {
+    eyebrow: "02 · Goals",
+    title: "Milestones with real timelines.",
+    body: "Track what you are building toward and estimate dates from actual pace, not wishful thinking.",
+    image: screens.goals,
+  },
+  {
+    eyebrow: "03 · Cash flow",
+    title: "Future money, without a spreadsheet.",
+    body: "Model income, expenses, recurring transactions, and surplus without handing over bank credentials.",
+    image: screens.cashflow,
+  },
+  {
+    eyebrow: "04 · Assets & debts",
+    title: "A monthly record you can trust.",
+    body: "Update balances, add notes, and build a financial memory that is easier to inspect over time.",
+    image: screens.assets,
+  },
 ];
 
-const FEATURES = [
-  [TrendingUp, "Net worth that stays visible", "Track assets, debts, and month-to-month movement without building another spreadsheet."],
-  [Target, "Goals with real timelines", "Estimate when goals may be reached from your actual pace, not optimistic guesses."],
-  [Wallet, "Cash flow without bank scraping", "Model income, expenses, recurring money movement, and surplus on your terms."],
-  [LineChart, "A longer financial memory", "Snapshots and projections help you see whether today's habits are creating momentum."],
-];
-
-const PRINCIPLES = [
+const principles = [
   [Shield, "No forced bank linking", "Grow UP does not need your bank credentials to be useful."],
   [Database, "Manual by design", "Intentional inputs create a calmer relationship with money."],
   [Cloud, "Backup when wanted", "Create an account only when you want cloud backup and restore."],
@@ -39,16 +58,44 @@ const PRINCIPLES = [
 ];
 
 function Reveal({ children, className = "", delay = 0, as: Tag = "div", id }) {
-  return <Tag id={id} className={className} data-reveal style={{ transitionDelay: `${delay}ms` }}>{children}</Tag>;
+  return (
+    <Tag id={id} className={className} data-reveal style={{ transitionDelay: `${delay}ms` }}>
+      {children}
+    </Tag>
+  );
 }
 
-function PhoneStack() {
+function AppButton({ children, variant = "primary", onClick }) {
   return (
-    <div className="gu-phone-stage" aria-label="Grow UP product preview">
-      <div className="gu-phone gu-phone-back"><img src="/screenshots/goals.jpeg" alt="" /></div>
-      <div className="gu-phone gu-phone-main"><img src="/screenshots/overview.jpeg" alt="Grow UP overview dashboard" /></div>
-      <div className="gu-float gu-float-one"><small>Net worth</small><strong>$93,400</strong><span>+$1,823 this month</span></div>
-      <div className="gu-float gu-float-two"><small>Goal forecast</small><strong>Debt free · 67%</strong></div>
+    <button onClick={onClick} className={`gwu-btn gwu-${variant}`}>
+      {children}
+    </button>
+  );
+}
+
+function Device({ src, alt, className = "" }) {
+  return (
+    <figure className={`gwu-device ${className}`}>
+      <img src={src} alt={alt} loading="lazy" />
+    </figure>
+  );
+}
+
+function HeroVisual() {
+  return (
+    <div className="gwu-hero-visual" aria-label="Grow UP product preview">
+      <Device src={screens.goals[0]} alt="" className="gwu-hero-phone gwu-hero-phone-left" />
+      <Device src={screens.overview[0]} alt="Grow UP overview dashboard" className="gwu-hero-phone gwu-hero-phone-main" />
+      <Device src={screens.assets[0]} alt="" className="gwu-hero-phone gwu-hero-phone-right" />
+      <div className="gwu-insight-card gwu-insight-one">
+        <span>Net worth</span>
+        <strong>$93,400</strong>
+        <em>+$1,823 this month</em>
+      </div>
+      <div className="gwu-insight-card gwu-insight-two">
+        <span>Goal forecast</span>
+        <strong>Debt free · 67%</strong>
+      </div>
     </div>
   );
 }
@@ -72,7 +119,7 @@ export function LandingPage() {
           observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.12, rootMargin: "0px 0px -70px 0px" });
+    }, { threshold: 0.14, rootMargin: "0px 0px -80px 0px" });
     nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
   }, []);
@@ -80,131 +127,176 @@ export function LandingPage() {
   useEffect(() => {
     const fine = window.matchMedia("(pointer: fine)").matches;
     if (!fine) return;
-    const onMove = (event) => {
-      document.documentElement.style.setProperty("--landing-x", `${event.clientX}px`);
-      document.documentElement.style.setProperty("--landing-y", `${event.clientY}px`);
+    const move = (event) => {
+      document.documentElement.style.setProperty("--gwu-x", `${event.clientX}px`);
+      document.documentElement.style.setProperty("--gwu-y", `${event.clientY}px`);
     };
-    window.addEventListener("pointermove", onMove);
-    return () => window.removeEventListener("pointermove", onMove);
+    window.addEventListener("pointermove", move);
+    return () => window.removeEventListener("pointermove", move);
   }, []);
 
   return (
-    <div className="landing-page growup-worldclass gu-v2">
-      <div className="gu-cursor" aria-hidden="true" />
-      <header className="gu-nav">
-        <a className="gu-brand" href="/landingpage" aria-label="Grow UP landing page">
-          <span className="gu-logo"><img src="/icons/growup-logo.png" alt="" /></span>
-          <span><b>Grow UP</b><small>personal wealth tracker</small></span>
+    <div className="landing-page growup-editorial">
+      <div className="gwu-cursor" aria-hidden="true" />
+
+      <header className="gwu-nav-shell">
+        <a className="gwu-brand" href="/landingpage" aria-label="Grow UP landing page">
+          <span className="gwu-mark"><img src="/icons/growup-logo.png" alt="" /></span>
+          <span><b>Grow UP</b><small>Personal wealth tracker</small></span>
         </a>
-        <nav>
-          <a href="#product">Product</a><a href="#features">Features</a><a href="#privacy">Privacy</a><a href="#pricing">Pricing</a>
+        <nav aria-label="Landing navigation">
+          <a href="#product">Product</a>
+          <a href="#how">How it works</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#pricing">Pricing</a>
         </nav>
-        <button onClick={startSignin} className="gu-signin">Sign in</button>
+        <button onClick={startSignin} className="gwu-signin">Sign in</button>
       </header>
 
       <main>
-        <section className="gu-hero">
-          <div className="gu-hero-copy">
-            <Reveal className="gu-pill"><span /> Manual wealth tracking. Clearer direction.</Reveal>
+        <section className="gwu-hero">
+          <Reveal className="gwu-hero-copy">
+            <span className="gwu-pill"><i /> Manual wealth tracking. Clearer direction.</span>
             <h1>Money clarity, without handing over your bank login.</h1>
             <p>Grow UP brings your assets, debts, goals, cash flow, and long-term projections into one calm dashboard — so progress becomes visible month after month.</p>
-            <div className="gu-actions">
-              <button onClick={startSignup} className="gu-btn gu-primary">Start free <ArrowRight size={18} /></button>
-              <button onClick={tryDemo} className="gu-btn gu-secondary">Explore demo</button>
+            <div className="gwu-actions">
+              <AppButton onClick={startSignup}>Start free <ArrowRight size={18} /></AppButton>
+              <AppButton variant="ghost" onClick={tryDemo}>Explore demo</AppButton>
             </div>
-            <div className="gu-trust">
-              {['No bank connection required','Private by default','Cloud backup when wanted','Free to start'].map((item) => <span key={item}><Check size={14}/>{item}</span>)}
+            <div className="gwu-trustline">
+              <span><Check size={15}/> No bank connection required</span>
+              <span><Check size={15}/> Private by default</span>
+              <span><Check size={15}/> Cloud backup when wanted</span>
             </div>
-          </div>
-          <Reveal className="gu-hero-visual" delay={100}><PhoneStack /></Reveal>
+          </Reveal>
+          <Reveal className="gwu-visual-wrap" delay={120}><HeroVisual /></Reveal>
         </section>
 
-        <Reveal as="section" className="gu-product-band" id="product">
-          <div className="gu-band-head">
-            <span className="gu-kicker">The product</span>
+        <Reveal as="section" className="gwu-product-editorial" id="product">
+          <div className="gwu-editorial-copy">
+            <span className="gwu-kicker">The product</span>
             <h2>Your financial command centre, made legible.</h2>
             <p>Not another budgeting feed. Grow UP is a monthly wealth ritual: update the important numbers, see what changed, and understand what your current path is building.</p>
           </div>
-          <div className="gu-screen-wall">
-            {SCREENS.map(([src, alt], i) => <figure key={src} className={`gu-screen gu-screen-${i+1}`}><img src={src} alt={alt} /></figure>)}
+          <div className="gwu-screen-row">
+            <Device src={screens.overview[0]} alt={screens.overview[1]} />
+            <Device src={screens.goals[0]} alt={screens.goals[1]} />
+            <Device src={screens.cashflow[0]} alt={screens.cashflow[1]} />
+            <Device src={screens.assets[0]} alt={screens.assets[1]} />
           </div>
         </Reveal>
 
-        <section className="gu-section gu-light" id="features">
-          <Reveal className="gu-section-head">
-            <span className="gu-kicker">What it brings together</span>
-            <h2>Progress you can actually inspect.</h2>
-            <p>The app focuses on direction: what you own, what you owe, what is changing, and what goals are becoming more realistic.</p>
+        <section className="gwu-story" id="how">
+          <Reveal className="gwu-story-head">
+            <span className="gwu-kicker">How it works</span>
+            <h2>Four screens. One monthly habit.</h2>
+            <p>Grow UP focuses on direction: what you own, what you owe, what is changing, and what goals are becoming more realistic.</p>
           </Reveal>
-          <div className="gu-feature-grid">
-            {FEATURES.map(([Icon, title, body], i) => <Reveal as="article" className="gu-feature" delay={i*70} key={title}><div><Icon size={22}/></div><h3>{title}</h3><p>{body}</p></Reveal>)}
+          <div className="gwu-story-list">
+            {story.map((item, index) => (
+              <Reveal as="article" className="gwu-story-item" delay={index * 80} key={item.title}>
+                <div className="gwu-story-text">
+                  <span>{item.eyebrow}</span>
+                  <h3>{item.title}</h3>
+                  <p>{item.body}</p>
+                </div>
+                <Device src={item.image[0]} alt={item.image[1]} className="gwu-story-device" />
+              </Reveal>
+            ))}
           </div>
         </section>
 
-        <Reveal as="section" className="gu-demo-panel" id="demo">
+        <Reveal as="section" className="gwu-demo" id="demo">
           <div>
-            <span className="gu-kicker">Interactive demo</span>
+            <span className="gwu-kicker">Interactive demo</span>
             <h2>Click around before you commit.</h2>
             <p>Demo Mode opens with realistic sample data and stays read-only. Explore accounts, goals, cash flow, history, and projections without creating an account.</p>
-            <button onClick={tryDemo} className="gu-btn gu-primary">Open demo <ArrowRight size={18}/></button>
+            <AppButton onClick={tryDemo}>Open demo <ArrowRight size={18} /></AppButton>
           </div>
-          <div className="gu-demo-orbit" aria-hidden="true"><BarChart3/><Target/><Wallet/></div>
+          <div className="gwu-demo-icons" aria-hidden="true">
+            <BarChart3 /><Target /><Wallet />
+          </div>
         </Reveal>
 
-        <section className="gu-section gu-dark" id="privacy">
-          <Reveal className="gu-section-head">
-            <span className="gu-kicker"><Fingerprint size={16}/> Privacy posture</span>
-            <h2>Designed for financial data people actually care about.</h2>
+        <section className="gwu-privacy" id="privacy">
+          <Reveal className="gwu-privacy-intro">
+            <span className="gwu-kicker"><Fingerprint size={15}/> Privacy posture</span>
+            <h2>Your financial life does not belong to an aggregator.</h2>
             <p>Grow UP is deliberately restrained. You decide what to enter, what to back up, and when to restore saved data.</p>
           </Reveal>
-          <div className="gu-principle-grid">
-            {PRINCIPLES.map(([Icon, title, body], i) => <Reveal as="article" className="gu-principle" delay={i*70} key={title}><Icon size={24}/><h3>{title}</h3><p>{body}</p></Reveal>)}
+          <div className="gwu-principles">
+            {principles.map(([Icon, title, body], index) => (
+              <Reveal as="article" className="gwu-principle" delay={index * 70} key={title}>
+                <Icon size={22} />
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </Reveal>
+            ))}
           </div>
         </section>
 
-        <section className="gu-section gu-light" id="pricing">
-          <Reveal className="gu-section-head centered">
-            <span className="gu-kicker">Pricing</span>
+        <section className="gwu-pricing" id="pricing">
+          <Reveal className="gwu-pricing-head">
+            <span className="gwu-kicker">Pricing</span>
             <h2>Start free. Upgrade when the picture grows.</h2>
             <p>No pressure wall. The free plan is useful; Pro is for people who want the full long-term system.</p>
           </Reveal>
-          <div className="gu-pricing-grid">
-            <Reveal as="article" className="gu-price-card">
-              <h3>Free</h3><strong>A$0</strong><small>forever</small>
+          <div className="gwu-plan-table">
+            <Reveal as="article" className="gwu-plan">
+              <div>
+                <h3>Free</h3>
+                <strong>A$0</strong>
+                <small>forever</small>
+              </div>
               <ul>
-                <li><Check/> Net worth dashboard</li>
-                <li><Check/> Up to {PRO_LIMITS.accounts} accounts</li>
-                <li><Check/> Up to {PRO_LIMITS.goals} goals</li>
-                <li><Check/> Up to {PRO_LIMITS.transactions} recurring transactions</li>
-                <li><Check/> {PRO_LIMITS.snapshotMonths} months of history</li>
+                <li><Check size={16}/> Net worth dashboard</li>
+                <li><Check size={16}/> Up to {PRO_LIMITS.accounts} accounts</li>
+                <li><Check size={16}/> Up to {PRO_LIMITS.goals} goals</li>
+                <li><Check size={16}/> Up to {PRO_LIMITS.transactions} recurring transactions</li>
+                <li><Check size={16}/> {PRO_LIMITS.snapshotMonths} months of history</li>
               </ul>
-              <button onClick={startSignup} className="gu-btn gu-secondary">Start free</button>
+              <AppButton variant="ghost" onClick={startSignup}>Start free</AppButton>
             </Reveal>
-            <Reveal as="article" className="gu-price-card pro" delay={90}>
-              <em>Most popular</em><h3>Pro</h3><strong>A$3.99</strong><small>/month or A$39.99/year</small>
+            <Reveal as="article" className="gwu-plan gwu-pro" delay={100}>
+              <em>Most popular</em>
+              <div>
+                <h3>Pro</h3>
+                <strong>A$3.99</strong>
+                <small>/month or A$39.99/year</small>
+              </div>
               <ul>
-                <li><Check/> Everything in Free</li>
-                <li><Check/> Unlimited accounts, goals, transactions</li>
-                <li><Check/> Full snapshot history</li>
-                <li><Check/> Smart insights</li>
-                <li><Check/> Wealth Timeline projections</li>
+                <li><Check size={16}/> Everything in Free</li>
+                <li><Check size={16}/> Unlimited accounts, goals, transactions</li>
+                <li><Check size={16}/> Full snapshot history</li>
+                <li><Check size={16}/> Smart insights</li>
+                <li><Check size={16}/> Wealth Timeline projections</li>
               </ul>
-              <button onClick={startSignup} className="gu-btn gu-primary">Start free, upgrade any time</button>
+              <AppButton onClick={startSignup}>Start free, upgrade any time</AppButton>
             </Reveal>
           </div>
         </section>
 
-        <Reveal as="section" className="gu-final">
-          <Zap size={24}/>
+        <Reveal as="section" className="gwu-final">
+          <EyeOff size={24} />
           <h2>Your money deserves a longer memory.</h2>
           <p>Make the monthly update. See the direction. Build a financial picture you actually understand.</p>
-          <div><button onClick={startSignup} className="gu-btn gu-primary">Create free account</button><button onClick={tryDemo} className="gu-btn gu-secondary">Explore demo</button></div>
+          <div className="gwu-actions center">
+            <AppButton onClick={startSignup}>Create free account</AppButton>
+            <AppButton variant="ghost" onClick={tryDemo}>Explore demo <ChevronRight size={18} /></AppButton>
+          </div>
         </Reveal>
       </main>
 
-      <footer className="gu-footer">
-        <a className="gu-brand" href="/landingpage"><span className="gu-logo"><img src="/icons/growup-logo.png" alt="" /></span><span><b>Grow UP</b><small>© {new Date().getFullYear()}</small></span></a>
-        <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a></div>
+      <footer className="gwu-footer">
+        <a className="gwu-brand" href="/landingpage">
+          <span className="gwu-mark"><img src="/icons/growup-logo.png" alt="" /></span>
+          <span><b>Grow UP</b><small>© {new Date().getFullYear()}</small></span>
+        </a>
+        <div>
+          <a href="/privacy">Privacy</a>
+          <a href="/terms">Terms</a>
+          <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
+        </div>
       </footer>
     </div>
   );
