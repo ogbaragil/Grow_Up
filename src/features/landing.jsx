@@ -1,330 +1,210 @@
 import React, { useEffect } from "react";
-import { Check, LineChart, Target, Telescope, TrendingUp, Zap } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart3,
+  Check,
+  Cloud,
+  Database,
+  Eye,
+  Fingerprint,
+  LineChart,
+  Lock,
+  Shield,
+  Target,
+  TrendingUp,
+  Wallet,
+  Zap,
+} from "lucide-react";
 import { PRO_LIMITS, SUPPORT_EMAIL } from "../config";
 
-// Replace with real user quotes when you have them — the band stays hidden
-// while this array is empty, so nothing fake ever ships.
-const TESTIMONIALS = [
-  // { quote: "Finally see all my money in one place without linking my bank.", name: "Sam", detail: "Early user" },
+const SCREENS = [
+  ["/screenshots/overview.jpeg", "Overview dashboard showing net worth and progress"],
+  ["/screenshots/goals.jpeg", "Goals screen with progress cards and forecasts"],
+  ["/screenshots/cashflow.jpeg", "Cash flow screen showing recurring transactions"],
+  ["/screenshots/assets-1.jpeg", "Assets and debts screen with account balances"],
 ];
 
-const PROOF_STATS = [
-  { value: "16", label: "currencies supported" },
-  { value: "5 min", label: "average setup time" },
-  { value: "A$0", label: "to start — free forever plan" },
+const FEATURES = [
+  [TrendingUp, "Net worth that stays visible", "Track assets, debts, and month-to-month movement without building another spreadsheet."],
+  [Target, "Goals with real timelines", "Estimate when goals may be reached from your actual pace, not optimistic guesses."],
+  [Wallet, "Cash flow without bank scraping", "Model income, expenses, recurring money movement, and surplus on your terms."],
+  [LineChart, "A longer financial memory", "Snapshots and projections help you see whether today's habits are creating momentum."],
 ];
+
+const PRINCIPLES = [
+  [Shield, "No forced bank linking", "Grow UP does not need your bank credentials to be useful."],
+  [Database, "Manual by design", "Intentional inputs create a calmer relationship with money."],
+  [Cloud, "Backup when wanted", "Create an account only when you want cloud backup and restore."],
+  [Lock, "Private by default", "No transaction scraping, no surveillance finance, no unnecessary data grab."],
+];
+
+function Reveal({ children, className = "", delay = 0, as: Tag = "div", id }) {
+  return <Tag id={id} className={className} data-reveal style={{ transitionDelay: `${delay}ms` }}>{children}</Tag>;
+}
+
+function PhoneStack() {
+  return (
+    <div className="gu-phone-stage" aria-label="Grow UP product preview">
+      <div className="gu-phone gu-phone-back"><img src="/screenshots/goals.jpeg" alt="" /></div>
+      <div className="gu-phone gu-phone-main"><img src="/screenshots/overview.jpeg" alt="Grow UP overview dashboard" /></div>
+      <div className="gu-float gu-float-one"><small>Net worth</small><strong>$93,400</strong><span>+$1,823 this month</span></div>
+      <div className="gu-float gu-float-two"><small>Goal forecast</small><strong>Debt free · 67%</strong></div>
+    </div>
+  );
+}
 
 export function LandingPage() {
-  const startSignup = () => {
-    window.location.href = "/?auth=signup";
-  };
+  const startSignup = () => { window.location.href = "/?auth=signup"; };
+  const startSignin = () => { window.location.href = "/?auth=signin"; };
+  const tryDemo = () => { localStorage.setItem("growup_demo_mode", "true"); window.location.href = "/"; };
 
-  const startSignin = () => {
-    window.location.href = "/?auth=signin";
-  };
-
-  const tryDemo = () => {
-    localStorage.setItem("growup_demo_mode", "true");
-    window.location.href = "/";
-  };
-
-  // Restrained scroll-reveal: fade-up once, ~400ms, disabled for users who
-  // prefer reduced motion.
   useEffect(() => {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const nodes = document.querySelectorAll("[data-reveal]");
     if (reduced || !("IntersectionObserver" in window)) {
-      nodes.forEach(n => n.classList.add("is-revealed"));
+      nodes.forEach((node) => node.classList.add("is-revealed"));
       return;
     }
     const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
+      entries.forEach((entry) => {
         if (entry.isIntersecting) {
           entry.target.classList.add("is-revealed");
           observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.15, rootMargin: "0px 0px -40px 0px" });
-    nodes.forEach(n => observer.observe(n));
+    }, { threshold: 0.12, rootMargin: "0px 0px -70px 0px" });
+    nodes.forEach((node) => observer.observe(node));
     return () => observer.disconnect();
   }, []);
 
-  const features = [
-    {
-      icon: TrendingUp,
-      title: "Track real wealth",
-      body: "See assets, debts, net worth, goals, and cash flow in one calm dashboard."
-    },
-    {
-      icon: Target,
-      title: "Forecast your goals",
-      body: "Estimate completion dates from your actual month-by-month progress."
-    },
-    {
-      icon: Zap,
-      title: "Crush debt faster",
-      body: "Track payoff momentum and understand how quickly debt is moving down."
-    },
-    {
-      icon: Telescope,
-      title: "Project the future",
-      body: "Use compound wealth scenarios to visualise long-term financial outcomes."
-    }
-  ];
+  useEffect(() => {
+    const fine = window.matchMedia("(pointer: fine)").matches;
+    if (!fine) return;
+    const onMove = (event) => {
+      document.documentElement.style.setProperty("--landing-x", `${event.clientX}px`);
+      document.documentElement.style.setProperty("--landing-y", `${event.clientY}px`);
+    };
+    window.addEventListener("pointermove", onMove);
+    return () => window.removeEventListener("pointermove", onMove);
+  }, []);
 
   return (
-    <div className="landing-page">
-      <header className="landing-nav">
-        <a className="landing-brand" href="/landingpage" aria-label="Grow UP landing page">
-          <span className="landing-logo app-icon"><img src="/icons/growup-logo.png" alt="" /></span>
-          <span>
-            <b>Grow UP</b>
-            <small>Personal Wealth OS</small>
-          </span>
+    <div className="landing-page growup-worldclass gu-v2">
+      <div className="gu-cursor" aria-hidden="true" />
+      <header className="gu-nav">
+        <a className="gu-brand" href="/landingpage" aria-label="Grow UP landing page">
+          <span className="gu-logo"><img src="/icons/growup-logo.png" alt="" /></span>
+          <span><b>Grow UP</b><small>personal wealth tracker</small></span>
         </a>
-
         <nav>
-          <a href="#features">Features</a>
-          <a href="#demo">Demo</a>
-          <a href="#pricing">Pricing</a>
-          <a href="#privacy">Privacy</a>
+          <a href="#product">Product</a><a href="#features">Features</a><a href="#privacy">Privacy</a><a href="#pricing">Pricing</a>
         </nav>
-
-        <button onClick={startSignin} className="landing-nav-cta">Sign in</button>
+        <button onClick={startSignin} className="gu-signin">Sign in</button>
       </header>
 
       <main>
-        <section className="landing-hero">
-          <div className="hero-copy hero-enter">
-            <div className="hero-badge">
-              <span></span>
-              Built for intentional wealth builders
+        <section className="gu-hero">
+          <div className="gu-hero-copy">
+            <Reveal className="gu-pill"><span /> Manual wealth tracking. Clearer direction.</Reveal>
+            <h1>Money clarity, without handing over your bank login.</h1>
+            <p>Grow UP brings your assets, debts, goals, cash flow, and long-term projections into one calm dashboard — so progress becomes visible month after month.</p>
+            <div className="gu-actions">
+              <button onClick={startSignup} className="gu-btn gu-primary">Start free <ArrowRight size={18} /></button>
+              <button onClick={tryDemo} className="gu-btn gu-secondary">Explore demo</button>
             </div>
-
-            <h1>
-              See your complete
-              <br />
-              financial picture.
-            </h1>
-
-            <p>
-              Track net worth, forecast goals, and watch your progress become a timeline — no spreadsheets, no bank logins, no stress.
-            </p>
-
-            <div className="hero-actions">
-              <button onClick={startSignup} className="primary-landing">Start free</button>
-              <button onClick={tryDemo} className="secondary-landing">Explore the demo</button>
-            </div>
-
-            <div className="trust-grid">
-              {["No bank connection required", "Private by default", "Secure cloud backup", "Built for long-term wealth"].map(item => (
-                <div key={item}>
-                  <i><Check size={13} strokeWidth={3.5} /></i>
-                  <span>{item}</span>
-                </div>
-              ))}
+            <div className="gu-trust">
+              {['No bank connection required','Private by default','Cloud backup when wanted','Free to start'].map((item) => <span key={item}><Check size={14}/>{item}</span>)}
             </div>
           </div>
+          <Reveal className="gu-hero-visual" delay={100}><PhoneStack /></Reveal>
+        </section>
 
-          <div className="hero-visual hero-enter delayed">
-            <div className="hero-device-wrap">
-              <div className="hero-device">
-                <img src="/screenshots/overview.jpeg" alt="Grow UP overview dashboard showing net worth and trends" />
-              </div>
+        <Reveal as="section" className="gu-product-band" id="product">
+          <div className="gu-band-head">
+            <span className="gu-kicker">The product</span>
+            <h2>Your financial command centre, made legible.</h2>
+            <p>Not another budgeting feed. Grow UP is a monthly wealth ritual: update the important numbers, see what changed, and understand what your current path is building.</p>
+          </div>
+          <div className="gu-screen-wall">
+            {SCREENS.map(([src, alt], i) => <figure key={src} className={`gu-screen gu-screen-${i+1}`}><img src={src} alt={alt} /></figure>)}
+          </div>
+        </Reveal>
 
-              <div className="floating-chip float-soft">
-                <small>Goal forecast</small>
-                <strong>Debt free · 67%</strong>
-              </div>
-
-              <div className="floating-stat float-soft slower">
-                <small>Monthly growth</small>
-                <strong>+$2,430</strong>
-                <span>On track this month</span>
-              </div>
-            </div>
+        <section className="gu-section gu-light" id="features">
+          <Reveal className="gu-section-head">
+            <span className="gu-kicker">What it brings together</span>
+            <h2>Progress you can actually inspect.</h2>
+            <p>The app focuses on direction: what you own, what you owe, what is changing, and what goals are becoming more realistic.</p>
+          </Reveal>
+          <div className="gu-feature-grid">
+            {FEATURES.map(([Icon, title, body], i) => <Reveal as="article" className="gu-feature" delay={i*70} key={title}><div><Icon size={22}/></div><h3>{title}</h3><p>{body}</p></Reveal>)}
           </div>
         </section>
 
-        <section className="proof-band" data-reveal>
-          {PROOF_STATS.map(stat => (
-            <div key={stat.label}>
-              <strong>{stat.value}</strong>
-              <span>{stat.label}</span>
-            </div>
-          ))}
-        </section>
-
-        {TESTIMONIALS.length > 0 && (
-          <section className="landing-section testimonials-section" data-reveal>
-            <div className="section-heading">
-              <span>From early users</span>
-              <h2>People are switching off their spreadsheets.</h2>
-            </div>
-            <div className="testimonial-grid">
-              {TESTIMONIALS.map(t => (
-                <figure key={t.name}>
-                  <blockquote>“{t.quote}”</blockquote>
-                  <figcaption><b>{t.name}</b> · {t.detail}</figcaption>
-                </figure>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section id="features" className="landing-section">
-          <div className="section-heading" data-reveal>
-            <span>Why Grow UP</span>
-            <h2>Build wealth with calm precision.</h2>
-            <p>See your assets, debt, cash flow, goals, insights, and future milestones in one premium wealth dashboard.</p>
-          </div>
-
-          <div className="feature-grid">
-            {features.map((feature, i) => {
-              const Icon = feature.icon;
-              return (
-                <article key={feature.title} data-reveal style={{ transitionDelay: `${i * 70}ms` }}>
-                  <div className="feature-icon"><Icon size={22} strokeWidth={2.4} /></div>
-                  <h3>{feature.title}</h3>
-                  <p>{feature.body}</p>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-
-        <section className="landing-section screens-section">
-          <div className="section-heading" data-reveal>
-            <span>See it in action</span>
-            <h2>The real app, not a render.</h2>
-            <p>Every screen below is Grow UP as your users see it — overview, goals, cash flow, and accounts.</p>
-          </div>
-
-          <div className="screens-row" data-reveal>
-            {[
-              ["/screenshots/overview.jpeg", "Overview dashboard with net worth and trends"],
-              ["/screenshots/goals.jpeg", "Wealth goals with progress and forecasts"],
-              ["/screenshots/cashflow.jpeg", "Recurring cash flow tracking"],
-              ["/screenshots/assets-1.jpeg", "Assets and debts with monthly snapshots"],
-            ].map(([src, alt]) => (
-              <img key={src} src={src} alt={alt} loading="lazy" />
-            ))}
-          </div>
-        </section>
-
-        <section id="demo" className="demo-conversion" data-reveal>
+        <Reveal as="section" className="gu-demo-panel" id="demo">
           <div>
-            <span>Interactive demo</span>
-            <h2>Try the full experience instantly.</h2>
-            <p>
-              Explore Grow UP with realistic sample data. No signup required. Demo Mode is read-only, so you can safely click around.
-            </p>
-            <button onClick={tryDemo}>Open the interactive demo</button>
+            <span className="gu-kicker">Interactive demo</span>
+            <h2>Click around before you commit.</h2>
+            <p>Demo Mode opens with realistic sample data and stays read-only. Explore accounts, goals, cash flow, history, and projections without creating an account.</p>
+            <button onClick={tryDemo} className="gu-btn gu-primary">Open demo <ArrowRight size={18}/></button>
+          </div>
+          <div className="gu-demo-orbit" aria-hidden="true"><BarChart3/><Target/><Wallet/></div>
+        </Reveal>
+
+        <section className="gu-section gu-dark" id="privacy">
+          <Reveal className="gu-section-head">
+            <span className="gu-kicker"><Fingerprint size={16}/> Privacy posture</span>
+            <h2>Designed for financial data people actually care about.</h2>
+            <p>Grow UP is deliberately restrained. You decide what to enter, what to back up, and when to restore saved data.</p>
+          </Reveal>
+          <div className="gu-principle-grid">
+            {PRINCIPLES.map(([Icon, title, body], i) => <Reveal as="article" className="gu-principle" delay={i*70} key={title}><Icon size={24}/><h3>{title}</h3><p>{body}</p></Reveal>)}
           </div>
         </section>
 
-        <section className="product-showcase">
-          <div className="showcase-copy" data-reveal>
-            <span>Built around momentum</span>
-            <h2>Not another budget tracker.</h2>
-            <p>
-              Grow UP is designed around wealth identity: snapshots, goals, insights, timeline projections, and long-term momentum.
-            </p>
-          </div>
-
-          <div className="showcase-cards">
-            {[
-              ["01", "Monthly snapshots", "Store historical assets, debts, and net worth so progress becomes visible."],
-              ["02", "Goal forecasting", "Estimate when you will hit goals based on your actual historical pace."],
-              ["03", "Flexible cash flow", "Track weekly, fortnightly, monthly, quarterly, yearly, and one-off items."],
-            ].map(([num, title, body], i) => (
-              <article key={num} data-reveal style={{ transitionDelay: `${i * 70}ms` }}>
-                <b>{num}</b>
-                <h3>{title}</h3>
-                <p>{body}</p>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section id="pricing" className="landing-section pricing-section">
-          <div className="section-heading" data-reveal>
-            <span>Pricing</span>
-            <h2>Free to start. Cheap to go all in.</h2>
-            <p>Begin with the free plan and upgrade only when your wealth picture outgrows it.</p>
-          </div>
-
-          <div className="pricing-grid">
-            <article data-reveal>
-              <h3>Free</h3>
-              <div className="price"><strong>A$0</strong><span>forever</span></div>
+        <section className="gu-section gu-light" id="pricing">
+          <Reveal className="gu-section-head centered">
+            <span className="gu-kicker">Pricing</span>
+            <h2>Start free. Upgrade when the picture grows.</h2>
+            <p>No pressure wall. The free plan is useful; Pro is for people who want the full long-term system.</p>
+          </Reveal>
+          <div className="gu-pricing-grid">
+            <Reveal as="article" className="gu-price-card">
+              <h3>Free</h3><strong>A$0</strong><small>forever</small>
               <ul>
-                <li><Check size={15} strokeWidth={3} /> Net worth dashboard</li>
-                <li><Check size={15} strokeWidth={3} /> Up to {PRO_LIMITS.accounts} accounts</li>
-                <li><Check size={15} strokeWidth={3} /> Up to {PRO_LIMITS.goals} goals</li>
-                <li><Check size={15} strokeWidth={3} /> Up to {PRO_LIMITS.transactions} recurring transactions</li>
-                <li><Check size={15} strokeWidth={3} /> {PRO_LIMITS.snapshotMonths} months of snapshot history</li>
-                <li><Check size={15} strokeWidth={3} /> Compound calculator &amp; cloud backup</li>
+                <li><Check/> Net worth dashboard</li>
+                <li><Check/> Up to {PRO_LIMITS.accounts} accounts</li>
+                <li><Check/> Up to {PRO_LIMITS.goals} goals</li>
+                <li><Check/> Up to {PRO_LIMITS.transactions} recurring transactions</li>
+                <li><Check/> {PRO_LIMITS.snapshotMonths} months of history</li>
               </ul>
-              <button onClick={startSignup} className="secondary-landing">Start free</button>
-            </article>
-
-            <article className="featured" data-reveal style={{ transitionDelay: "80ms" }}>
-              <em>Most popular</em>
-              <h3>Pro</h3>
-              <div className="price"><strong>A$3.99</strong><span>/month, or A$39.99/year</span></div>
+              <button onClick={startSignup} className="gu-btn gu-secondary">Start free</button>
+            </Reveal>
+            <Reveal as="article" className="gu-price-card pro" delay={90}>
+              <em>Most popular</em><h3>Pro</h3><strong>A$3.99</strong><small>/month or A$39.99/year</small>
               <ul>
-                <li><Check size={15} strokeWidth={3} /> Everything in Free</li>
-                <li><Check size={15} strokeWidth={3} /> Unlimited accounts, goals &amp; transactions</li>
-                <li><Check size={15} strokeWidth={3} /> Full snapshot history</li>
-                <li><Check size={15} strokeWidth={3} /> Insights — smart reads on your money</li>
-                <li><Check size={15} strokeWidth={3} /> Wealth Timeline projections</li>
+                <li><Check/> Everything in Free</li>
+                <li><Check/> Unlimited accounts, goals, transactions</li>
+                <li><Check/> Full snapshot history</li>
+                <li><Check/> Smart insights</li>
+                <li><Check/> Wealth Timeline projections</li>
               </ul>
-              <button onClick={startSignup} className="primary-landing">Start free, upgrade any time</button>
-            </article>
+              <button onClick={startSignup} className="gu-btn gu-primary">Start free, upgrade any time</button>
+            </Reveal>
           </div>
         </section>
 
-        <section id="privacy" className="privacy-band" data-reveal>
-          <div>
-            <h2>Private by design. Premium by feel.</h2>
-            <p>
-              Grow UP does not require bank connections. You control what you enter, what you back up, and when you restore saved data.
-            </p>
-          </div>
-
-          <ul>
-            <li>No forced bank integrations</li>
-            <li>Google Sign-In supported</li>
-            <li>Cloud backup available</li>
-            <li>Demo Mode is read-only</li>
-          </ul>
-        </section>
-
-        <section className="final-cta" data-reveal>
-          <h2>See the future you are building.</h2>
-          <p>Grow UP turns financial progress into a timeline you can see, track, and feel.</p>
-          <div>
-            <button onClick={startSignup} className="primary-landing">Create free account</button>
-            <button onClick={tryDemo} className="secondary-landing">Explore the demo</button>
-          </div>
-        </section>
+        <Reveal as="section" className="gu-final">
+          <Zap size={24}/>
+          <h2>Your money deserves a longer memory.</h2>
+          <p>Make the monthly update. See the direction. Build a financial picture you actually understand.</p>
+          <div><button onClick={startSignup} className="gu-btn gu-primary">Create free account</button><button onClick={tryDemo} className="gu-btn gu-secondary">Explore demo</button></div>
+        </Reveal>
       </main>
 
-      <footer className="landing-footer">
-        <a className="landing-brand" href="/landingpage">
-          <span className="landing-logo app-icon"><img src="/icons/growup-logo.png" alt="" /></span>
-          <span>
-            <b>Grow UP</b>
-            <small>© {new Date().getFullYear()}</small>
-          </span>
-        </a>
-
-        <div>
-          <a href="/privacy">Privacy Policy</a>
-          <a href="/terms">Terms</a>
-          <a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a>
-        </div>
+      <footer className="gu-footer">
+        <a className="gu-brand" href="/landingpage"><span className="gu-logo"><img src="/icons/growup-logo.png" alt="" /></span><span><b>Grow UP</b><small>© {new Date().getFullYear()}</small></span></a>
+        <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a></div>
       </footer>
     </div>
   );
