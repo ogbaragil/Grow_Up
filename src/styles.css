@@ -5353,9 +5353,16 @@ button:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.email-reminder-grid {
+.email-reminder-controls {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.email-reminder-grid {
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
@@ -5384,12 +5391,13 @@ button:focus-visible {
 
 .email-reminder-toggles {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 12px;
 }
 
 .email-reminder-toggles button {
   min-height: 48px;
+  height: 100%;
   border-radius: 18px;
   padding: 0 14px;
   display: flex;
@@ -5436,6 +5444,7 @@ button:focus-visible {
     justify-content: center;
   }
 
+  .email-reminder-controls,
   .email-reminder-grid,
   .email-reminder-toggles {
     grid-template-columns: 1fr;

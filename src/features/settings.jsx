@@ -158,15 +158,17 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
               {state.emailRemindersEnabled ? "Turn off" : "Enable"}
             </button>
           </div>
-          <div className="email-reminder-grid">
-            <label><span>Transaction reminder</span>
-              <select value={state.emailReminderDays??1} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailReminderDays:Number(e.target.value)},notify}); }}>
-                <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
-              </select>
-            </label>
-          </div>
-          <div className="email-reminder-toggles">
-            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Include goal snapshot</button>
+          <div className="email-reminder-controls">
+            <div className="email-reminder-grid">
+              <label><span>Transaction reminder</span>
+                <select value={state.emailReminderDays??1} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailReminderDays:Number(e.target.value)},notify}); }}>
+                  <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
+                </select>
+              </label>
+            </div>
+            <div className="email-reminder-toggles">
+              <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Include goal snapshot</button>
+            </div>
           </div>
           <small className="field-caption">One email per day at most — only sent when a recurring transaction is actually due within your reminder window.</small>
         </div>
