@@ -289,9 +289,7 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
         <div className="minimal-title-block">
           <div className="minimal-greeting-line">
             <p>Welcome back</p>
-            {isPro ? (
-              <span className="mode-pill pro-mode-pill">✦ Pro</span>
-            ) : isDemo ? (
+            {isDemo ? (
               <button
                 type="button"
                 className="mode-pill demo-mode-pill demo-exit-pill"
@@ -304,6 +302,8 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
                 <LogOut size={13} aria-hidden="true" />
                 Exit
               </button>
+            ) : isPro ? (
+              <span className="mode-pill pro-mode-pill">✦ Pro</span>
             ) : (
               <button className="mode-pill free-mode-pill" onClick={() => showUpgrade?.("general")}>
                 Free · Upgrade
