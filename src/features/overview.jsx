@@ -132,16 +132,71 @@ export function useAutoCarousel(itemCount = 3, intervalMs = 5200, resumeDelayMs 
 }
 
 
-export function ShareNetWorthCard({ netWorth, prevNet, displayName }) {
-  const [copied, setCopied] = useState(false);
+export function buildShareMessage({ state, netWorth, prevNet, totals }) {
+  const rows = historyRows(state); // newest first
+  const snapshotCount = rows.length;
+
+  // MoM growth % — only when there's real history, a meaningful positive base,
+  // and positive growth (people don't share losses). Skip absurd percentages
+  // from tiny starting balances.
+  let pctStr = null;
   const mom = netWorth - (prevNet || 0);
-  const momStr = mom >= 0 ? `+${money(mom)}` : money(mom);
-  const text = `My net worth is ${money(netWorth)} (${momStr} this month) — tracked with Grow UP 🌱 growupapp.app`;
+  if (snapshotCount >= 2 && prevNet > 0 && mom > 0) {
+    const pct = (mom / prevNet) * 100;
+    if (pct <= 100) pctStr = pct < 10 ? pct.toFixed(1).replace(/\.0$/, "") : String(Math.round(pct));
+  }
+
+  // Consecutive months of net worth growth (newest backwards).
+  let growthStreak = 0;
+  for (let i = 0; i < rows.length - 1; i++) {
+    if (rows[i].net > rows[i + 1].net) growthStreak++;
+    else break;
+  }
+
+  // Consecutive calendar months tracked (newest backwards).
+  let trackStreak = snapshotCount ? 1 : 0;
+  for (let i = 0; i < rows.length - 1; i++) {
+    if (addMonths(rows[i].key, -1) === rows[i + 1].key) trackStreak++;
+    else break;
+  }
+
+  // Best in-progress goal, as a percentage — never the target amount.
+  let goalMsg = null;
+  const activeGoals = (state.goals || []).filter(g => g && !g.archived && g.name);
+  if (activeGoals.length) {
+    const accounts = getAccountsForSelectedMonth(state);
+    let best = null;
+    for (const g of activeGoals) {
+      let progress = 0;
+      try { progress = Math.round(calculateGoalProgress(g, totals, accounts)?.progress || 0); } catch {}
+      if (progress > 0 && progress < 100 && (!best || progress > best.progress)) best = { name: g.name, progress };
+    }
+    if (best) goalMsg = `I'm ${best.progress}% of the way to my "${best.name}" goal 🎯`;
+  }
+
+  // Pick the strongest brag available. No dollar amounts, ever.
+  let body;
+  if (pctStr && growthStreak >= 2) body = `My net worth grew ${pctStr}% this month — that's ${growthStreak} months of growth in a row 📈`;
+  else if (pctStr) body = `My net worth grew ${pctStr}% this month 📈`;
+  else if (growthStreak >= 2) body = `${growthStreak} months of net worth growth in a row 📈`;
+  else if (goalMsg) body = goalMsg;
+  else if (trackStreak >= 2) body = `I've tracked my net worth ${trackStreak} months in a row 💪`;
+  else body = `I'm tracking my net worth and building wealth, one month at a time`;
+
+  return `${body} — tracked with Grow UP 🌱 growupapp.app`;
+}
+
+export function ShareNetWorthCard({ netWorth, prevNet, displayName, state, totals }) {
+  const [copied, setCopied] = useState(false);
+  const text = useMemo(
+    () => buildShareMessage({ state, netWorth, prevNet, totals }),
+    [state, netWorth, prevNet, totals]
+  );
 
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: "My Net Worth — Grow UP", text });
+        await navigator.share({ title: "My Progress — Grow UP", text });
         return;
       } catch {}
     }
@@ -482,7 +537,7 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
         <button onClick={()=>setHistoryMetric("debts")}><span>Total Debts</span><strong>{money(dashboardTotals.debts)}</strong></button>
       </section>
 
-      <ShareNetWorthCard netWorth={dashboardTotals.net} prevNet={dashboardTotals.prevNet} displayName={displayName} />
+      <ShareNetWorthCard netWorth={dashboardTotals.net} prevNet={dashboardTotals.prevNet} displayName={displayName} state={state} totals={dashboardTotals} />
     </div>
   );
 }

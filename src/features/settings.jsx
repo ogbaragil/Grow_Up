@@ -128,9 +128,20 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
             <h2>Appearance</h2>
             <p>Light or dark — your call.</p>
           </div>
-          <button className="settings-theme-btn" onClick={()=>update({ theme:state.theme==="light"?"dark":"light" })}>
-            {state.theme === "light" ? <><Moon size={16}/> Dark</> : <><Sun size={16}/> Light</>}
-          </button>
+          <div className="theme-segment" role="group" aria-label="Theme">
+            <button
+              type="button"
+              className={state.theme !== "dark" ? "active" : ""}
+              aria-pressed={state.theme !== "dark"}
+              onClick={() => update({ theme: "light" })}
+            ><Sun size={14}/> Light</button>
+            <button
+              type="button"
+              className={state.theme === "dark" ? "active" : ""}
+              aria-pressed={state.theme === "dark"}
+              onClick={() => update({ theme: "dark" })}
+            ><Moon size={14}/> Dark</button>
+          </div>
         </div>
       </Card>
 

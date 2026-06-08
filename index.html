@@ -21,6 +21,16 @@
   <meta name="twitter:image" content="https://growupapp.app/screenshots/overview.jpeg" />
   <title>Grow UP — Personal Finance</title>
   <script>
+    // Apply saved theme before first paint to avoid white flash and
+    // make the current mode unambiguous from the moment the app loads.
+    try {
+      var growupState = JSON.parse(localStorage.getItem("growup_history_monthbar_v1"));
+      if (growupState && growupState.theme === "dark") {
+        document.documentElement.dataset.theme = "dark";
+      }
+    } catch (e) {}
+  </script>
+  <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js');
