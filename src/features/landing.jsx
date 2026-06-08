@@ -105,7 +105,7 @@ export function LandingPage() {
       <main>
         <section className="gu-hero">
           <div className="gu-hero-copy">
-            <Reveal className="gu-pill"><span /> Manual wealth tracking. Clearer direction.</Reveal>
+            <Reveal className="gu-pill"><span /> Personal wealth tracking. Clearer direction.</Reveal>
             <h1>Money clarity, without handing over your bank login.</h1>
             <p>Grow UP brings your assets, debts, goals, cash flow, and long-term projections into one calm dashboard — so progress becomes visible month after month.</p>
             <div className="gu-actions">
