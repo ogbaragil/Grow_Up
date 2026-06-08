@@ -37,11 +37,11 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
           </div>
         </div>
         <div className="settings-profile-fields">
-          <label>Birth month &amp; year{currentAge ? <span className="field-caption"> · age {currentAge}</span> : null}
+          <label><span className="field-row-label">Birth month &amp; year{currentAge ? <span className="field-caption"> · age {currentAge}</span> : null}</span>
             <input type="month" defaultValue={birthDefault} max={new Date().toISOString().slice(0, 7)}
               onChange={e => update({ profile: { ...(state.profile||{}), birth: e.target.value || null, age: null }})} />
           </label>
-          <label>Desired retirement age
+          <label><span className="field-row-label">Desired retirement age</span>
             <input type="number" defaultValue={state.profile?.retirementAge || 65} placeholder="e.g. 65" min="40" max="99"
               onChange={e => update({ profile: { ...(state.profile||{}), retirementAge: Number(e.target.value)||65 }})} />
           </label>

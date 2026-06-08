@@ -152,9 +152,13 @@ dd { margin:0; font-weight:900; }
 .editor-modal .checkbox input { width:20px; height:20px; }
 
 @media (min-width: 900px) {
-  .phone { max-width:1180px; padding-bottom:0; }
-  .screen { padding:32px 42px 70px; }
-  .bottom-nav { display:none; }
+  /* Keep the app a centered, phone-width column on desktop so the bottom
+     tab bar stays usable, instead of stretching full-width and pushing
+     navigation into the drawer (which then duplicated the tab titles). */
+  .phone { max-width:460px; }
+  .bottom-nav { max-width:460px; }
+  .menu-sheet { max-width:460px; }
+  .screen { padding-top:30px; }
 }
 
 
@@ -6942,6 +6946,7 @@ button:focus-visible {
 .settings-profile-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  align-items: stretch;
   gap: 12px;
   margin-top: 4px;
 }
@@ -6954,13 +6959,21 @@ button:focus-visible {
   color: var(--muted);
   min-width: 0;
 }
+.settings-profile-fields .field-row-label {
+  white-space: normal;
+  line-height: 1.35;
+}
+.settings-profile-fields .field-row-label .field-caption {
+  display: inline;
+  margin-top: 0;
+  font-weight: 600;
+}
 .settings-profile-fields label span,
 .settings-profile-fields label > :first-child {
-  white-space: nowrap;
   overflow: hidden;
-  text-overflow: ellipsis;
 }
 .settings-profile-fields input {
+  margin-top: auto;
   padding: 10px 12px;
   border-radius: 12px;
   border: 1.5px solid var(--line);
