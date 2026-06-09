@@ -1204,6 +1204,9 @@ button:disabled {
   width: 58px;
   height: 58px;
   border-radius: 18px;
+  object-fit: cover;
+  display: block;
+  flex: 0 0 auto;
 }
 
 .legal-header h1 {
@@ -3736,7 +3739,7 @@ select:focus {
 }
 
 .auth-tabs button.active {
-  background: #15181D !important;
+  background: var(--green) !important;
   color: white !important;
 }
 
@@ -3755,7 +3758,7 @@ select:focus {
 .auth-legal-links a,
 .legal-footer a,
 .legal-link-row a {
-  color: #5967E8 !important;
+  color: var(--green) !important;
 }
 
 /* Legal pages */
@@ -8176,15 +8179,21 @@ button:focus-visible {
 /* ── Auth screen: redesigned sign-in (icons, remember row, CTAs) ── */
 .auth-card label { color: var(--text); }
 
+/* Non-bold text across the auth screen; only the app name stays bold */
+.auth-card :where(button, input, label, a, span, p, small, strong, em, div) {
+  font-weight: 500 !important;
+}
+.auth-card h1 { font-weight: 800 !important; }
+
 .auth-card .primary.full {
   background: var(--green) !important;
   background-image: none !important;
   color: #fff !important;
-  height: 54px;
-  border-radius: 14px;
-  font-size: 16px;
+  height: 42px;
+  border-radius: 12px;
+  font-size: 15px;
   margin: 8px 0 0;
-  box-shadow: 0 12px 30px rgba(47,143,91,.22);
+  box-shadow: 0 6px 16px rgba(47,143,91,.18);
 }
 
 .auth-field { position: relative; margin-top: 7px; }
@@ -8709,6 +8718,13 @@ html[data-theme="dark"],
   background: linear-gradient(135deg, #2a3349, #1c2436) !important;
   color: #fff !important;
   border: 1px solid rgba(255,255,255,.14) !important;
+}
+
+[data-theme="dark"] .auth-tabs button.active {
+  background: var(--green) !important;
+  background-image: none !important;
+  border: none !important;
+  color: #fff !important;
 }
 [data-theme="dark"] .secondary,
 [data-theme="dark"] .onboarding-head button,

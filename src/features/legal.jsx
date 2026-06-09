@@ -9,7 +9,7 @@ export function LegalPage({ type }) {
     <div className="app-shell">
       <main className="phone legal-phone">
         <section className="legal-header">
-          <div className="app-icon legal-logo">GV</div>
+          <img className="legal-logo" src="/icons/growup-logo.png" alt="Grow UP" />
           <div>
             <h1>{isPrivacy ? "Privacy Policy" : "Terms of Service"}</h1>
             <p>Effective Date: May 16, 2026</p>
@@ -67,7 +67,7 @@ export function PrivacyPolicyContent() {
       <p>We may update this Privacy Policy periodically. Updated versions will be posted at https://growupapp.app/privacy.</p>
 
       <h2>12. Contact</h2>
-      <p>For questions, support requests, or data deletion requests, contact Gilbert Ogbara at {SUPPORT_EMAIL}.</p>
+      <p>For questions, support requests, or data deletion requests, contact our support team at {SUPPORT_EMAIL}.</p>
     </article>
   );
 }
@@ -114,7 +114,7 @@ export function TermsContent() {
       <p>These Terms are governed by the laws of Victoria, Australia, unless otherwise required by applicable law.</p>
 
       <h2>13. Contact</h2>
-      <p>For questions about these Terms, contact Gilbert Ogbara at {SUPPORT_EMAIL}.</p>
+      <p>For questions about these Terms, contact our support team at {SUPPORT_EMAIL}.</p>
     </article>
   );
 }
