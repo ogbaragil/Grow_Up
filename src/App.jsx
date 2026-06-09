@@ -445,8 +445,9 @@ export function App() {
   }
 
   if (!session && !demoMode) {
-    const hasUsed = localStorage.getItem("growup_has_used") === "true";
-    if (!hasUsed && !authIntent) return <LandingPage />;
+    // Logged-out visitors land directly on sign in / create account.
+    // The marketing page stays reachable from the auth screen's "Learn more"
+    // link and at the /landingpage route.
     return (
       <>
         <AuthScreen enterDemoMode={enterDemoMode} initialMode={authIntent === "signup" ? "signUp" : "signIn"} />

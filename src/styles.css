@@ -749,6 +749,41 @@ dd { margin:0; font-weight:900; }
   box-shadow: var(--shadow);
   padding: 26px 20px;
   text-align: center;
+  position: relative;
+}
+
+.auth-learn-icon {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  transition: color .15s ease, border-color .15s ease, transform .15s ease;
+}
+
+.auth-learn-icon:hover {
+  color: var(--green);
+  border-color: var(--green);
+  transform: translateY(-1px);
+}
+
+.auth-learn-link {
+  display: inline-block;
+  margin-top: 18px;
+  color: var(--green);
+  font-weight: 900;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.auth-learn-link:hover {
+  text-decoration: underline;
 }
 
 .app-icon.large {
