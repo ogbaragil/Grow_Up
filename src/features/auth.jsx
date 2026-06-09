@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { Eye, EyeOff, Info } from "lucide-react";
-import { supabase } from "../supabaseClient";
+import { Eye, EyeOff, Info, Lock, Mail, ShieldCheck } from "lucide-react";
+import { supabase, setKeepSignedIn } from "../supabaseClient";
 
 function GoogleMark() {
   return (
@@ -23,6 +23,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
   const [password, setPassword] = useState("");
   const [firstName, setFirstName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [keepSignedIn, setKeepSignedInState] = useState(true);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [message, setMessage] = useState(null); // { text, type: "error" | "success" | "info" }
@@ -45,6 +46,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
     }
 
     setBusy(true);
+    setKeepSignedIn(keepSignedIn);
 
     try {
       if (mode === "signUp") {
@@ -87,6 +89,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
     }
 
     setGoogleBusy(true);
+    setKeepSignedIn(keepSignedIn);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -135,7 +138,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
           <AuthLogo />
           <h1>Grow UP</h1>
           <p>{mode === "signIn"
-            ? "Welcome back — your money picture is right where you left it."
+            ? "Welcome back. Pick up where you left off."
             : "Free to start — see your complete financial picture in minutes."}</p>
 
           <div className="auth-tabs">
@@ -159,13 +162,17 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
             )}
 
             <label>
-              Email
-              <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
+              Email address
+              <div className="auth-field">
+                <Mail className="auth-field-icon" size={18} />
+                <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" />
+              </div>
             </label>
 
             <label>
               Password
-              <div className="password-wrap">
+              <div className="auth-field password-wrap">
+                <Lock className="auth-field-icon" size={18} />
                 <input
                   type={showPassword ? "text" : "password"}
                   value={password}
@@ -182,24 +189,38 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
               </div>
             </label>
 
+            <div className="auth-remember-row">
+              <label className="auth-remember">
+                <input
+                  type="checkbox"
+                  checked={keepSignedIn}
+                  onChange={e => setKeepSignedInState(e.target.checked)}
+                />
+                <span>Keep me signed in</span>
+              </label>
+              {mode === "signIn" && (
+                <button type="button" className="auth-forgot" onClick={resetPassword}>Forgot password?</button>
+              )}
+            </div>
+
             {message && <div className={`auth-message ${message.type}`} aria-live="polite">{message.text}</div>}
 
             <button className="primary full" disabled={busy || !canSubmit}>
               {busy ? "Please wait…" : mode === "signIn" ? "Sign in" : "Create account"}
             </button>
+
+            <div className="auth-secure-note">
+              <ShieldCheck size={16} />
+              <span>Your data is encrypted and private.</span>
+            </div>
           </form>
 
-          {mode === "signIn" && (
-            <button className="link-btn" onClick={resetPassword}>Forgot password?</button>
-          )}
+          <div className="auth-divider auth-new-divider"><span>New to Grow UP?</span></div>
 
-          <button className="demo-auth-btn" type="button" onClick={enterDemoMode}>
-            Explore Demo
-          </button>
-
-          <a className="auth-learn-link" href="/landingpage">
-            New to Grow UP? Learn more
-          </a>
+          <div className="auth-cta-row">
+            <a className="auth-cta auth-cta-learn" href="/landingpage">Learn more</a>
+            <button className="auth-cta auth-cta-demo" type="button" onClick={enterDemoMode}>Explore demo</button>
+          </div>
 
           <div className="auth-legal-links">
             <a href="/privacy">Privacy Policy</a>

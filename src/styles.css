@@ -8173,6 +8173,119 @@ button:focus-visible {
 .google-auth-btn svg { flex: 0 0 auto; }
 .google-auth-btn:disabled { opacity: .6; }
 
+/* ── Auth screen: redesigned sign-in (icons, remember row, CTAs) ── */
+.auth-card label { color: var(--text); }
+
+.auth-card .primary.full {
+  background: var(--green) !important;
+  background-image: none !important;
+  color: #fff !important;
+  height: 54px;
+  border-radius: 14px;
+  font-size: 16px;
+  margin: 8px 0 0;
+  box-shadow: 0 12px 30px rgba(47,143,91,.22);
+}
+
+.auth-field { position: relative; margin-top: 7px; }
+.auth-card .auth-field input { margin-top: 0; padding-left: 44px; }
+.auth-card .auth-field.password-wrap input { padding-right: 44px; }
+.auth-field-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+  display: inline-flex;
+}
+
+.auth-remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 6px;
+}
+.auth-card .auth-remember {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  text-align: left;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text);
+  cursor: pointer;
+}
+.auth-card .auth-remember input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  padding: 0;
+  border-radius: 6px;
+  accent-color: var(--green);
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.auth-forgot {
+  color: var(--green);
+  font-weight: 900;
+  font-size: 14px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.auth-forgot:hover { text-decoration: underline; }
+
+.auth-secure-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 13.5px;
+  font-weight: 800;
+}
+.auth-secure-note svg { color: var(--green); flex: 0 0 auto; }
+
+.auth-divider.auth-new-divider {
+  margin: 20px 0 16px;
+  color: var(--text);
+  font-weight: 900;
+  font-size: 14px;
+}
+
+.auth-cta-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.auth-cta {
+  height: 52px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 900;
+  font-size: 15px;
+  background: var(--card);
+  border: 1.5px solid var(--line);
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease, transform .15s ease;
+}
+.auth-cta:hover { transform: translateY(-1px); }
+.auth-cta-learn { color: var(--green); border-color: rgba(63,164,99,.55); }
+.auth-cta-learn:hover { border-color: var(--green); background: var(--green2); }
+.auth-cta-demo { color: #574fd6; border-color: rgba(87,79,214,.45); }
+.auth-cta-demo:hover { border-color: #574fd6; background: rgba(87,79,214,.08); }
+[data-theme="dark"] .auth-cta-demo { color: #a6a0ff; border-color: rgba(166,160,255,.4); }
+[data-theme="dark"] .auth-cta-demo:hover { border-color: #a6a0ff; background: rgba(166,160,255,.12); }
+
+
 /* ── Landing: logo, screenshots, pricing ─────────────────────── */
 .landing-logo { overflow: hidden; padding: 0; }
 .landing-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; display: block; }
