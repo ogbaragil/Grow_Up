@@ -1,5 +1,6 @@
 import React from "react";
-import { Home, CreditCard, Repeat2, Target, Sun, Moon, TrendingUp, X, Save, DownloadCloud, SlidersHorizontal, Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator } from "lucide-react";
+import { Home, CreditCard, Repeat2, Target, TrendingUp, X, UploadCloud, DownloadCloud, SlidersHorizontal, Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator, Moon, ChevronRight, CheckCircle2 } from "lucide-react";
+import { timeAgo } from "../lib/dates";
 import { Goals } from "../features/goals";
 import { Settings } from "../features/settings";
 
@@ -23,27 +24,130 @@ export function BottomNav({ tab, setTab }) {
 
 
 export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, setCompoundOpen, tab, isPro=false }) {
-  const navClass = (name) => tab === name ? "active" : undefined;
+  const backupAgo = state?.lastBackupAt ? timeAgo(state.lastBackupAt) : null;
+  const isDark = state?.theme === "dark";
+  const close = () => setMenuOpen(false);
+
   return (
-    <div className="sheet-backdrop" onClick={()=>setMenuOpen(false)}>
-      <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
-        <div className="sheet-head"><div className="app-icon drawer-logo"><img src="/icons/growup-logo.png" alt="Grow UP" /></div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
+    <div className="sheet-backdrop" onClick={close}>
+      <aside className="gu-drawer" onClick={(e)=>e.stopPropagation()}>
+        {/* Header */}
+        <div className="gu-drawer-head">
+          <button className="gu-drawer-close" onClick={close} aria-label="Close menu"><X size={22}/></button>
+          <img className="gu-drawer-avatar" src="/icons/growup-logo.png" alt="" />
+          <div className="gu-drawer-meta">
+            <h2>{displayName || "Grow UP"}</h2>
+            {session?.user?.email && <p className="gu-drawer-email">{session.user.email}</p>}
+            <span className={isPro ? "gu-plan-badge pro" : "gu-plan-badge"}>{isPro ? "Pro Plan" : "Free Plan"}</span>
+            <div className="gu-sync">
+              <CheckCircle2 size={16}/>
+              <span>{backupAgo ? `Last synced ${backupAgo}` : "Cloud sync ready"}</span>
+            </div>
+          </div>
+        </div>
 
-        <div className="drawer-section-label">Tools</div>
-        <button onClick={()=>{setInsightsOpen(true); setMenuOpen(false)}}><Lightbulb/> Insights{!isPro && <span className="pro-lock">PRO</span>}</button>
-        <button onClick={()=>{setTimelineOpen(true); setMenuOpen(false)}}><TrendingUp/> Wealth Timeline{!isPro && <span className="pro-lock">PRO</span>}</button>
-        <button onClick={()=>{setCompoundOpen(true); setMenuOpen(false)}}><Calculator/> Compound Wealth{!isPro && <span className="pro-lock">PRO</span>}</button>
-        <button onClick={()=>update({ theme:state.theme === "light" ? "dark" : "light" })}>{state.theme === "light" ? <Moon/> : <Sun/>} Toggle theme</button>
-        <button onClick={isDemo ? exitDemoMode : enterDemoMode}><FlaskConical/> {isDemo ? "Exit preview" : "Preview with sample data"}</button>
+        {/* Analysis */}
+        <div className="gu-drawer-label">Analysis</div>
+        <button className="gu-drawer-row" onClick={()=>{ setInsightsOpen(true); close(); }}>
+          <span className="gu-row-icon"><Lightbulb size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">Insights</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
+        <button className="gu-drawer-row" onClick={()=>{ setTimelineOpen(true); close(); }}>
+          <span className="gu-row-icon"><TrendingUp size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">Wealth Timeline</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
+        <button className="gu-drawer-row" onClick={()=>{ setCompoundOpen(true); close(); }}>
+          <span className="gu-row-icon"><Calculator size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">Compound Wealth</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
 
-        <div className="drawer-section-label">Account</div>
-        <button className="drawer-caution" disabled={isDemo} onClick={saveSnapshot}><Save/> Back up data</button>
-        <button className="drawer-caution" disabled={isDemo} onClick={restoreSnapshot}><DownloadCloud/> Restore from Cloud</button>
-        <button onClick={()=>{setTab("settings");setMenuOpen(false)}}><SlidersHorizontal/> Settings</button>
-        <button onClick={()=>{ window.location.href = "/privacy"; }}><Shield/> Privacy Policy</button>
-        <button onClick={()=>{ window.location.href = "/terms"; }}><FileText/> Terms</button>
-        {session && !isDemo && <button className="menu-danger" onClick={signOut}><LogOut/> Sign out</button>}
-      </div>
+        {/* Utility */}
+        <hr className="gu-drawer-divider" />
+        <div className="gu-drawer-label">Utility</div>
+        <button className="gu-drawer-row" onClick={isDemo ? exitDemoMode : enterDemoMode}>
+          <span className="gu-row-icon"><FlaskConical size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">{isDemo ? "Exit preview" : "Preview with sample data"}</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
+
+        {/* Account */}
+        <hr className="gu-drawer-divider" />
+        <div className="gu-drawer-label">Account</div>
+        <div className="gu-drawer-card">
+          <span className="gu-row-icon"><UploadCloud size={24}/></span>
+          <div className="gu-card-text">
+            <span className="gu-card-title">Back up data</span>
+            <div className="gu-card-sub">{backupAgo ? `Last backup: ${backupAgo}` : "No backup yet"}</div>
+          </div>
+          <button className="gu-card-btn" disabled={isDemo} onClick={saveSnapshot}>Back up now</button>
+        </div>
+        <div className="gu-drawer-card">
+          <span className="gu-row-icon"><DownloadCloud size={24}/></span>
+          <div className="gu-card-text">
+            <span className="gu-card-title">Restore from Cloud</span>
+            <div className="gu-card-sub">
+              {isDemo
+                ? <span>Preview mode</span>
+                : session
+                  ? <><span>Cloud sync is connected</span><CheckCircle2 size={15}/></>
+                  : <span>Sign in to enable sync</span>}
+            </div>
+          </div>
+          <button className="gu-card-btn" disabled={isDemo} onClick={restoreSnapshot}>Restore</button>
+        </div>
+
+        {/* App */}
+        <hr className="gu-drawer-divider" />
+        <div className="gu-drawer-label">App</div>
+        <div className="gu-drawer-row">
+          <span className="gu-row-icon"><Moon size={22}/></span>
+          <span className="gu-row-text">
+            <span className="gu-row-title">Dark Mode</span>
+            <span className="gu-row-sub">{isDark ? "On" : "Off"}</span>
+          </span>
+          <button
+            className={isDark ? "gu-toggle on" : "gu-toggle"}
+            role="switch"
+            aria-checked={isDark}
+            aria-label="Toggle dark mode"
+            onClick={()=>update({ theme: isDark ? "light" : "dark" })}
+          ><span className="gu-toggle-knob"/></button>
+        </div>
+        <button className="gu-drawer-row" onClick={()=>{ setTab("settings"); close(); }}>
+          <span className="gu-row-icon"><SlidersHorizontal size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">Settings</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
+
+        {/* Legal */}
+        <hr className="gu-drawer-divider" />
+        <div className="gu-drawer-label">Legal</div>
+        <button className="gu-drawer-row" onClick={()=>{ window.location.href = "/privacy"; }}>
+          <span className="gu-row-icon"><Shield size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">Privacy Policy</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
+        <button className="gu-drawer-row" onClick={()=>{ window.location.href = "/terms"; }}>
+          <span className="gu-row-icon"><FileText size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">Terms</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
+
+        {/* Sign out */}
+        {session && !isDemo && (
+          <button className="gu-signout" onClick={signOut}>
+            <span className="gu-row-icon"><LogOut size={22}/></span>
+            <span className="gu-row-text">
+              <span className="gu-row-title">Sign out</span>
+              <span className="gu-row-sub">Sign out of Grow UP</span>
+            </span>
+            <ChevronRight className="gu-row-chev" size={20}/>
+          </button>
+        )}
+      </aside>
     </div>
   );
 }
