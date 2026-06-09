@@ -13,6 +13,14 @@ function GoogleMark() {
   );
 }
 
+function AppleMark() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="currentColor" d="M16.37 12.93c-.02-2.06 1.68-3.05 1.76-3.1-.96-1.4-2.45-1.6-2.98-1.62-1.27-.13-2.48.75-3.12.75-.64 0-1.64-.73-2.7-.71-1.39.02-2.67.81-3.38 2.05-1.44 2.5-.37 6.19 1.04 8.22.69.99 1.51 2.1 2.58 2.06 1.04-.04 1.43-.67 2.69-.67 1.25 0 1.6.67 2.7.65 1.11-.02 1.82-1.01 2.5-2.01.79-1.15 1.11-2.27 1.13-2.32-.02-.01-2.17-.83-2.19-3.3zM14.3 6.87c.57-.69.95-1.65.85-2.6-.82.03-1.81.54-2.4 1.23-.52.61-.98 1.58-.86 2.51.91.07 1.84-.46 2.41-1.14z"/>
+    </svg>
+  );
+}
+
 export function AuthLogo() {
   return <img className="auth-logo-img" src="/icons/growup-logo.png" alt="Grow UP" />;
 }
@@ -26,6 +34,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
   const [keepSignedIn, setKeepSignedInState] = useState(true);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
+  const [appleBusy, setAppleBusy] = useState(false);
   const [message, setMessage] = useState(null); // { text, type: "error" | "success" | "info" }
 
   const canSubmit = email.trim() && password.length >= 6;
@@ -104,6 +113,30 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
     // On success the browser redirects to Google, so the busy state can stay on.
   };
 
+  const signInWithApple = async () => {
+    say(null);
+
+    if (!supabase) {
+      say("We're having trouble connecting right now. Please try again shortly.", "error");
+      return;
+    }
+
+    setAppleBusy(true);
+    setKeepSignedIn(keepSignedIn);
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "apple",
+      options: {
+        redirectTo: window.location.origin
+      }
+    });
+
+    if (error) {
+      setAppleBusy(false);
+      say(error.message || "Apple sign-in failed.", "error");
+    }
+    // On success the browser redirects to Apple, so the busy state can stay on.
+  };
+
   const resetPassword = async () => {
     if (!supabase) {
       say("We're having trouble connecting right now. Please try again shortly.", "error");
@@ -145,6 +178,11 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
             <button className={mode === "signIn" ? "active" : ""} onClick={()=>{setMode("signIn"); say(null);}}>Sign in</button>
             <button className={mode === "signUp" ? "active" : ""} onClick={()=>{setMode("signUp"); say(null);}}>Create account</button>
           </div>
+
+          <button className="apple-auth-btn" onClick={signInWithApple} type="button" disabled={appleBusy}>
+            <AppleMark />
+            {appleBusy ? "Connecting…" : "Continue with Apple"}
+          </button>
 
           <button className="google-auth-btn" onClick={signInWithGoogle} type="button" disabled={googleBusy}>
             <GoogleMark />

@@ -911,6 +911,26 @@ dd { margin:0; font-weight:900; }
   box-shadow: 0 6px 16px rgba(15,23,42,.05);
 }
 
+/* Apple sign-in */
+.apple-auth-btn {
+  width: 100%;
+  height: 50px;
+  border-radius: 14px;
+  border: 1.5px solid #000;
+  background: #000;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-weight: 900;
+  font-size: 15px;
+  margin-bottom: 12px;
+  box-shadow: 0 6px 16px rgba(15,23,42,.05);
+}
+.apple-auth-btn svg { flex: 0 0 auto; }
+.apple-auth-btn:disabled { opacity: .6; }
+
 .google-auth-btn span {
   width: 26px;
   height: 26px;
