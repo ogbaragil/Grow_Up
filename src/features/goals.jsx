@@ -1,6 +1,6 @@
 import { getCurrentAge } from "../lib/user";
 import React, { useMemo, useState } from "react";
-import { Plus, Pencil, Trash2, Archive, ChevronDown, ChevronUp, X, ArrowLeft } from "lucide-react";
+import { Plus, Pencil, Trash2, Archive, ChevronDown, ChevronUp, X, ArrowLeft, Menu, RotateCcw } from "lucide-react";
 import { Card, EmptyState, GoalRing, ScreenTitle } from "../components/ui";
 import { calculateGoalProgress, clamp, estimateGoalCompletion, getAccountsForSelectedMonth, goalColorForType, goalIconForType, goalStatus, goalTypeLabel, goalValueForSnapshot, monthlyNeeded, refineDebtPayoffCalcWithHistory } from "../lib/goals";
 import { computeTotals } from "../lib/insights";
@@ -436,7 +436,9 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
           <h1>Compound Wealth</h1>
           <p>Run your rich-life scenarios and see how time turns habits into wealth.</p>
         </div>
-        <button className="reset-btn" onClick={reset}>Reset</button>
+        <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={24}/>
+        </button>
       </div>
 
       <section className="compound-hero-card">
@@ -450,7 +452,10 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
       </section>
 
       <Card>
-        <span className="section-chip">Scenario inputs</span>
+        <div className="compound-inputs-head">
+          <span className="section-chip">Scenario inputs</span>
+          <button className="compound-reset-btn" onClick={reset}><RotateCcw size={15}/> Reset</button>
+        </div>
         <div className="compound-grid">
           <label>Starting amount ({currencySign(state.currency)})<input type="number" value={inputs.start} onChange={e=>change("start", e.target.value)} /><small className="field-caption">Pre-filled from your current net worth</small></label>
           <label>Monthly contribution ({currencySign(state.currency)})<input type="number" value={inputs.monthly} onChange={e=>change("monthly", e.target.value)} /><small className="field-caption">Pre-filled from your cash surplus</small></label>

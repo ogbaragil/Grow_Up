@@ -10211,3 +10211,42 @@ button.gu-drawer-row:hover { background: var(--bg); }
 [data-theme="dark"] .gu-card-btn { background: rgba(255,255,255,.06); }
 [data-theme="dark"] .gu-card-btn:hover { background: rgba(255,255,255,.1); }
 [data-theme="dark"] .gu-plan-badge.pro { background: rgba(123,92,180,.26); color: #cbb8ff; }
+
+/* Subtle PRO hint pill on gated drawer items (free plan only) */
+.gu-pro-pill {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: .06em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(212,160,44,.16);
+  color: #a9790f;
+  align-self: center;
+}
+[data-theme="dark"] .gu-pro-pill { background: rgba(212,160,44,.22); color: #e6c168; }
+
+/* Compound Wealth: relocated Reset (now inside the Scenario inputs card) */
+.compound-inputs-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.compound-inputs-head .section-chip { margin: 0; }
+.compound-reset-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 7px 12px;
+  flex: 0 0 auto;
+}
+.compound-reset-btn:hover { color: var(--text); border-color: var(--muted); }
+.compound-reset-btn svg { flex: 0 0 auto; }

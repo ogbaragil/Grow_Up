@@ -27,6 +27,10 @@ export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, re
   const backupAgo = state?.lastBackupAt ? timeAgo(state.lastBackupAt) : null;
   const isDark = state?.theme === "dark";
   const close = () => setMenuOpen(false);
+  // Clear any full-screen overlay page (Timeline / Insights / Compound) so that
+  // navigating from the drawer actually takes effect instead of being shadowed
+  // by an overlay that's still open.
+  const closeOverlays = () => { setTimelineOpen?.(false); setInsightsOpen?.(false); setCompoundOpen?.(false); };
 
   return (
     <div className="sheet-backdrop" onClick={close}>
@@ -48,26 +52,29 @@ export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, re
 
         {/* Analysis */}
         <div className="gu-drawer-label">Analysis</div>
-        <button className="gu-drawer-row" onClick={()=>{ setInsightsOpen(true); close(); }}>
+        <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); setInsightsOpen(true); close(); }}>
           <span className="gu-row-icon"><Lightbulb size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">Insights</span></span>
+          {!isPro && <span className="gu-pro-pill">PRO</span>}
           <ChevronRight className="gu-row-chev" size={20}/>
         </button>
-        <button className="gu-drawer-row" onClick={()=>{ setTimelineOpen(true); close(); }}>
+        <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); setTimelineOpen(true); close(); }}>
           <span className="gu-row-icon"><TrendingUp size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">Wealth Timeline</span></span>
+          {!isPro && <span className="gu-pro-pill">PRO</span>}
           <ChevronRight className="gu-row-chev" size={20}/>
         </button>
-        <button className="gu-drawer-row" onClick={()=>{ setCompoundOpen(true); close(); }}>
+        <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); setCompoundOpen(true); close(); }}>
           <span className="gu-row-icon"><Calculator size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">Compound Wealth</span></span>
+          {!isPro && <span className="gu-pro-pill">PRO</span>}
           <ChevronRight className="gu-row-chev" size={20}/>
         </button>
 
         {/* Utility */}
         <hr className="gu-drawer-divider" />
         <div className="gu-drawer-label">Utility</div>
-        <button className="gu-drawer-row" onClick={isDemo ? exitDemoMode : enterDemoMode}>
+        <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); (isDemo ? exitDemoMode : enterDemoMode)(); }}>
           <span className="gu-row-icon"><FlaskConical size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">{isDemo ? "Exit preview" : "Preview with sample data"}</span></span>
           <ChevronRight className="gu-row-chev" size={20}/>
@@ -116,7 +123,7 @@ export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, re
             onClick={()=>update({ theme: isDark ? "light" : "dark" })}
           ><span className="gu-toggle-knob"/></button>
         </div>
-        <button className="gu-drawer-row" onClick={()=>{ setTab("settings"); close(); }}>
+        <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); setTab("settings"); close(); }}>
           <span className="gu-row-icon"><SlidersHorizontal size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">Settings</span></span>
           <ChevronRight className="gu-row-chev" size={20}/>
