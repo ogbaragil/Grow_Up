@@ -29,12 +29,6 @@ export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, re
       <div className="menu-sheet app-drawer" onClick={(e)=>e.stopPropagation()}>
         <div className="sheet-head"><div className="app-icon drawer-logo"><img src="/icons/growup-logo.png" alt="Grow UP" /></div><div><h2>{displayName || "Grow UP"}</h2><p>{session?.user?.email || "Personal finance PWA"}</p></div><button onClick={()=>setMenuOpen(false)}><X/></button></div>
 
-        <div className="drawer-section-label">Navigate</div>
-        <button className={navClass("overview")} onClick={()=>{setTab("overview");setMenuOpen(false)}}><Home/> Overview</button>
-        <button className={navClass("assets")} onClick={()=>{setTab("assets");setMenuOpen(false)}}><CreditCard/> Assets & Debts</button>
-        <button className={navClass("cash")} onClick={()=>{setTab("cash");setMenuOpen(false)}}><Repeat2/> Cash Flow</button>
-        <button className={navClass("goals")} onClick={()=>{setTab("goals");setMenuOpen(false)}}><Target/> Wealth Goals</button>
-
         <div className="drawer-section-label">Tools</div>
         <button onClick={()=>{setInsightsOpen(true); setMenuOpen(false)}}><Lightbulb/> Insights{!isPro && <span className="pro-lock">PRO</span>}</button>
         <button onClick={()=>{setTimelineOpen(true); setMenuOpen(false)}}><TrendingUp/> Wealth Timeline{!isPro && <span className="pro-lock">PRO</span>}</button>

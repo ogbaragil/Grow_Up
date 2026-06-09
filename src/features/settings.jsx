@@ -6,7 +6,7 @@ import React from "react";
 import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun } from "lucide-react";
 import { Card, ScreenTitle } from "../components/ui";
 import { useConfirm, useToast } from "../context/ToastContext";
-import { requestGrowUpNotifications, saveEmailReminderPreferences } from "./notifications";
+import { saveEmailReminderPreferences } from "./notifications";
 import { STORAGE_KEY } from "../state/useGrowState";
 
 export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenuOpen, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, isPro=false, showUpgrade}) {
@@ -37,11 +37,11 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
           </div>
         </div>
         <div className="settings-profile-fields">
-          <label>Birth month &amp; year{currentAge ? <span className="field-caption"> · age {currentAge}</span> : null}
+          <label><span className="field-row-label">Birth month &amp; year{currentAge ? <span className="field-caption"> · age {currentAge}</span> : null}</span>
             <input type="month" defaultValue={birthDefault} max={new Date().toISOString().slice(0, 7)}
               onChange={e => update({ profile: { ...(state.profile||{}), birth: e.target.value || null, age: null }})} />
           </label>
-          <label>Desired retirement age
+          <label><span className="field-row-label">Desired retirement age</span>
             <input type="number" defaultValue={state.profile?.retirementAge || 65} placeholder="e.g. 65" min="40" max="99"
               onChange={e => update({ profile: { ...(state.profile||{}), retirementAge: Number(e.target.value)||65 }})} />
           </label>
@@ -52,31 +52,6 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
 
       {/* ── PREFERENCES ────────────────────────────────────── */}
       <div className="settings-section-label">Preferences</div>
-
-      <Card>
-        <div className="settings-row-head">
-          <div>
-            <h2>Push Notifications</h2>
-            <p>Get reminded when bills are due and to update your monthly balances.</p>
-          </div>
-          <button
-            className={`settings-action-btn ${state.notificationsEnabled ? "primary-tint" : ""}`}
-            onClick={async () => {
-              if (state.notificationsEnabled) {
-                update({ notificationsEnabled: false });
-                notify("Push notifications turned off.", "info");
-              } else {
-                await requestGrowUpNotifications(s => update(s(state)), notify);
-              }
-            }}
-          >
-            {state.notificationsEnabled ? "On" : "Enable"}
-          </button>
-        </div>
-        {state.notificationsEnabled && (
-          <p style={{fontSize:12,color:"var(--green)",fontWeight:800,margin:0}}>✓ You'll be notified about upcoming transactions and monthly balance reminders.</p>
-        )}
-      </Card>
 
       <Card>
         <div className="settings-row-head">
@@ -158,15 +133,17 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
               {state.emailRemindersEnabled ? "Turn off" : "Enable"}
             </button>
           </div>
-          <div className="email-reminder-grid">
-            <label><span>Transaction reminder</span>
-              <select value={state.emailReminderDays??1} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailReminderDays:Number(e.target.value)},notify}); }}>
-                <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
-              </select>
-            </label>
-          </div>
-          <div className="email-reminder-toggles">
-            <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Include goal snapshot</button>
+          <div className="email-reminder-controls">
+            <div className="email-reminder-grid">
+              <label><span>Transaction reminder</span>
+                <select value={state.emailReminderDays??1} onChange={async e=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailReminderDays:Number(e.target.value)},notify}); }}>
+                  <option value={0}>Due day</option><option value={1}>1 day before</option><option value={2}>2 days before</option><option value={7}>1 week before</option>
+                </select>
+              </label>
+            </div>
+            <div className="email-reminder-toggles">
+              <button type="button" className={state.emailGoalReminders?"active":""} onClick={async()=>{ await saveEmailReminderPreferences({session,state,update,overrides:{emailRemindersEnabled:true,emailGoalReminders:!state.emailGoalReminders}}); }}><span>{state.emailGoalReminders?"✓":"○"}</span>Include goal snapshot</button>
+            </div>
           </div>
           <small className="field-caption">One email per day at most — only sent when a recurring transaction is actually due within your reminder window.</small>
         </div>

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Info } from "lucide-react";
 import { supabase } from "../supabaseClient";
 
 function GoogleMark() {
@@ -124,6 +124,14 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
     <div className="app-shell">
       <main className="phone auth-phone">
         <section className="auth-card">
+          <a
+            className="auth-learn-icon"
+            href="/landingpage"
+            aria-label="Learn more about Grow UP"
+            title="Learn more about Grow UP"
+          >
+            <Info size={20} />
+          </a>
           <AuthLogo />
           <h1>Grow UP</h1>
           <p>{mode === "signIn"
@@ -185,9 +193,17 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
             <button className="link-btn" onClick={resetPassword}>Forgot password?</button>
           )}
 
-          <button className="demo-auth-btn" type="button" onClick={enterDemoMode}>
-            Explore Demo
-          </button>
+          <div className="auth-learn-link">New to Grow UP?</div>
+
+          <div style={{display:"flex", gap:"12px", width:"100%"}}>
+            <a className="auth-learn-link" href="/landingpage" style={{flex:1, textAlign:"center"}}>
+              Learn more
+            </a>
+
+            <button className="demo-auth-btn" type="button" onClick={enterDemoMode} style={{flex:1}}>
+              Explore Demo
+            </button>
+          </div>
 
           <div className="auth-legal-links">
             <a href="/privacy">Privacy Policy</a>
