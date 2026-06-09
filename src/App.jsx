@@ -548,6 +548,7 @@ export function App() {
           setTimelineOpen={setTimelineOpen}
           setInsightsOpen={setInsightsOpen}
           setCompoundOpen={setCompoundOpen}
+          setHistoryMetric={setHistoryMetric}
           tab={tab}
           update={update}
           saveSnapshot={saveSnapshot}

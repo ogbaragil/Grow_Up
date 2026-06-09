@@ -1,5 +1,5 @@
 import React from "react";
-import { Home, CreditCard, Repeat2, Target, TrendingUp, X, UploadCloud, DownloadCloud, SlidersHorizontal, Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator, Moon, ChevronRight, CheckCircle2 } from "lucide-react";
+import { Home, CreditCard, Repeat2, Target, TrendingUp, X, UploadCloud, DownloadCloud, SlidersHorizontal, Shield, FileText, FlaskConical, LogOut, Lightbulb, Calculator, Moon, ChevronRight, CheckCircle2, History } from "lucide-react";
 import { timeAgo } from "../lib/dates";
 import { Goals } from "../features/goals";
 import { Settings } from "../features/settings";
@@ -23,14 +23,14 @@ export function BottomNav({ tab, setTab }) {
 }
 
 
-export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, setCompoundOpen, tab, isPro=false }) {
+export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, restoreSnapshot, session, displayName, signOut, isDemo=false, enterDemoMode, exitDemoMode, setTimelineOpen, setInsightsOpen, setCompoundOpen, setHistoryMetric, tab, isPro=false }) {
   const backupAgo = state?.lastBackupAt ? timeAgo(state.lastBackupAt) : null;
   const isDark = state?.theme === "dark";
   const close = () => setMenuOpen(false);
-  // Clear any full-screen overlay page (Timeline / Insights / Compound) so that
-  // navigating from the drawer actually takes effect instead of being shadowed
-  // by an overlay that's still open.
-  const closeOverlays = () => { setTimelineOpen?.(false); setInsightsOpen?.(false); setCompoundOpen?.(false); };
+  // Clear any full-screen overlay page (History / Timeline / Insights / Compound)
+  // so that navigating from the drawer actually takes effect instead of being
+  // shadowed by an overlay that's still open.
+  const closeOverlays = () => { setTimelineOpen?.(false); setInsightsOpen?.(false); setCompoundOpen?.(false); setHistoryMetric?.(null); };
 
   return (
     <div className="sheet-backdrop" onClick={close}>
@@ -52,6 +52,11 @@ export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, re
 
         {/* Analysis */}
         <div className="gu-drawer-label">Analysis</div>
+        <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); setHistoryMetric?.("net"); close(); }}>
+          <span className="gu-row-icon"><History size={22}/></span>
+          <span className="gu-row-text"><span className="gu-row-title">History</span></span>
+          <ChevronRight className="gu-row-chev" size={20}/>
+        </button>
         <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); setInsightsOpen(true); close(); }}>
           <span className="gu-row-icon"><Lightbulb size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">Insights</span></span>
@@ -71,9 +76,9 @@ export function MenuSheet({ state, setMenuOpen, setTab, update, saveSnapshot, re
           <ChevronRight className="gu-row-chev" size={20}/>
         </button>
 
-        {/* Utility */}
+        {/* Demo */}
         <hr className="gu-drawer-divider" />
-        <div className="gu-drawer-label">Utility</div>
+        <div className="gu-drawer-label">Demo</div>
         <button className="gu-drawer-row" onClick={()=>{ closeOverlays(); (isDemo ? exitDemoMode : enterDemoMode)(); }}>
           <span className="gu-row-icon"><FlaskConical size={22}/></span>
           <span className="gu-row-text"><span className="gu-row-title">{isDemo ? "Exit preview" : "Preview with sample data"}</span></span>
