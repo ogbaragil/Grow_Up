@@ -312,8 +312,8 @@ export function MinimalOverview({ state, totals, setMenuOpen, setHistoryMetric, 
           </div>
           <h1>{displayName || "there"}</h1>
         </div>
-        <button className="top-menu-btn compact-menu-btn settings-header-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
-          <Menu size={24}/>
+        <button className="mini-menu-btn" onClick={()=>setMenuOpen(true)} aria-label="Open menu">
+          <Menu size={22}/>
         </button>
       </div>
 
