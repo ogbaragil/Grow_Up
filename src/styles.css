@@ -9883,6 +9883,10 @@ html[data-theme="dark"],
 .gu-v2 .gu-nav,.gu-v2 main,.gu-v2 .gu-footer{position:relative; z-index:1; width:min(1180px,calc(100% - 48px)); margin-inline:auto}
 .gu-v2 .gu-nav{height:74px; margin-top:18px; padding:10px 14px; display:flex; align-items:center; justify-content:space-between; border-radius:999px; background:rgba(255,255,255,.78); border:1px solid rgba(17,20,24,.08); box-shadow:0 24px 70px rgba(31,34,28,.18); backdrop-filter:blur(24px)}
 .gu-v2 .gu-brand{display:flex; align-items:center; gap:12px; text-decoration:none; color:var(--ink)}
+.gu-v2 .gu-brand-block{display:flex;flex-direction:column;gap:6px}
+.gu-v2 .gu-byline{text-transform:uppercase;letter-spacing:2px;font-size:10px;font-weight:900;color:var(--muted)}
+.gu-v2 .gu-byline a{color:inherit;text-decoration:none;border-bottom:1px solid currentColor;padding-bottom:1px}
+.gu-v2 .gu-byline a:hover{color:var(--ink)}
 .gu-v2 .gu-logo{width:46px;height:46px;border-radius:15px;display:grid;place-items:center;background:#fff;overflow:hidden;box-shadow:0 10px 30px rgba(0,0,0,.12)}
 .gu-v2 .gu-logo img{width:100%;height:100%;object-fit:cover}.gu-v2 .gu-brand b{display:block;font-size:16px;font-weight:950}.gu-v2 .gu-brand small{display:block;text-transform:uppercase;letter-spacing:2px;font-size:10px;font-weight:900;color:var(--muted)}
 .gu-v2 .gu-nav nav{display:flex;gap:28px}.gu-v2 .gu-nav nav a{color:#4e524d;text-decoration:none;font-weight:850;font-size:14px}.gu-v2 .gu-nav nav a:hover{color:#000}.gu-v2 .gu-signin{border:0;border-radius:999px;background:linear-gradient(135deg,var(--green),var(--green2));padding:16px 24px;font-weight:950;color:#071107;box-shadow:0 12px 30px rgba(126,234,155,.35)}
@@ -10270,3 +10274,25 @@ button.gu-drawer-row:hover { background: var(--bg); }
 }
 .compound-reset-btn:hover { color: var(--text); border-color: var(--muted); }
 .compound-reset-btn svg { flex: 0 0 auto; }
+
+/* ── Settings footer brand line ─────────────────────────── */
+.settings-footer {
+  margin: 28px 0 8px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.settings-footer a {
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color .15s ease, border-color .15s ease;
+}
+.settings-footer a:hover {
+  color: var(--text);
+  border-bottom-color: var(--line);
+}
