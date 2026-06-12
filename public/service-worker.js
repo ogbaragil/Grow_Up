@@ -1,4 +1,4 @@
-const CACHE_NAME = "growup-v1";
+const CACHE_NAME = "growup-v2";
 const PRECACHE = ["/", "/manifest.webmanifest"];
 
 // Install — precache shell
