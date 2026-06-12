@@ -208,6 +208,10 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
           <RotateCcw size={16}/> Reset local data
         </button>
       </Card>
+
+      <footer className="settings-footer">
+        Grow UP by <a href="https://ogbara.com.au" target="_blank" rel="noopener">Ogbara</a>
+      </footer>
     </div>
   );
 }
