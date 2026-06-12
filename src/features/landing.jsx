@@ -203,7 +203,7 @@ export function LandingPage() {
       </main>
 
       <footer className="gu-footer">
-        <a className="gu-brand" href="/landingpage"><span className="gu-logo"><img src="/icons/growup-logo.png" alt="" /></span><span><b>Grow UP</b><small>© {new Date().getFullYear()}</small></span></a>
+        <a className="gu-brand" href="/landingpage"><span className="gu-logo"><img src="/icons/growup-logo.png" alt="" /></span><span><b>Grow UP</b><small>by Ogbara · © {new Date().getFullYear()}</small></span></a>
         <div><a href="/privacy">Privacy</a><a href="/terms">Terms</a><a href={`mailto:${SUPPORT_EMAIL}`}>Contact</a></div>
       </footer>
     </div>
