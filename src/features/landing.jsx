@@ -1,3 +1,7 @@
+/* ARCHIVED — no longer routed.
+   The live Grow UP marketing page is now https://ogbara.com.au/growup/
+   Kept for reference; App.jsx redirects /landingpage there. */
+
 import React, { useEffect } from "react";
 import {
   ArrowRight,

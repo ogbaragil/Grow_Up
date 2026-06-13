@@ -510,23 +510,39 @@ export function WizardScreen({ children, step, total, progress, onBack, onNext, 
 }
 
 export function OnboardingTips({ state, setState, setTab }) {
-  if (state.onboardingDismissed) return null;
+  // Session-scoped snooze: tapping a step or "Maybe later" hides the modal until the
+  // next app launch; the × dismisses it permanently (state.onboardingDismissed).
+  const [snoozed, setSnoozed] = useState(() => {
+    try { return sessionStorage.getItem("growup_tips_snoozed") === "1"; } catch { return false; }
+  });
+  const snooze = () => {
+    try { sessionStorage.setItem("growup_tips_snoozed", "1"); } catch {}
+    setSnoozed(true);
+  };
+  const dismissForever = () => setState(s => ({ ...s, onboardingDismissed: true }));
 
-  const accountsDone = (state.accounts || []).length >= 2;
+  const accountsDone  = (state.accounts || []).length >= 2;
   const snapshotsDone = Object.keys(state.monthSnapshots || {}).length >= 2;
-  const cashDone = (state.transactions || []).length >= 2;
-  const goalsDone = (state.goals || []).filter(g => !g.archived).length >= 1;
+  const cashDone      = (state.transactions || []).length >= 2;
+  const goalsDone     = (state.goals || []).filter(g => !g.archived).length >= 1;
 
   const steps = [
-    { done: accountsDone, title:"Add your accounts", detail:"Start with the assets and debts that drive your net worth.", tab:"assets" },
-    { done: snapshotsDone, title:"Save two months of balances", detail:"Save this month, then switch the month selector back one and save last month's balances too. Two months unlock your trend chart, goal forecasting, and the full history table — no waiting.", tab:"assets" },
-    { done: cashDone, title:"Add cash flow", detail:"Salary, rent, subscriptions, and recurring bills make insights smarter.", tab:"cash" },
-    { done: goalsDone, title:"Create one goal", detail:"A single target gives the timeline something meaningful to project.", tab:"goals" }
+    { key:"accounts",  done: accountsDone,  title:"Add your accounts",           detail:"Start with the assets and debts that drive your net worth.", tab:"assets" },
+    { key:"snapshots", done: snapshotsDone, title:"Save two months of balances", detail:"Save this month, then switch the selector back one month and save again — two months unlock trends, forecasting and the history table.", tab:"assets" },
+    { key:"cash",      done: cashDone,      title:"Add cash flow",               detail:"Salary, rent, subscriptions and recurring bills make your insights smarter.", tab:"cash" },
+    { key:"goals",     done: goalsDone,     title:"Create one goal",             detail:"A single target gives the timeline something meaningful to project.", tab:"goals" },
   ];
-
   const completeCount = steps.filter(s => s.done).length;
+  const remaining = steps.filter(s => !s.done);
+
+  // First-snapshot celebration is a brief, separate nudge — independent of the tips modal.
   const snapshotCount = Object.keys(state.monthSnapshots || {}).length;
   const showCelebration = snapshotCount === 1 && !state.firstSnapshotCelebrationDismissed;
+
+  const showTips = !state.onboardingDismissed && !snoozed && remaining.length > 0;
+  if (!showCelebration && !showTips) return null;
+
+  const goTo = (tab) => { snooze(); setTab(tab); };
 
   return (
     <>
@@ -536,36 +552,37 @@ export function OnboardingTips({ state, setState, setTab }) {
           <button onClick={() => setState(s => ({ ...s, firstSnapshotCelebrationDismissed: true }))}>×</button>
         </div>
       )}
-      <section className="onboarding-tips-card">
-        <div className="onboarding-head">
-          <div>
-            <p>Quick setup</p>
-            <h2>Get the best from Grow UP</h2>
+
+      {showTips && (
+        <div className="tips-backdrop" onClick={snooze}>
+          <div className="tips-modal" role="dialog" aria-modal="true" aria-label="Recommended setup steps" onClick={(e) => e.stopPropagation()}>
+            <button type="button" className="tips-close" aria-label="Dismiss" onClick={dismissForever}>×</button>
+            <div className="tips-emoji" aria-hidden="true">🌱</div>
+            <h2>{completeCount > 0 ? "You're almost set up" : "Get the best from Grow UP"}</h2>
+            <p>{remaining.length === 1
+              ? "One last recommended step to unlock the full picture."
+              : `${remaining.length} recommended steps to unlock trends, forecasting and insights.`}</p>
+
+            <div className="tips-progress"><i style={{ width: `${(completeCount / steps.length) * 100}%` }} /></div>
+            <span className="tips-progress-label">{completeCount} of {steps.length} done</span>
+
+            <div className="tips-steps">
+              {remaining.map((step) => (
+                <button type="button" key={step.key} onClick={() => goTo(step.tab)}>
+                  <span aria-hidden="true">○</span>
+                  <div>
+                    <strong>{step.title}</strong>
+                    <small>{step.detail}</small>
+                  </div>
+                  <em aria-hidden="true">→</em>
+                </button>
+              ))}
+            </div>
+
+            <button type="button" className="tips-later" onClick={snooze}>Maybe later</button>
           </div>
-          <button type="button" onClick={()=>setState(s=>({...s,onboardingDismissed:true}))}>×</button>
         </div>
-
-        <div className="onboarding-progress">
-          <i style={{ width:`${(completeCount / steps.length) * 100}%` }}></i>
-        </div>
-
-        <div className="onboarding-steps">
-          {steps.map(step => (
-            <button
-              type="button"
-              key={step.title}
-              className={step.done ? "done" : ""}
-              onClick={()=>setTab(step.tab)}
-            >
-              <span>{step.done ? "✓" : "○"}</span>
-              <div>
-                <strong>{step.title}</strong>
-                <small>{step.detail}</small>
-              </div>
-            </button>
-          ))}
-        </div>
-      </section>
+      )}
     </>
   );
 }

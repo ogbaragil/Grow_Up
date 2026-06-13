@@ -10311,3 +10311,46 @@ button.gu-drawer-row:hover { background: var(--bg); }
   color: var(--text);
   border-bottom-color: var(--line);
 }
+
+/* ── Overview recommended-steps modal (centre screen, replaces header-fixed tips card) ── */
+.tips-backdrop{
+  position:fixed; inset:0; z-index:160; background:rgba(0,0,0,.5);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+  animation:fadeInBackdrop .2s ease;
+}
+.tips-modal{
+  position:relative; background:var(--card); border:1px solid var(--line);
+  border-radius:26px; padding:28px 22px 20px; width:min(100%,400px);
+  max-height:90vh; overflow-y:auto; text-align:center;
+  box-shadow:0 30px 80px rgba(0,0,0,.28);
+  animation:slideUpPopup .25s cubic-bezier(.34,1.2,.64,1);
+}
+.tips-close{
+  position:absolute; top:14px; right:14px; width:32px; height:32px; border-radius:999px;
+  background:rgba(127,127,127,.14); color:var(--muted); font-size:20px; font-weight:900;
+  border:none; cursor:pointer; line-height:1;
+}
+.tips-emoji{ font-size:44px; line-height:1; margin-bottom:8px; }
+.tips-modal h2{ margin:0 0 8px; font-size:22px; font-weight:1000; letter-spacing:-.04em; color:var(--text); }
+.tips-modal p{ margin:0 0 18px; font-size:14.5px; line-height:1.45; color:var(--muted); }
+.tips-progress{ height:8px; border-radius:999px; background:rgba(127,127,127,.16); overflow:hidden; margin:0 0 6px; }
+.tips-progress i{ display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#5967E8,#B88A2B); transition:width .4s ease; }
+.tips-progress-label{ display:block; font-size:12px; font-weight:850; color:var(--muted); margin:0 0 16px; text-align:right; }
+.tips-steps{ display:grid; gap:10px; text-align:left; }
+.tips-steps button{
+  display:grid; grid-template-columns:26px 1fr auto; align-items:center; gap:12px;
+  padding:13px; border-radius:16px; background:rgba(127,127,127,.08);
+  border:1px solid rgba(127,127,127,.12); cursor:pointer; width:100%;
+}
+.tips-steps button:active{ transform:scale(.99); }
+.tips-steps button > span{
+  width:26px; height:26px; border-radius:999px; display:grid; place-items:center;
+  background:var(--card); color:var(--muted); font-weight:1000;
+}
+.tips-steps strong{ display:block; color:var(--text); font-size:15px; font-weight:1000; }
+.tips-steps small{ display:block; margin-top:3px; color:var(--muted); font-size:12.5px; line-height:1.3; font-weight:700; }
+.tips-steps em{ font-style:normal; color:#5967E8; font-weight:1000; font-size:18px; }
+.tips-later{
+  margin-top:16px; background:none; border:none; color:var(--muted);
+  font-size:14px; font-weight:850; cursor:pointer; text-decoration:underline; padding:6px;
+}

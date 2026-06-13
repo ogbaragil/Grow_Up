@@ -512,8 +512,12 @@ serve(async () => {
   let transactionEmailsSent = 0;
   let skipped = 0;
 
+  const WELCOME_DELAY_MS = 5 * 60 * 1000; // hold the welcome ~5 min so it isn't confused with the verification email
   for (const pref of prefs) {
-    if (pref.welcome_email_sent !== true) {
+    const welcomeAgeOk = pref.created_at
+      ? (Date.now() - new Date(pref.created_at).getTime() >= WELCOME_DELAY_MS)
+      : true;
+    if (pref.welcome_email_sent !== true && welcomeAgeOk) {
       const ok = await sendEmail(
         pref.email,
         "Welcome to Grow UP",

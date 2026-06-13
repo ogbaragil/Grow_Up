@@ -162,7 +162,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
         <section className="auth-card">
           <a
             className="auth-learn-icon"
-            href="/landingpage"
+            href="https://ogbara.com.au/growup/" target="_blank" rel="noopener"
             aria-label="Learn more about Grow UP"
             title="Learn more about Grow UP"
           >
@@ -256,7 +256,7 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
           <div className="auth-divider auth-new-divider"><span>New to Grow UP?</span></div>
 
           <div className="auth-cta-row">
-            <a className="auth-cta auth-cta-learn" href="/landingpage">Learn more</a>
+            <a className="auth-cta auth-cta-learn" href="https://ogbara.com.au/growup/" target="_blank" rel="noopener">Learn more</a>
             <button className="auth-cta auth-cta-demo" type="button" onClick={enterDemoMode}>Explore demo</button>
           </div>
 

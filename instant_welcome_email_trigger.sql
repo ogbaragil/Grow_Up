@@ -1,3 +1,6 @@
+-- DEPRECATED: superseded by sql/delayed_welcome_email.sql (welcome now sent ~5 min after signup).
+-- Do not run this file; run sql/delayed_welcome_email.sql instead.
+
 
 -- Grow UP Instant Welcome Email Upgrade
 -- Run this AFTER smart_email_engine_v2.sql.

@@ -11,7 +11,6 @@ import { CashFlow } from "./features/cashflow";
 import { CompoundWealthPage, Goals } from "./features/goals";
 import { HistoryPage } from "./features/history";
 import { InsightsPage } from "./features/insights";
-import { LandingPage } from "./features/landing";
 import { DeleteAccountPage, LegalPage } from "./features/legal";
 import { OnboardingTips, OnboardingWizard } from "./features/onboarding";
 import { BackfillPrompt, MinimalOverview } from "./features/overview";
@@ -44,7 +43,8 @@ const stripVolatileForBackup = (s) => {
 export function App() {
   const path = window.location.pathname;
   if (path === "/delete-account") return <DeleteAccountPage />;
-  if (path === "/landingpage") return <LandingPage />;
+  // Marketing/landing now lives at ogbara.com.au/growup (the in-app page is archived in src/_archive/landing.jsx).
+  if (path === "/landingpage") { window.location.replace("https://ogbara.com.au/growup/"); return null; }
   if (path === "/privacy") return <LegalPage type="privacy" />;
   if (path === "/terms") return <LegalPage type="terms" />;
 
