@@ -1,6 +1,6 @@
 import { supabase } from "./supabaseClient";
 
-export const SUPPORT_EMAIL = "support@lgds.com.au";
+export const SUPPORT_EMAIL = "support@ogbara.com.au";
 
 // ── Stripe / Monetisation ─────────────────────────────────────────────────
 // Live values come from env (.env.production / hosting provider settings);

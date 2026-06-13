@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")!;
-const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "Grow UP <support@lgds.com.au>";
+const FROM_EMAIL = Deno.env.get("FROM_EMAIL") || "Grow UP <support@ogbara.com.au>";
 const APP_URL = Deno.env.get("APP_URL") || "https://growupapp.app";
 
 const delay = () => new Promise((resolve) => setTimeout(resolve, 700));

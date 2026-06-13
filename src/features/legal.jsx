@@ -170,7 +170,7 @@ export function DeleteAccountPage() {
           </button>
           <p style={{fontSize:12,color:"#9ca3af",textAlign:"center",marginTop:12,lineHeight:1.5}}>
             This will permanently delete your account, all snapshots, goals, and financial data. This cannot be undone.
-            You can also email <a href="mailto:support@lgds.com.au" style={{color:"#3fa463"}}>support@lgds.com.au</a>
+            You can also email <a href="mailto:support@ogbara.com.au" style={{color:"#3fa463"}}>support@ogbara.com.au</a>
           </p>
         </div>
       )}
