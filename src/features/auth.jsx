@@ -2,6 +2,17 @@ import React, { useState } from "react";
 import { Eye, EyeOff, Info, Lock, Mail, ShieldCheck } from "lucide-react";
 import { supabase, setKeepSignedIn } from "../supabaseClient";
 
+// Detect when running inside the iOS App Store wrapper (PWABuilder WKWebView).
+// Apple and Google block their OAuth sign-in pages inside embedded web views
+// ("disallowed_useragent"), so inside the app we hide the social buttons and
+// offer email/password only. Social login still works in a normal browser.
+// The wrapper sets a custom user-agent ending in "PWAShell" (see WebView.swift)
+// and an "app-platform=iOS App Store" cookie.
+const IS_IOS_APP_WRAPPER =
+  typeof navigator !== "undefined" &&
+  (/PWAShell/i.test(navigator.userAgent || "") ||
+    (typeof document !== "undefined" && /app-platform=iOS/i.test(document.cookie)));
+
 function GoogleMark() {
   return (
     <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
@@ -179,17 +190,21 @@ export function AuthScreen({ enterDemoMode, initialMode = "signIn" }) {
             <button className={mode === "signUp" ? "active" : ""} onClick={()=>{setMode("signUp"); say(null);}}>Create account</button>
           </div>
 
-          <button className="apple-auth-btn" onClick={signInWithApple} type="button" disabled={appleBusy}>
-            <AppleMark />
-            {appleBusy ? "Connecting…" : "Continue with Apple"}
-          </button>
+          {!IS_IOS_APP_WRAPPER && (
+            <>
+              <button className="apple-auth-btn" onClick={signInWithApple} type="button" disabled={appleBusy}>
+                <AppleMark />
+                {appleBusy ? "Connecting…" : "Continue with Apple"}
+              </button>
 
-          <button className="google-auth-btn" onClick={signInWithGoogle} type="button" disabled={googleBusy}>
-            <GoogleMark />
-            {googleBusy ? "Connecting…" : "Continue with Google"}
-          </button>
+              <button className="google-auth-btn" onClick={signInWithGoogle} type="button" disabled={googleBusy}>
+                <GoogleMark />
+                {googleBusy ? "Connecting…" : "Continue with Google"}
+              </button>
 
-          <div className="auth-divider"><span>or</span></div>
+              <div className="auth-divider"><span>or</span></div>
+            </>
+          )}
 
           <form onSubmit={submit}>
             {mode === "signUp" && (
