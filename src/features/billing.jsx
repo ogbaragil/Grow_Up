@@ -2,8 +2,9 @@ import React, { useState } from "react";
 import { X } from "lucide-react";
 import { supabase, SUPABASE_URL, SUPABASE_ANON_KEY } from "../supabaseClient";
 import { PRO_FEATURES, PRO_LIMITS, STRIPE_PRICES } from "../config";
+import { isNativeIOS, purchasePro, restorePurchases } from "../lib/iap";
 
-export function UpgradeSheet({ reason, onClose, session, notify }) {
+export function UpgradeSheet({ reason, onClose, session, notify, refreshSubscription }) {
   const [plan, setPlan] = useState("annual");
   const [loading, setLoading] = useState(false);
 
@@ -27,6 +28,35 @@ export function UpgradeSheet({ reason, onClose, session, notify }) {
   const handleUpgrade = async (skipTrial = false) => {
     if (!session) { notify("Please sign in first.", "error"); return; }
     setLoading(true);
+
+    // ── iOS App Store build: must use StoreKit In-App Purchase (Apple 3.1.1) ──
+    if (isNativeIOS()) {
+      try {
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        if (!freshSession?.access_token) {
+          notify("Session expired — please sign out and sign in again.", "error");
+          setLoading(false);
+          return;
+        }
+        await purchasePro(plan, {
+          token: freshSession.access_token,
+          validateUrl: `${SUPABASE_URL}/functions/v1/iap-validate`,
+          anonKey: SUPABASE_ANON_KEY,
+        });
+        await refreshSubscription?.();
+        notify("✦ You're now on Grow UP Pro! Enjoy.", "success");
+        onClose?.();
+      } catch (err) {
+        if (err?.message !== "cancelled") {
+          notify(`Purchase failed: ${err?.message || String(err)}`, "error");
+        }
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // ── Web / PWA build: Stripe Checkout ──
     try {
       const { data: { session: freshSession } } = await supabase.auth.getSession();
       if (!freshSession?.access_token) {
@@ -119,6 +149,32 @@ export function UpgradeSheet({ reason, onClose, session, notify }) {
           <button className="upgrade-cta-secondary" onClick={() => handleUpgrade(true)} disabled={loading}>
             {plan === "annual" ? `Subscribe now — A$${annual}/yr` : `Subscribe now — A$${monthly}/mo`}
           </button>
+          {isNativeIOS() && (
+            <button
+              className="upgrade-restore"
+              disabled={loading}
+              onClick={async () => {
+                setLoading(true);
+                try {
+                  const { data: { session: fresh } } = await supabase.auth.getSession();
+                  await restorePurchases({
+                    token: fresh?.access_token,
+                    validateUrl: `${SUPABASE_URL}/functions/v1/iap-validate`,
+                    anonKey: SUPABASE_ANON_KEY,
+                  });
+                  await refreshSubscription?.();
+                  notify("Purchases restored.", "success");
+                  onClose?.();
+                } catch {
+                  notify("No previous purchase found to restore.", "info");
+                } finally {
+                  setLoading(false);
+                }
+              }}
+            >
+              Restore purchases
+            </button>
+          )}
         </div>
         <p className="upgrade-fine">
           Trial: no card required · 14 days free · cancel anytime

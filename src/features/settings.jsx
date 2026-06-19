@@ -1,6 +1,7 @@
 import { getCurrentAge } from "../lib/user";
 import { timeAgo } from "../lib/dates";
 import { createPortalSession } from "../config";
+import { isNativeIOS, openManageSubscriptions } from "../lib/iap";
 import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
 import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun } from "lucide-react";
@@ -65,6 +66,10 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
               disabled={portalLoading}
               onClick={async () => {
                 if (isDemo) return;
+                if (isNativeIOS()) {
+                  await openManageSubscriptions();
+                  return;
+                }
                 setPortalLoading(true);
                 const url = await createPortalSession(session);
                 setPortalLoading(false);
