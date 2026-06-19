@@ -575,6 +575,7 @@ export function App() {
           onClose={() => setUpgradeSheet(null)}
           session={session}
           notify={notify}
+          refreshSubscription={refreshSubscription}
         />
       )}
 

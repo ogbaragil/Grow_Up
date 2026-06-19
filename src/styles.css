@@ -10354,3 +10354,16 @@ button.gu-drawer-row:hover { background: var(--bg); }
   margin-top:16px; background:none; border:none; color:var(--muted);
   font-size:14px; font-weight:850; cursor:pointer; text-decoration:underline; padding:6px;
 }
+
+/* iOS-only "Restore purchases" link in the upgrade sheet */
+.upgrade-restore {
+  background: none;
+  border: none;
+  color: var(--muted, #8a8f98);
+  font-size: 0.85rem;
+  text-decoration: underline;
+  padding: 8px;
+  margin-top: 4px;
+  cursor: pointer;
+}
+.upgrade-restore:disabled { opacity: 0.5; cursor: default; }
