@@ -34,7 +34,10 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   const b64 = pem
     .replace(/-----BEGIN [^-]+-----/g, "")
     .replace(/-----END [^-]+-----/g, "")
-    .replace(/\s+/g, "");
+    .replace(/\\r/g, "")
+    .replace(/\\n/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "");
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -164,6 +167,27 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
+
+    // An Apple subscription (original_transaction_id) maps to one app account at
+    // a time. If a different account already holds this transaction, transfer
+    // it: release it from the previous owner before granting it here. This
+    // prevents one Apple subscription from unlocking multiple accounts.
+    const { data: existing } = await admin
+      .from("growup_subscriptions")
+      .select("user_id")
+      .eq("apple_original_transaction_id", tx.originalTransactionId)
+      .maybeSingle();
+
+    if (existing && existing.user_id !== user.id) {
+      await admin
+        .from("growup_subscriptions")
+        .update({
+          status: "free",
+          apple_original_transaction_id: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", existing.user_id);
+    }
 
     const { error: upsertError } = await admin
       .from("growup_subscriptions")

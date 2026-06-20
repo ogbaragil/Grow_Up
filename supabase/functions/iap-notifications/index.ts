@@ -35,7 +35,10 @@ function pemToArrayBuffer(pem: string): ArrayBuffer {
   const b64 = pem
     .replace(/-----BEGIN [^-]+-----/g, "")
     .replace(/-----END [^-]+-----/g, "")
-    .replace(/\s+/g, "");
+    .replace(/\\r/g, "")
+    .replace(/\\n/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[^A-Za-z0-9+/=]/g, "");
   const bin = atob(b64);
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
