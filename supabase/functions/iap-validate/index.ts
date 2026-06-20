@@ -137,15 +137,20 @@ serve(async (req) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) return json({ error: "Unauthorized" }, 401);
+    if (!authHeader) return json({ error: "missing_auth_header" }, 401);
+    const jwt = authHeader.replace(/^Bearer\s+/i, "").trim();
 
+    // Pass the token explicitly to getUser(). Relying on the client's global
+    // Authorization header is unreliable server-side and returns no user.
     const userClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
     );
-    const { data: { user }, error: authError } = await userClient.auth.getUser();
-    if (authError || !user) return json({ error: "Unauthorized" }, 401);
+    const { data: { user }, error: authError } = await userClient.auth.getUser(jwt);
+    if (authError || !user) {
+      console.error("auth failed:", authError?.message ?? "no user", "jwt length:", jwt.length);
+      return json({ error: "invalid_session", detail: authError?.message ?? null }, 401);
+    }
 
     const { transactionId } = await req.json();
     if (!transactionId) return json({ error: "missing transactionId" }, 400);
