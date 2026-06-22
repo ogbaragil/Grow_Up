@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../supabaseClient";
 import { SUPPORT_EMAIL } from "../config";
 
@@ -124,6 +124,13 @@ export function TermsContent() {
 export function DeleteAccountPage() {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
+
+  useEffect(() => {
+    if (!supabase) return;
+    supabase.auth.getUser()
+      .then(({ data }) => { if (data?.user?.email) setEmail(data.user.email); })
+      .catch(() => {});
+  }, []);
 
   const handleSubmit = async () => {
     if (!email) return;

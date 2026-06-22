@@ -4,7 +4,7 @@ import { createPortalSession } from "../config";
 import { isNativeIOS, openManageSubscriptions } from "../lib/iap";
 import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
-import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun } from "lucide-react";
+import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun, Trash2 } from "lucide-react";
 import { Card, ScreenTitle } from "../components/ui";
 import { useConfirm, useToast } from "../context/ToastContext";
 import { saveEmailReminderPreferences } from "./notifications";
@@ -211,6 +211,11 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
           location.reload();
         }}}>
           <RotateCcw size={16}/> Reset local data
+        </button>
+
+        <p style={{marginTop:20}}>Permanently delete your Grow UP account and all associated data.</p>
+        <button className="settings-danger-btn" disabled={isDemo} onClick={()=>{ window.location.href = "/delete-account"; }}>
+          <Trash2 size={16}/> Delete account
         </button>
       </Card>
 
