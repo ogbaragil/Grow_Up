@@ -4,7 +4,7 @@ import { createPortalSession } from "../config";
 import { isNativeIOS, openManageSubscriptions } from "../lib/iap";
 import { CURRENCY_OPTIONS } from "../lib/money";
 import React from "react";
-import { DownloadCloud, FileText, LogOut, Moon, RotateCcw, Save, Shield, Sun, Trash2 } from "lucide-react";
+import { DownloadCloud, FileText, HelpCircle, LogOut, Moon, RotateCcw, Save, Shield, Sun, Trash2 } from "lucide-react";
 import { Card, ScreenTitle } from "../components/ui";
 import { useConfirm, useToast } from "../context/ToastContext";
 import { saveEmailReminderPreferences } from "./notifications";
@@ -196,6 +196,7 @@ export function Settings({ state, update, saveSnapshot, restoreSnapshot, setMenu
         <div className="settings-legal-row">
           <a href="/privacy"><Shield size={14}/> Privacy Policy</a>
           <a href="/terms"><FileText size={14}/> Terms of Service</a>
+          <a href="/support"><HelpCircle size={14}/> Help &amp; Support</a>
         </div>
       </Card>
 
