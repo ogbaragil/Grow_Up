@@ -179,6 +179,14 @@ export function UpgradeSheet({ reason, onClose, session, notify, refreshSubscrip
         <p className="upgrade-fine">
           Trial: no card required · 14 days free · cancel anytime
         </p>
+        <p className="upgrade-fine">
+          Subscriptions renew automatically unless cancelled at least 24 hours before the end of the current period. Manage or cancel anytime in your device's subscription settings.
+        </p>
+        <p className="upgrade-legal-links">
+          <a href="/terms">Terms of Use (EULA)</a>
+          <span aria-hidden="true"> · </span>
+          <a href="/privacy">Privacy Policy</a>
+        </p>
       </div>
     </div>
   );

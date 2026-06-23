@@ -10367,3 +10367,15 @@ button.gu-drawer-row:hover { background: var(--bg); }
   cursor: pointer;
 }
 .upgrade-restore:disabled { opacity: 0.5; cursor: default; }
+
+/* Privacy / Terms links on the subscription paywall (Apple 3.1.2(c)) */
+.upgrade-legal-links {
+  text-align: center;
+  font-size: 0.8rem;
+  margin-top: 8px;
+  opacity: 0.85;
+}
+.upgrade-legal-links a {
+  color: inherit;
+  text-decoration: underline;
+}

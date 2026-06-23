@@ -11,7 +11,7 @@ import { CashFlow } from "./features/cashflow";
 import { CompoundWealthPage, Goals } from "./features/goals";
 import { HistoryPage } from "./features/history";
 import { InsightsPage } from "./features/insights";
-import { DeleteAccountPage, LegalPage } from "./features/legal";
+import { DeleteAccountPage, LegalPage, SupportPage } from "./features/legal";
 import { OnboardingTips, OnboardingWizard } from "./features/onboarding";
 import { BackfillPrompt, MinimalOverview } from "./features/overview";
 import { Settings } from "./features/settings";
@@ -47,6 +47,7 @@ export function App() {
   if (path === "/landingpage") { window.location.replace("https://ogbara.com.au/growup/"); return null; }
   if (path === "/privacy") return <LegalPage type="privacy" />;
   if (path === "/terms") return <LegalPage type="terms" />;
+  if (path === "/support") return <SupportPage />;
 
   // "?auth=signup" / "?auth=signin" — set by landing page CTAs so visitors
   // land on the right tab of the auth screen.

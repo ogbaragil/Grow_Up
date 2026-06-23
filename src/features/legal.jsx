@@ -26,6 +26,50 @@ export function LegalPage({ type }) {
   );
 }
 
+export function SupportPage() {
+  return (
+    <div className="app-shell">
+      <main className="phone legal-phone">
+        <section className="legal-header">
+          <img className="legal-logo" src="/icons/growup-logo.png" alt="Grow UP" />
+          <div>
+            <h1>Support</h1>
+            <p>We're here to help.</p>
+          </div>
+        </section>
+
+        <article className="legal-card">
+          <h2>Contact us</h2>
+          <p>Questions, feedback, or trouble with your account or subscription? Email us at <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a> and we'll get back to you, usually within 1–2 business days.</p>
+
+          <h2>Frequently asked questions</h2>
+
+          <h3>How do I upgrade to Grow UP Pro?</h3>
+          <p>Open the app, tap “Upgrade” at the top of the Home screen, and choose a Monthly or Annual plan. On iPhone and iPad, payment is handled securely through your Apple Account via In-App Purchase.</p>
+
+          <h3>How do I manage or cancel my subscription?</h3>
+          <p>On iPhone or iPad, go to Settings → tap your name → Subscriptions → Grow UP to change plans or cancel. You can also reach this from the “Manage” button on the app's Settings screen.</p>
+
+          <h3>Is there a free trial?</h3>
+          <p>Yes — new subscribers get a 14-day free trial. You won't be charged until the trial ends, and you can cancel anytime before then.</p>
+
+          <h3>How do I delete my account?</h3>
+          <p>In the app, go to Settings → Danger Zone → “Delete account” and follow the prompts to remove your account and associated data.</p>
+
+          <h3>Does Grow UP connect to my bank?</h3>
+          <p>No. Grow UP never connects to your bank — you enter your numbers manually, and we never sell your data.</p>
+
+          <p>Still need help? Email <a href={`mailto:${SUPPORT_EMAIL}`}>{SUPPORT_EMAIL}</a>.</p>
+        </article>
+
+        <div className="legal-footer">
+          <a href="/">Back to Grow UP</a>
+        </div>
+      </main>
+    </div>
+  );
+}
+
 export function PrivacyPolicyContent() {
   return (
     <article className="legal-card">
