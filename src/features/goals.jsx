@@ -142,6 +142,13 @@ export function Goals({ state, setState, setEditor, setMenuOpen, setCompoundOpen
         )}
       </section>
 
+      {sortedActiveGoals.length > 0 && (
+        <button className="page-footer-link" onClick={openCompound}>
+          <span>Run a Compound Wealth scenario</span>
+          <ChevronRight size={15} />
+        </button>
+      )}
+
       <section className="archived-goals-wrap">
         <button className="archived-goals-toggle" type="button" onClick={() => setShowArchivedGoals(v => !v)}>
           <div>

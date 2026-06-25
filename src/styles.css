@@ -10569,3 +10569,31 @@ button.gu-drawer-row:hover { background: var(--bg); }
   -moz-appearance: textfield;
   appearance: none;
 }
+
+/* Subtle "luxury" footer discovery links (Accounts → history, Goals → compound).
+   Hairline divider above, muted at rest, warms and nudges the chevron on press. */
+.page-footer-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 28px auto 6px;
+  padding: 18px 12px 4px;
+  border: none;
+  border-top: 1px solid var(--line);
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: color .18s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.page-footer-link svg { opacity: .65; transition: transform .18s ease, opacity .18s ease; }
+.page-footer-link:hover,
+.page-footer-link:active { color: var(--text); }
+.page-footer-link:hover svg,
+.page-footer-link:active svg { transform: translateX(3px); opacity: 1; }

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Trash2, X, Check } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Check, ChevronRight } from "lucide-react";
 import { ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { Card, EmptyState, MonthBar, ScreenTitle } from "../components/ui";
 import { addMonths, currentMonthKey, isFutureMonth, monthLabel } from "../lib/dates";
@@ -293,6 +293,10 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
             <div onClick={()=>setHistoryMetric("debts")}><span>Debts (this month)</span><strong>{money(totals.debts)}</strong></div>
             <div className="bold" onClick={()=>setHistoryMetric("net")}><span>Net Worth</span><strong>{money(totals.net)}</strong></div>
           </Card>
+          <button className="page-footer-link" onClick={()=>setHistoryMetric("net")}>
+            <span>View your net worth history</span>
+            <ChevronRight size={15} />
+          </button>
         </>
       )}
 
