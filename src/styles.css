@@ -6684,7 +6684,8 @@ button:focus-visible {
   font-weight: 800;
   display: flex;
   align-items: center;
-  gap: 2px;
+  gap: 3px;
+  white-space: nowrap;
 }
 .account-row-v2-delta.up   { color: var(--green); }
 .account-row-v2-delta.down { color: var(--red); }

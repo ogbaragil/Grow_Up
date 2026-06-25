@@ -268,7 +268,7 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
         <>
           <AccountGroup
             title={`Assets (${assets.length})`}
-            sub="Enter this month's values; see last month + change."
+            sub="Compared to last month"
             accounts={assets}
             updateBalance={updateBalance}
             readOnly={!!selectedSnapshot && !editingBalances}
@@ -279,7 +279,7 @@ export function AssetsDebts({ state, setState, totals, setEditor, setMenuOpen, s
           />
           <AccountGroup
             title={`Debts (${debts.length})`}
-            sub="Enter this month's amounts owed; see last month + change."
+            sub="Compared to last month"
             accounts={debts}
             updateBalance={updateBalance}
             readOnly={!!selectedSnapshot && !editingBalances}
@@ -367,15 +367,17 @@ export function AccountGroup({ title, sub, accounts, updateBalance, readOnly, ed
         const delta = Number(a.balance || 0) - Number(a.previous || 0);
         const deltaAbs = Math.abs(delta);
         const isUp = delta > 0;
-        const isDown = delta < 0;
+        // Colour by impact, not direction: for debts a decrease is good (green)
+        // and an increase is bad (red) — the inverse of assets.
+        const isGood = a.kind === "debt" ? delta < 0 : delta > 0;
+        const deltaClass = delta === 0 ? "flat" : isGood ? "up" : "down";
         return (
           <div className="account-row-v2" key={a.id}>
             <div className={`round-icon ${a.kind === "debt" ? "debt" : "asset"}`}>{a.icon || (a.kind==="debt" ? "💳" : "💼")}</div>
             <div className="account-row-v2-main">
               <strong className="account-row-v2-name">{a.name}</strong>
-              <span className={`account-row-v2-delta ${isUp ? "up" : isDown ? "down" : "flat"}`}>
-                {delta === 0 ? "No change" : isUp ? `↑ ${money(deltaAbs)}` : `↓ ${money(deltaAbs)}`}
-                <span className="account-row-v2-delta-label"> from last month</span>
+              <span className={`account-row-v2-delta ${deltaClass}`}>
+                {delta === 0 ? "— No change" : `${isUp ? "▲" : "▼"} ${isUp ? "+" : "-"}${money(deltaAbs)}`}
               </span>
             </div>
             <div className="account-actions-wrap">
