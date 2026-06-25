@@ -10556,3 +10556,16 @@ button.gu-drawer-row:hover { background: var(--bg); }
   .cw-table .checkpoint-row { font-size: 12px; gap: 6px; }
   .cw-section-label { font-size: 16px; }
 }
+
+/* iOS renders input[type=month] as a native control that can ignore width:100%
+   and overflow its container on small phones. Normalise it to a plain styled box
+   (still opens the month picker on tap) so it always fits the card. */
+.settings-profile-fields { max-width: 100%; }
+.settings-profile-fields input { max-width: 100%; }
+.settings-profile-fields input[type="month"],
+.settings-profile-fields input[type="date"],
+.settings-profile-fields input[type="number"] {
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+  appearance: none;
+}
