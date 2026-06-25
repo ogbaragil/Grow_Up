@@ -10533,3 +10533,26 @@ button.gu-drawer-row:hover { background: var(--bg); }
   .settings-profile-fields { grid-template-columns: 1fr; gap: 14px; }
   .settings-profile-fields input { margin-top: 6px; }
 }
+
+/* Compound Wealth — small-phone overflow fixes */
+.cw-table .checkpoint-head,
+.cw-table .checkpoint-row { min-width: 0; }      /* drop the 360px floor so 5 cols fit */
+.cw-table .checkpoint-row span,
+.cw-table .checkpoint-head span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cw-checkpoints-head > div { min-width: 0; }       /* let the subtitle wrap, keep toggle aligned */
+.cw-chart-card { overflow: hidden; }               /* belt-and-braces against chart bleed */
+
+@media (max-width: 390px) {
+  .cw-hero-value { font-size: 32px; }
+  .cw-stat { padding: 10px 8px; }
+  .cw-stat small { font-size: 9px; }
+  .cw-stat strong { font-size: 13.5px; }
+  .cw-stat em { font-size: 9.5px; }
+  .cw-hero-stats { gap: 6px; }
+  .cw-fields { gap: 14px 10px; }
+  .cw-field-value { font-size: 16px; }
+  .cw-field-caption { font-size: 10.5px; }
+  .cw-table .checkpoint-head,
+  .cw-table .checkpoint-row { font-size: 12px; gap: 6px; }
+  .cw-section-label { font-size: 16px; }
+}

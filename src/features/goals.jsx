@@ -535,6 +535,15 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
   }, [rows]);
 
   const sign = currencySign(state.currency);
+  // Tight K/M formatter so the chart axis and checkpoint table never overflow
+  // on small phones (compactMoney shows full numbers between 10k–1M).
+  const kMoney = (v) => {
+    const n = Number(v) || 0;
+    const a = Math.abs(n);
+    if (a >= 1000000) return `${sign}${(n / 1000000).toFixed(1)}M`;
+    if (a >= 1000) return `${sign}${(n / 1000).toFixed(a >= 100000 ? 0 : 1)}K`;
+    return `${sign}${Math.round(n)}`;
+  };
 
   return (
     <div className="screen compound-screen cw-screen">
@@ -644,7 +653,7 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
             </defs>
             <CartesianGrid vertical={false} stroke="var(--line)" strokeDasharray="3 3" />
             <XAxis dataKey="year" tick={{ fontSize: 11, fill: "var(--muted)" }} tickLine={false} axisLine={false} interval="preserveStartEnd" minTickGap={36} />
-            <YAxis tickFormatter={(v) => compactMoney(v)} tick={{ fontSize: 11, fill: "var(--muted)" }} tickLine={false} axisLine={false} width={46} />
+            <YAxis tickFormatter={kMoney} tick={{ fontSize: 11, fill: "var(--muted)" }} tickLine={false} axisLine={false} width={46} />
             <Tooltip content={<CwTooltip />} />
             <Area type="monotone" dataKey="contributions" stroke="var(--muted)" strokeWidth={1.5} strokeDasharray="5 4" fill="none" dot={false} />
             <Area type="monotone" dataKey="value" stroke="#6366f1" strokeWidth={2.5} fill="url(#cwChartFill)" dot={false} activeDot={{ r: 4 }} />
@@ -687,9 +696,9 @@ export function CompoundWealthPage({ setCompoundOpen, setMenuOpen, state, setSta
               <div className="checkpoint-row" key={row.year}>
                 <span>{row.year}</span>
                 <span>{row.age}</span>
-                <span>{compactMoney(row.contributions)}</span>
-                <span className="success">+{compactMoney(row.growth)}</span>
-                <span>{compactMoney(row.value)}</span>
+                <span>{kMoney(row.contributions)}</span>
+                <span className="success">+{kMoney(row.growth)}</span>
+                <span>{kMoney(row.value)}</span>
               </div>
             ))}
           </div>
