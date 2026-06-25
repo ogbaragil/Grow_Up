@@ -89,6 +89,16 @@ export function App() {
   useEffect(() => {
     window.__GROWUP_ACTIVE_CURRENCY = state.currency;
     document.documentElement.dataset.theme = state.theme;
+    // Keep the iOS status-bar strip matching the app background instead of the
+    // brand green, in both light and dark mode.
+    const themeColor = state.theme === "dark" ? "#0d1321" : "#f6f6f8";
+    let meta = document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.setAttribute("name", "theme-color");
+      document.head.appendChild(meta);
+    }
+    meta.setAttribute("content", themeColor);
     if ("serviceWorker" in navigator) navigator.serviceWorker.register("/service-worker.js").catch(() => {});
   }, [state.theme, state.currency]);
 
